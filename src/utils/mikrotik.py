@@ -6,6 +6,7 @@ import os
 class MikrotikAPI:
     STATIC_DNS_RESOURCE_PATH="/ip/dns/static"
     api: any
+    connection: any
     host: str
     port: int
     username: str
@@ -34,9 +35,13 @@ class MikrotikAPI:
         self.use_ssl = os.getenv('MIKROTIK_USE_SSL', 'false').lower() in ('true', '1', 'yes')
         self.ssl_verify = os.getenv('MIKROTIK_SSL_VERIFY', 'false').lower() in ('true', '1', 'yes')
 
+    def __del__(self):
+        if self.connection is not None:
+            self.connection.disconnect()
+
     def connect(self):
         try:
-            connection = routeros_api.RouterOsApiPool(
+            self.connection = routeros_api.RouterOsApiPool(
                 self.host,
                 username=self.username,
                 password=self.password,
@@ -46,7 +51,7 @@ class MikrotikAPI:
                 ssl_verify_hostname=self.ssl_verify,
                 plaintext_login=True,
             )
-            self.api = connection.get_api()
+            self.api = self.connection.get_api()
             print("Connection successful!")
         except Exception as e:
             print(f"Failed to connect to the router: {e}")
