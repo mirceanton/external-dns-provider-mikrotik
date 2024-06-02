@@ -1,0 +1,16 @@
+---
+area/docker:
+  - changed-files:
+      - any-glob-to-any-file: ".dockerignore"
+      - any-glob-to-any-file: "Dockerfile"
+      - any-glob-to-any-file: "docker-compose.yaml"
+      - any-glob-to-any-file: ".devcontainer/devcontainer.json"
+
+area/github:
+  - changed-files:
+      - any-glob-to-any-file: ".github/**/*"
+
+area/code:
+  - changed-files:
+      - any-glob-to-any-file: "src/**/*"
+      - any-glob-to-any-file: "requirements.txt"
