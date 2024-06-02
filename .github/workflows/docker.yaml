@@ -1,5 +1,5 @@
 ---
-name: Docker Release
+name: Docker
 
 on:
   pull_request:
