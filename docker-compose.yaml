@@ -1,0 +1,7 @@
+version: '3.8'
+
+services:
+  mikrotik-dns-webhook:
+    build: .
+    ports: [ "8088:8088" ]
+    env_file: [ .env ]
