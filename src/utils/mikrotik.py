@@ -4,6 +4,7 @@ import os
 
 
 class MikrotikAPI:
+    STATIC_DNS_RESOURCE_PATH="/ip/dns/static"
     api: any
     host: str
     port: int
@@ -52,10 +53,39 @@ class MikrotikAPI:
             sys.exit(1)
 
     def add_dns_record(self, fqdn: str, ip: str) -> bool:
-        pass
+        try:
+            self.api.get_resource(self.STATIC_DNS_RESOURCE_PATH).add(
+                name=fqdn, address=ip
+            )
+            print(f"Added DNS record: {fqdn} -> {ip}")
+            return True
+        except Exception as e:
+            print(f"Error adding DNS record: {e}")
+            return False
 
     def update_dns_record(self, fqdn: str, ip: str) -> bool:
-        pass
+        try:
+            dns_resource = self.api.get_resource(self.STATIC_DNS_RESOURCE_PATH)
+            existing_record = dns_resource.get(name=fqdn)
 
-    def delete_dns_record(self, fqdn: str, ip: str) -> bool:
-        pass
+            if existing_record:
+                dns_resource.set(id=existing_record[0]['id'], address=ip)
+                print(f"Updated DNS record: {fqdn} -> {ip}")
+            else:
+                self.add_dns_record(fqdn, ip)
+            return True
+        except Exception as e:
+            print(f"Error updating DNS record: {e}")
+            return False
+
+    def delete_dns_record(self, fqdn: str) -> bool:
+        try:
+            dns_resource = self.api.get_resource(self.STATIC_DNS_RESOURCE_PATH)
+            existing_record = dns_resource.get(name=fqdn)
+            if existing_record:
+                dns_resource.remove(id=existing_record[0]['id'])
+                print(f"Deleted DNS record: {fqdn}")
+            return True
+        except Exception as e:
+            print(f"Error deleting DNS record: {e}")
+            return False
