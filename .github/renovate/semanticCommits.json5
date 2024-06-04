@@ -26,40 +26,31 @@
         "semanticCommitScope": "container",
         "commitMessageTopic": "{{depName}}",
         "commitMessageExtra": "( {{currentVersion}} → {{newVersion}} )"
-      },
-      {
-        "matchDatasources": ["docker"],
-        "matchUpdateTypes": ["digest"],
-        "semanticCommitType": "chore",
-        "semanticCommitScope": "container",
-        "commitMessageTopic": "{{depName}}",
-        "commitMessageExtra": "( {{currentDigestShort}} → {{newDigestShort}} )"
-      },
-
+      }
       
     // ============================================================================================
     // Ruby
     // ============================================================================================
       {
-        "matchDatasources": ["golang"],
+        "matchDatasources": ["gomod"],
         "matchUpdateTypes": ["major"],
-        "commitMessagePrefix": "feat(golang)!: ",
+        "commitMessagePrefix": "feat(gomod)!: ",
         "commitMessageTopic": "{{depName}}",
         "commitMessageExtra": "( {{currentVersion}} → {{newVersion}} )"
       },
       {
-        "matchDatasources": ["golang"],
+        "matchDatasources": ["gomod"],
         "matchUpdateTypes": ["minor"],
         "semanticCommitType": "feat",
-        "semanticCommitScope": "golang",
+        "semanticCommitScope": "gomod",
         "commitMessageTopic": "{{depName}}",
         "commitMessageExtra": "( {{currentVersion}} → {{newVersion}} )"
       },
       {
-        "matchDatasources": ["golang"],
+        "matchDatasources": ["gomod"],
         "matchUpdateTypes": ["patch"],
         "semanticCommitType": "fix",
-        "semanticCommitScope": "golang",
+        "semanticCommitScope": "gomod",
         "commitMessageTopic": "{{depName}}",
         "commitMessageExtra": "( {{currentVersion}} → {{newVersion}} )"
       },
