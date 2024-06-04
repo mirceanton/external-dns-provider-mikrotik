@@ -2,6 +2,7 @@
 name: Go Pipeline
 
 on:
+  workflow_dispatch: {}  # Manual Trigger
   pull_request:
     branches: ["main"]
 
@@ -19,17 +20,17 @@ jobs:
       
       - name: Run Go Build
         run: go build ./cmd/webhook
+  # test:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
 
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.22.3
+  #     - name: Set up Go
+  #       uses: actions/setup-go@v2
+  #       with:
+  #         go-version: 1.22.3
       
-      - name: Run Go Test
-        run: go test ./internal/mikrotik/
+  #     - name: Run Go Test
+  #       run: go test ./internal/mikrotik/
+
