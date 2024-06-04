@@ -1,0 +1,35 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Labeler
+
+on:
+  workflow_dispatch: {}  # Manual Trigger
+  pull_request_target:
+    branches: [ "main" ]
+
+jobs:
+  labeler:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Generate Token
+        uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: "${{ secrets.BOT_APP_ID }}"
+          private-key: "${{ secrets.BOT_APP_PRIVATE_KEY }}"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Labeler
+        uses: actions/labeler@v5
+        with:
+          configuration-path: .github/labeler.yaml
+          sync-labels: true
+        env:
+          GH_TOKEN: "${{ steps.app-token.outputs.token }}"

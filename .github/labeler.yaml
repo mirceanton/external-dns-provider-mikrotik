@@ -1,0 +1,18 @@
+---
+area/docker:
+  - changed-files:
+      - any-glob-to-any-file: ".dockerignore"
+      - any-glob-to-any-file: "Dockerfile"
+      - any-glob-to-any-file: ".devcontainer/devcontainer.json"
+
+area/github:
+  - changed-files:
+      - any-glob-to-any-file: ".github/**/*"
+
+area/go:
+  - changed-files:
+      - any-glob-to-any-file: "cmd/**/*"
+      - any-glob-to-any-file: "internal/**/*"
+      - any-glob-to-any-file: "pkg/**/*"
+      - any-glob-to-any-file: "go.mod"
+      - any-glob-to-any-file: "go.sum"
