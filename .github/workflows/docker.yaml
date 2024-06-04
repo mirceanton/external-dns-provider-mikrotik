@@ -4,6 +4,9 @@ name: Docker
 on:
   pull_request:
     branches: ["main"]
+    paths-ignore:
+      - '.devcontainer/**'
+      - '.github/**'
   release:
     types: [ "created" ]
 
