@@ -1,0 +1,20 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+
+  "dependencyDashboardTitle": "Renovate Dashboard 🤖",
+
+  "extends": [
+    ":dependencyDashboard",
+
+    ":timezone(Europe/Bucharest)",
+
+    "config:best-practices",
+    "docker:enableMajor",
+    ":disableRateLimiting",
+    ":semanticCommits",
+
+    "github>mirceanton/mirceanton.com//.github/renovate/autoMerge.json5",
+    "github>mirceanton/mirceanton.com//.github/renovate/semanticCommits.json5",
+    "github>mirceanton/mirceanton.com//.github/renovate/labels.json5"
+  ]
+}

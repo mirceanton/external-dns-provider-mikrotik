@@ -1,0 +1,95 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "packageRules": [
+    // ============================================================================================
+    // Docker
+    // ============================================================================================
+      {
+        "matchDatasources": ["docker"],
+        "matchUpdateTypes": ["major"],
+        "commitMessagePrefix": "feat(container)!: ",
+        "commitMessageTopic": "{{depName}}",
+        "commitMessageExtra": " ( {{currentVersion}} → {{newVersion}} )"
+      },
+      {
+        "matchDatasources": ["docker"],
+        "matchUpdateTypes": ["minor"],
+        "semanticCommitType": "feat",
+        "semanticCommitScope": "container",
+        "commitMessageTopic": "{{depName}}",
+        "commitMessageExtra": "( {{currentVersion}} → {{newVersion}} )"
+      },
+      {
+        "matchDatasources": ["docker"],
+        "matchUpdateTypes": ["patch"],
+        "semanticCommitType": "fix",
+        "semanticCommitScope": "container",
+        "commitMessageTopic": "{{depName}}",
+        "commitMessageExtra": "( {{currentVersion}} → {{newVersion}} )"
+      },
+      {
+        "matchDatasources": ["docker"],
+        "matchUpdateTypes": ["digest"],
+        "semanticCommitType": "chore",
+        "semanticCommitScope": "container",
+        "commitMessageTopic": "{{depName}}",
+        "commitMessageExtra": "( {{currentDigestShort}} → {{newDigestShort}} )"
+      },
+
+      
+    // ============================================================================================
+    // Ruby
+    // ============================================================================================
+      {
+        "matchDatasources": ["golang"],
+        "matchUpdateTypes": ["major"],
+        "commitMessagePrefix": "feat(golang)!: ",
+        "commitMessageTopic": "{{depName}}",
+        "commitMessageExtra": "( {{currentVersion}} → {{newVersion}} )"
+      },
+      {
+        "matchDatasources": ["golang"],
+        "matchUpdateTypes": ["minor"],
+        "semanticCommitType": "feat",
+        "semanticCommitScope": "golang",
+        "commitMessageTopic": "{{depName}}",
+        "commitMessageExtra": "( {{currentVersion}} → {{newVersion}} )"
+      },
+      {
+        "matchDatasources": ["golang"],
+        "matchUpdateTypes": ["patch"],
+        "semanticCommitType": "fix",
+        "semanticCommitScope": "golang",
+        "commitMessageTopic": "{{depName}}",
+        "commitMessageExtra": "( {{currentVersion}} → {{newVersion}} )"
+      },
+
+
+    // ============================================================================================
+    // GitHub Actions
+    // ============================================================================================
+      {
+        "matchManagers": ["github-actions"],
+        "matchUpdateTypes": ["major"],
+        "commitMessagePrefix": "feat(github-action)!: ",
+        "commitMessageTopic": "{{depName}}",
+        "commitMessageExtra": "( {{currentVersion}} → {{newVersion}} )"
+      },
+      {
+        "matchManagers": ["github-actions"],
+        "matchUpdateTypes": ["minor"],
+        "semanticCommitType": "feat",
+        "semanticCommitScope": "github-action",
+        "commitMessageTopic": "{{depName}}",
+        "commitMessageExtra": "( {{currentVersion}} → {{newVersion}} )"
+      },
+      {
+        "matchManagers": ["github-actions"],
+        "matchUpdateTypes": ["patch"],
+        "semanticCommitType": "fix",
+        "semanticCommitScope": "github-action",
+        "commitMessageTopic": "{{depName}}",
+        "commitMessageExtra": "( {{currentVersion}} → {{newVersion}} )"
+      }
+    ]
+  }

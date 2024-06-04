@@ -1,0 +1,21 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "packageRules": [
+      {
+        "description": ["Auto-merge container digests updates for trusted containers"],
+        "matchDatasources": ["docker"],
+        "automerge": true,
+        "automergeType": "pr",
+        "matchUpdateTypes": ["minor", "patch"]
+        "matchPackagePatterns": ["golang", "mcr.microsoft.com/devcontainers/go"]
+      },
+      {
+        "description": ["Auto-merge GitHub Actions for minor and patch"],
+        "matchManagers": ["github-actions"],
+        "matchDatasources": ["github-tags"],
+        "automerge": true,
+        "automergeType": "pr",
+        "matchUpdateTypes": ["minor", "patch"]
+      }
+    ]
+  }
