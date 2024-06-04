@@ -6,7 +6,7 @@
         { "matchUpdateTypes": ["patch"], "labels": ["type/patch"] },
 
         { "matchDatasources": ["docker"], "addLabels": ["renovate/container"] },
-        { "matchDatasources": ["go"], "addLabels": ["renovate/go"] },
+        { "matchDatasources": ["gomod"], "addLabels": ["renovate/go"] },
         { "matchManagers": ["github-actions"], "addLabels": ["renovate/github-action"] }
     ]
 }

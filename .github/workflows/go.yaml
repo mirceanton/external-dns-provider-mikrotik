@@ -20,6 +20,7 @@ jobs:
       
       - name: Run Go Build
         run: go build ./cmd/webhook
+
   # test:
   #   runs-on: ubuntu-latest
   #   steps:
@@ -33,4 +34,3 @@ jobs:
       
   #     - name: Run Go Test
   #       run: go test ./internal/mikrotik/
-
