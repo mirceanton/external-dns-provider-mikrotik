@@ -12,11 +12,7 @@
 
 ## ⭐ Stargazers
 
-<div align="center">
-
 [![Star History Chart](https://api.star-history.com/svg?repos=mirceanton/external-dns-mikrotik-webhook&type=Date)](https://star-history.com/#mirceanton/external-dns-mikrotik-webhook&Date)
-
-</div>
 
 ---
 
