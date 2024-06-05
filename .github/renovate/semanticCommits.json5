@@ -7,50 +7,34 @@
       {
         "matchDatasources": ["docker"],
         "matchUpdateTypes": ["major"],
-        "commitMessagePrefix": "feat(container)!: ",
+        "commitMessagePrefix": "deps(container)!: ",
         "commitMessageTopic": "{{depName}}",
         "commitMessageExtra": " ( {{currentVersion}} → {{newVersion}} )"
       },
       {
         "matchDatasources": ["docker"],
-        "matchUpdateTypes": ["minor"],
-        "semanticCommitType": "feat",
+        "matchUpdateTypes": ["minor", "patch"],
+        "semanticCommitType": "deps",
         "semanticCommitScope": "container",
         "commitMessageTopic": "{{depName}}",
         "commitMessageExtra": "( {{currentVersion}} → {{newVersion}} )"
       },
-      {
-        "matchDatasources": ["docker"],
-        "matchUpdateTypes": ["patch"],
-        "semanticCommitType": "fix",
-        "semanticCommitScope": "container",
-        "commitMessageTopic": "{{depName}}",
-        "commitMessageExtra": "( {{currentVersion}} → {{newVersion}} )"
-      }
-      
+
     // ============================================================================================
-    // Ruby
+    // Golang
     // ============================================================================================
       {
         "matchDatasources": ["gomod"],
         "matchUpdateTypes": ["major"],
-        "commitMessagePrefix": "feat(gomod)!: ",
+        "commitMessagePrefix": "deps(go)!: ",
         "commitMessageTopic": "{{depName}}",
         "commitMessageExtra": "( {{currentVersion}} → {{newVersion}} )"
       },
       {
         "matchDatasources": ["gomod"],
-        "matchUpdateTypes": ["minor"],
-        "semanticCommitType": "feat",
-        "semanticCommitScope": "gomod",
-        "commitMessageTopic": "{{depName}}",
-        "commitMessageExtra": "( {{currentVersion}} → {{newVersion}} )"
-      },
-      {
-        "matchDatasources": ["gomod"],
-        "matchUpdateTypes": ["patch"],
-        "semanticCommitType": "fix",
-        "semanticCommitScope": "gomod",
+        "matchUpdateTypes": ["minor", "patch"],
+        "semanticCommitType": "deps",
+        "semanticCommitScope": "go",
         "commitMessageTopic": "{{depName}}",
         "commitMessageExtra": "( {{currentVersion}} → {{newVersion}} )"
       },
@@ -62,25 +46,17 @@
       {
         "matchManagers": ["github-actions"],
         "matchUpdateTypes": ["major"],
-        "commitMessagePrefix": "feat(github-action)!: ",
+        "commitMessagePrefix": "deps(github-actions)!: ",
         "commitMessageTopic": "{{depName}}",
         "commitMessageExtra": "( {{currentVersion}} → {{newVersion}} )"
       },
       {
         "matchManagers": ["github-actions"],
-        "matchUpdateTypes": ["minor"],
-        "semanticCommitType": "feat",
-        "semanticCommitScope": "github-action",
-        "commitMessageTopic": "{{depName}}",
-        "commitMessageExtra": "( {{currentVersion}} → {{newVersion}} )"
-      },
-      {
-        "matchManagers": ["github-actions"],
-        "matchUpdateTypes": ["patch"],
-        "semanticCommitType": "fix",
-        "semanticCommitScope": "github-action",
+        "matchUpdateTypes": ["minor", "patch"],
+        "semanticCommitType": "deps",
+        "semanticCommitScope": "github-actions",
         "commitMessageTopic": "{{depName}}",
         "commitMessageExtra": "( {{currentVersion}} → {{newVersion}} )"
       }
     ]
-  }
+}
