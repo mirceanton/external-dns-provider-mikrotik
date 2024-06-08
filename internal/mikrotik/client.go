@@ -3,7 +3,6 @@
 package mikrotik
 
 import (
-	"bytes"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
@@ -78,34 +77,38 @@ func (c *MikrotikApiClient) GetSystemInfo() (*SystemInfo, error) {
 func (c *MikrotikApiClient) Create(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 	log.Infof("Creating DNS record: %+v", endpoint)
 
-	jsonBody, err := json.Marshal(DNSRecord{
-		Name:    endpoint.DNSName,
-		Type:    endpoint.RecordType,
-		Address: endpoint.Targets[0],
-		// TTL:     endpoint.RecordTTL,  //FIXME
-		Comment: "Managed by ExternalDNS",
-	})
-	if err != nil {
-		log.Errorf("Error marshalling DNS record: %v", err)
-		return nil, err
-	}
+	jsonEndpoint, _ := json.Marshal(endpoint)
+	log.Debugf(fmt.Sprintf("Received request for object %s", jsonEndpoint))
+	return nil, nil
 
-	// no logging here since we have logs in doRequest
-	resp, err := c.doRequest(http.MethodPut, "ip/dns/static", bytes.NewReader(jsonBody))
-	if err != nil {
-		return nil, err
-	}
+	// jsonBody, err := json.Marshal(DNSRecord{
+	// 	Name:    endpoint.DNSName,
+	// 	Address: endpoint.Targets[0],
+	// 	Type:    endpoint.RecordType,
+	// 	// TTL:     endpoint.RecordTTL,  //FIXME
+	// 	Comment: "Managed by ExternalDNS",
+	// })
+	// if err != nil {
+	// 	log.Errorf("Error marshalling DNS record: %v", err)
+	// 	return nil, err
+	// }
 
-	defer resp.Body.Close()
+	// // no logging here since we have logs in doRequest
+	// resp, err := c.doRequest(http.MethodPut, "ip/dns/static", bytes.NewReader(jsonBody))
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	var record DNSRecord
-	if err = json.NewDecoder(resp.Body).Decode(&record); err != nil {
-		log.Errorf("Error decoding response body: %v", err)
-		return nil, err
-	}
-	log.Debugf("Created record: %+v", record)
+	// defer resp.Body.Close()
 
-	return &record, nil
+	// var record DNSRecord
+	// if err = json.NewDecoder(resp.Body).Decode(&record); err != nil {
+	// 	log.Errorf("Error decoding response body: %v", err)
+	// 	return nil, err
+	// }
+	// log.Debugf("Created record: %+v", record)
+
+	// return &record, nil
 }
 
 func (c *MikrotikApiClient) GetAll() ([]DNSRecord, error) {
