@@ -17,6 +17,7 @@ RUN go build -ldflags "-s -w -X main.Version=${VERSION} -X main.Gitsha=${REVISIO
 # PRODUCTION STAGE
 # =================================================================================================
 FROM scratch
+USER 8675:8675
 COPY --from=builder --chmod=555 /build/webhook /external-dns-mikrotik-webhook
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 ENTRYPOINT ["/external-dns-mikrotik-webhook"]
