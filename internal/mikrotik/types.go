@@ -10,14 +10,27 @@ type Config struct {
 }
 
 // https://help.mikrotik.com/docs/display/ROS/DNS#DNS-DNSStatic
-// TODO: Add all fields here
 type DNSRecord struct {
-	ID      string `json:".id,omitempty"`
-	Name    string `json:"name"`                       // Domain name.
-	Address string `json:"address"`                    // The address that will be used for "A" or "AAAA" type records.
-	Type    string `default:"A" json:"type,omitempty"` // Type of the DNS record. (A | AAAA | CNAME | FWD | MX | NS | NXDOMAIN | SRV | TXT ; Default: A)
-	// TTL     endpoint.TTL `json:"ttl,omitempty"`              // Maximum time-to-live for cached records. (default 24h)  //FIXME
-	Comment string `json:"comment,omitempty"` // Comment about the domain name record.
+	ID             string `json:".id,omitempty"`
+	Address        string `json:"address,omitempty"`
+	CName          string `json:"cname,omitempty"`
+	ForwardTo      string `json:"forward-to,omitempty"`
+	MXExchange     string `json:"mx-exchange,omitempty"`
+	Name           string `json:"name"`
+	SrvPort        int    `json:"srv-port,omitempty"`
+	SrvTarget      string `json:"srv-target,omitempty"`
+	Text           string `json:"text,omitempty"`
+	Type           string `default:"A" json:"type,omitempty"`
+	AddressList    string `json:"address-list,omitempty"`
+	Comment        string `json:"comment,omitempty"`
+	Disabled       bool   `default:"false" json:"disabled,omitempty"`
+	MatchSubdomain bool   `json:"match-subdomain,omitempty"`
+	MXPreference   int    `json:"mx-preference,omitempty"`
+	NS             string `json:"ns,omitempty"`
+	Regexp         string `json:"regexp,omitempty"`
+	SrvPriority    int    `json:"srv-priority,omitempty"`
+	SrvWeight      int    `json:"srv-wright,omitempty"`
+	TTL            string `json:"ttl,omitempty"`
 }
 
 // https://help.mikrotik.com/docs/display/ROS/Resource
