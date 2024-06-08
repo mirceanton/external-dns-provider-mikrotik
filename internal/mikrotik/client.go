@@ -77,8 +77,7 @@ func (c *MikrotikApiClient) GetSystemInfo() (*SystemInfo, error) {
 func (c *MikrotikApiClient) Create(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 	log.Infof("Creating DNS record: %+v", endpoint)
 
-	jsonEndpoint, _ := json.Marshal(endpoint)
-	log.Debugf(fmt.Sprintf("Received request for object %s", jsonEndpoint))
+	log.Debugf(fmt.Sprintf("Received request for object %s", endpoint))
 	return nil, nil
 
 	// jsonBody, err := json.Marshal(DNSRecord{
