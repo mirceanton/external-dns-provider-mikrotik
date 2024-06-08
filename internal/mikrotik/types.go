@@ -10,6 +10,7 @@ type Config struct {
 }
 
 // https://help.mikrotik.com/docs/display/ROS/DNS#DNS-DNSStatic
+// TODO: Add all fields here
 type DNSRecord struct {
 	ID      string `json:".id,omitempty"`
 	Name    string `json:"name"`                       // Domain name.
