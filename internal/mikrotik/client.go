@@ -52,6 +52,13 @@ func NewMikrotikClient(config *Config) (*MikrotikApiClient, error) {
 
 // NewDNSRecord converts an ExternalDNS Endpoint to a Mikrotik DNSRecord
 func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
+	jsonBody, err := json.Marshal(endpoint)
+	if err != nil {
+		log.Errorf("Error marshalling endpoint: %v", err)
+		return nil, err
+	}
+	log.Debugf("Endpoint to parse: %s", string(jsonBody))
+
 	record := DNSRecord{
 		Name:    endpoint.DNSName,
 		Type:    endpoint.RecordType,
@@ -97,6 +104,13 @@ func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 		record.Address = endpoint.Targets[0]
 	}
 
+	jsonBody, err = json.Marshal(record)
+	if err != nil {
+		log.Errorf("Error marshalling endpoint: %v", err)
+		return nil, err
+	}
+	log.Debugf("Record parsed: %s", string(jsonBody))
+
 	return &record, nil
 }
 
@@ -136,7 +150,6 @@ func (c *MikrotikApiClient) Create(endpoint *endpoint.Endpoint) (*DNSRecord, err
 		return nil, err
 	}
 
-	log.Debugf("JSON body being sent: %s", string(jsonBody))
 	resp, err := c.doRequest(http.MethodPut, "ip/dns/static", bytes.NewReader(jsonBody))
 	if err != nil {
 		return nil, err
