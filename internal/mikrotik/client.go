@@ -53,7 +53,6 @@ func NewMikrotikClient(config *Config) (*MikrotikApiClient, error) {
 // NewDNSRecord converts an ExternalDNS Endpoint to a Mikrotik DNSRecord
 func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 	record := DNSRecord{
-		Address: endpoint.Targets[0],
 		Name:    endpoint.DNSName,
 		Type:    endpoint.RecordType,
 		Comment: "Managed by ExternalDNS",
@@ -90,6 +89,12 @@ func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 		case "ttl":
 			record.TTL = prop.Value
 		}
+	}
+
+	if record.Type == "TXT" {
+		record.Text = endpoint.Targets[0]
+	} else {
+		record.Address = endpoint.Targets[0]
 	}
 
 	return &record, nil
