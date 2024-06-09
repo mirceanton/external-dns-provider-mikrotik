@@ -22,19 +22,19 @@ type DNSRecord struct {
 	ForwardTo      string `json:"forward-to,omitempty"`
 	MXExchange     string `json:"mx-exchange,omitempty"`
 	Name           string `json:"name"`
-	SrvPort        int    `json:"srv-port,omitempty"`
+	SrvPort        string `json:"srv-port,omitempty"`
 	SrvTarget      string `json:"srv-target,omitempty"`
 	Text           string `json:"text,omitempty"`
 	Type           string `default:"A" json:"type,omitempty"`
 	AddressList    string `json:"address-list,omitempty"`
 	Comment        string `json:"comment,omitempty"`
 	Disabled       string `default:"false" json:"disabled,omitempty"`
-	MatchSubdomain bool   `json:"match-subdomain,omitempty"`
-	MXPreference   int    `json:"mx-preference,omitempty"`
+	MatchSubdomain string `json:"match-subdomain,omitempty"`
+	MXPreference   string `json:"mx-preference,omitempty"`
 	NS             string `json:"ns,omitempty"`
 	Regexp         string `json:"regexp,omitempty"`
-	SrvPriority    int    `json:"srv-priority,omitempty"`
-	SrvWeight      int    `json:"srv-wright,omitempty"`
+	SrvPriority    string `json:"srv-priority,omitempty"`
+	SrvWeight      string `json:"srv-wright,omitempty"`
 	TTL            int    `json:"ttl,omitempty"`
 }
 
