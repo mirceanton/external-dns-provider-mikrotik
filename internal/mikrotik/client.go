@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/cookiejar"
+	"strconv"
 
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/publicsuffix"
@@ -51,7 +52,7 @@ func NewMikrotikClient(config *Config) (*MikrotikApiClient, error) {
 }
 
 // NewDNSRecord converts an ExternalDNS Endpoint to a Mikrotik DNSRecord
-func NewDNSRecord(endpoint *endpoint.Endpoint) *DNSRecord {
+func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 	record := DNSRecord{
 		Address: endpoint.Targets[0],
 		Name:    endpoint.DNSName,
@@ -87,10 +88,16 @@ func NewDNSRecord(endpoint *endpoint.Endpoint) *DNSRecord {
 			fmt.Sscanf(prop.Value, "%d", &record.SrvPriority)
 		case "srv-weight":
 			fmt.Sscanf(prop.Value, "%d", &record.SrvWeight)
+		case "disabled":
+			disabled, err := strconv.ParseBool(prop.Value)
+			if err != nil {
+				return nil, err
+			}
+			record.Disabled = disabled
 		}
 	}
 
-	return &record
+	return &record, nil
 }
 
 // GetSystemInfo fetches system information from the MikroTik API
@@ -118,7 +125,12 @@ func (c *MikrotikApiClient) GetSystemInfo() (*SystemInfo, error) {
 func (c *MikrotikApiClient) Create(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 	log.Infof("Creating DNS record: %+v", endpoint)
 
-	jsonBody, err := json.Marshal(NewDNSRecord(endpoint))
+	record, err := NewDNSRecord(endpoint)
+	if err != nil {
+		log.Errorf("Error converting ExternalDNS endpoint to Mikrotik DNS Record: %v", err)
+		return nil, err
+	}
+	jsonBody, err := json.Marshal(record)
 	if err != nil {
 		log.Errorf("Error marshalling DNS record: %v", err)
 		return nil, err
@@ -131,14 +143,13 @@ func (c *MikrotikApiClient) Create(endpoint *endpoint.Endpoint) (*DNSRecord, err
 
 	defer resp.Body.Close()
 
-	var record = DNSRecord{}
 	if err = json.NewDecoder(resp.Body).Decode(&record); err != nil {
 		log.Errorf("Error decoding response body: %v", err)
 		return nil, err
 	}
 	log.Infof("Created record: %+v", record)
 
-	return &record, nil
+	return record, nil
 }
 
 // GetAll fetches all DNS records from the MikroTik API
