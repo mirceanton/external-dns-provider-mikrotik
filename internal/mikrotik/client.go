@@ -11,7 +11,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/cookiejar"
-	"strconv"
 
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/publicsuffix"
@@ -89,11 +88,7 @@ func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 		case "disabled":
 			record.Disabled = prop.Value
 		case "ttl":
-			value, err := strconv.Atoi(prop.Value)
-			if err != nil {
-				return nil, err
-			}
-			record.TTL = value
+			record.TTL = prop.Value
 		}
 	}
 
