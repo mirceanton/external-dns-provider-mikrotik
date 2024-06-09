@@ -131,6 +131,7 @@ func (c *MikrotikApiClient) Create(endpoint *endpoint.Endpoint) (*DNSRecord, err
 		return nil, err
 	}
 
+	log.Debugf("JSON body: %v", jsonBody)
 	resp, err := c.doRequest(http.MethodPut, "ip/dns/static", bytes.NewReader(jsonBody))
 	if err != nil {
 		return nil, err
