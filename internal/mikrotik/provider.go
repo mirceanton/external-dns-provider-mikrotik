@@ -39,12 +39,7 @@ func (p *Provider) Records(ctx context.Context) ([]*endpoint.Endpoint, error) {
 
 	var endpoints []*endpoint.Endpoint
 	for _, record := range records {
-		ep := &endpoint.Endpoint{
-			DNSName:    record.Name,
-			RecordType: record.Type,
-			// RecordTTL:  record.TTL, //FIXME
-			Targets: endpoint.NewTargets(record.Address),
-		}
+		ep, _ := NewEndpointFromRecord(record)
 
 		if !p.domainFilter.Match(ep.DNSName) {
 			continue

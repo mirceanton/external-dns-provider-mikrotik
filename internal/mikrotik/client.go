@@ -50,70 +50,6 @@ func NewMikrotikClient(config *Config) (*MikrotikApiClient, error) {
 	return client, nil
 }
 
-// NewDNSRecord converts an ExternalDNS Endpoint to a Mikrotik DNSRecord
-func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
-	jsonBody, err := json.Marshal(endpoint)
-	if err != nil {
-		log.Errorf("Error marshalling endpoint: %v", err)
-		return nil, err
-	}
-	log.Debugf("Endpoint to parse: %s", string(jsonBody))
-
-	record := DNSRecord{
-		Name:    endpoint.DNSName,
-		Type:    endpoint.RecordType,
-		Comment: "Managed by ExternalDNS",
-	}
-
-	for _, prop := range endpoint.ProviderSpecific {
-		switch prop.Name {
-		case "cname":
-			record.CName = prop.Value
-		case "forward-to":
-			record.ForwardTo = prop.Value
-		case "mx-exchange":
-			record.MXExchange = prop.Value
-		case "srv-target":
-			record.SrvTarget = prop.Value
-		case "text":
-			record.Text = prop.Value
-		case "address-list":
-			record.AddressList = prop.Value
-		case "ns":
-			record.NS = prop.Value
-		case "regexp":
-			record.Regexp = prop.Value
-		case "srv-port":
-			record.SrvPort = prop.Value
-		case "mx-preference":
-			record.MXPreference = prop.Value
-		case "srv-priority":
-			record.SrvPriority = prop.Value
-		case "srv-weight":
-			record.SrvWeight = prop.Value
-		case "disabled":
-			record.Disabled = prop.Value
-		case "ttl":
-			record.TTL = prop.Value
-		}
-	}
-
-	if record.Type == "TXT" {
-		record.Text = endpoint.Targets[0]
-	} else {
-		record.Address = endpoint.Targets[0]
-	}
-
-	jsonBody, err = json.Marshal(record)
-	if err != nil {
-		log.Errorf("Error marshalling endpoint: %v", err)
-		return nil, err
-	}
-	log.Debugf("Record parsed: %s", string(jsonBody))
-
-	return &record, nil
-}
-
 // GetSystemInfo fetches system information from the MikroTik API
 func (c *MikrotikApiClient) GetSystemInfo() (*SystemInfo, error) {
 	log.Infof("Fetching system information.")
@@ -139,7 +75,7 @@ func (c *MikrotikApiClient) GetSystemInfo() (*SystemInfo, error) {
 func (c *MikrotikApiClient) Create(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 	log.Infof("Creating DNS record: %+v", endpoint)
 
-	record, err := NewDNSRecord(endpoint)
+	record, err := NewRecordFromEndpoint(endpoint)
 	if err != nil {
 		log.Errorf("Error converting ExternalDNS endpoint to Mikrotik DNS Record: %v", err)
 		return nil, err
