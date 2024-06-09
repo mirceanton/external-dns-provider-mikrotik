@@ -68,26 +68,46 @@ func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 			record.ForwardTo = prop.Value
 		case "mx-exchange":
 			record.MXExchange = prop.Value
-		case "srv-port":
-			fmt.Sscanf(prop.Value, "%d", &record.SrvPort)
 		case "srv-target":
 			record.SrvTarget = prop.Value
 		case "text":
 			record.Text = prop.Value
 		case "address-list":
 			record.AddressList = prop.Value
-		case "ttl":
-			fmt.Sscanf(prop.Value, "%d", &record.TTL)
-		case "mx-preference":
-			fmt.Sscanf(prop.Value, "%d", &record.MXPreference)
 		case "ns":
 			record.NS = prop.Value
 		case "regexp":
 			record.Regexp = prop.Value
+		case "srv-port":
+			value, err := strconv.Atoi(prop.Value)
+			if err != nil {
+				return nil, err
+			}
+			record.SrvPort = value
+		case "ttl":
+			value, err := strconv.Atoi(prop.Value)
+			if err != nil {
+				return nil, err
+			}
+			record.TTL = value
+		case "mx-preference":
+			value, err := strconv.Atoi(prop.Value)
+			if err != nil {
+				return nil, err
+			}
+			record.MXPreference = value
 		case "srv-priority":
-			fmt.Sscanf(prop.Value, "%d", &record.SrvPriority)
+			value, err := strconv.Atoi(prop.Value)
+			if err != nil {
+				return nil, err
+			}
+			record.SrvPriority = value
 		case "srv-weight":
-			fmt.Sscanf(prop.Value, "%d", &record.SrvWeight)
+			value, err := strconv.Atoi(prop.Value)
+			if err != nil {
+				return nil, err
+			}
+			record.SrvWeight = value
 		case "disabled":
 			disabled, err := strconv.ParseBool(prop.Value)
 			if err != nil {
