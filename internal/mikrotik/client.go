@@ -109,11 +109,7 @@ func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 			}
 			record.SrvWeight = value
 		case "disabled":
-			disabled, err := strconv.ParseBool(prop.Value)
-			if err != nil {
-				return nil, err
-			}
-			record.Disabled = disabled
+			record.Disabled = prop.Value
 		}
 	}
 
@@ -188,8 +184,6 @@ func (c *MikrotikApiClient) GetAll() ([]DNSRecord, error) {
 		log.Errorf("Error decoding response body: %v", err)
 		return nil, err
 	}
-	log.Infof("Retrieved %d records.", len(records))
-	log.Debugf("Records: %+v", records)
 
 	return records, nil
 }

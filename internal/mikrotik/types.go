@@ -28,7 +28,7 @@ type DNSRecord struct {
 	Type           string `default:"A" json:"type,omitempty"`
 	AddressList    string `json:"address-list,omitempty"`
 	Comment        string `json:"comment,omitempty"`
-	Disabled       bool   `default:"false" json:"disabled,omitempty"`
+	Disabled       string `default:"false" json:"disabled,omitempty"`
 	MatchSubdomain bool   `json:"match-subdomain,omitempty"`
 	MXPreference   int    `json:"mx-preference,omitempty"`
 	NS             string `json:"ns,omitempty"`
