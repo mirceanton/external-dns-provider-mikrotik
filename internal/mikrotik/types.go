@@ -35,7 +35,7 @@ type DNSRecord struct {
 	Regexp         string `json:"regexp,omitempty"`
 	SrvPriority    string `json:"srv-priority,omitempty"`
 	SrvWeight      string `json:"srv-wright,omitempty"`
-	TTL            int    `json:"ttl,omitempty"`
+	TTL            string `json:"ttl,omitempty"`
 }
 
 // SystemInfo represents MikroTik system information
