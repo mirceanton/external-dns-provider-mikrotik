@@ -79,37 +79,21 @@ func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 		case "regexp":
 			record.Regexp = prop.Value
 		case "srv-port":
-			value, err := strconv.Atoi(prop.Value)
-			if err != nil {
-				return nil, err
-			}
-			record.SrvPort = value
+			record.SrvPort = prop.Value
+		case "mx-preference":
+			record.MXPreference = prop.Value
+		case "srv-priority":
+			record.SrvPriority = prop.Value
+		case "srv-weight":
+			record.SrvWeight = prop.Value
+		case "disabled":
+			record.Disabled = prop.Value
 		case "ttl":
 			value, err := strconv.Atoi(prop.Value)
 			if err != nil {
 				return nil, err
 			}
 			record.TTL = value
-		case "mx-preference":
-			value, err := strconv.Atoi(prop.Value)
-			if err != nil {
-				return nil, err
-			}
-			record.MXPreference = value
-		case "srv-priority":
-			value, err := strconv.Atoi(prop.Value)
-			if err != nil {
-				return nil, err
-			}
-			record.SrvPriority = value
-		case "srv-weight":
-			value, err := strconv.Atoi(prop.Value)
-			if err != nil {
-				return nil, err
-			}
-			record.SrvWeight = value
-		case "disabled":
-			record.Disabled = prop.Value
 		}
 	}
 
