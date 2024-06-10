@@ -44,7 +44,7 @@ func NewRecordFromEndpoint(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 	return &record, nil
 }
 
-func NewEndpointFromRecord(record DNSRecord) (*endpoint.Endpoint, error) {
+func NewEndpointFromRecord(record *DNSRecord) (*endpoint.Endpoint, error) {
 	jsonBody, err := json.Marshal(record)
 	if err != nil {
 		log.Errorf("Error marshalling record: %v", err)
