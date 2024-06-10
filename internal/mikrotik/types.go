@@ -21,10 +21,10 @@ type DNSRecord struct {
 	SrvPort        string `json:"srv-port,omitempty"`
 	SrvTarget      string `json:"srv-target,omitempty"`
 	Text           string `json:"text,omitempty"`
-	Type           string `default:"A" json:"type"`
+	Type           string `json:"type"`
 	AddressList    string `json:"address-list,omitempty"`
 	Comment        string `json:"comment,omitempty"`
-	Disabled       string `default:"false" json:"disabled,omitempty"`
+	Disabled       string `json:"disabled,omitempty"`
 	MatchSubdomain string `json:"match-subdomain,omitempty"`
 	MXPreference   string `json:"mx-preference,omitempty"`
 	NS             string `json:"ns,omitempty"`
