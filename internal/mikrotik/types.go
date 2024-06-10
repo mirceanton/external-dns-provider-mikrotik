@@ -21,7 +21,7 @@ type DNSRecord struct {
 	SrvPort        string `json:"srv-port,omitempty"`
 	SrvTarget      string `json:"srv-target,omitempty"`
 	Text           string `json:"text,omitempty"`
-	Type           string `default:"A" json:"type,omitempty"`
+	Type           string `default:"A" json:"type"`
 	AddressList    string `json:"address-list,omitempty"`
 	Comment        string `json:"comment,omitempty"`
 	Disabled       string `default:"false" json:"disabled,omitempty"`
