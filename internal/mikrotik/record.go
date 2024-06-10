@@ -53,7 +53,9 @@ func NewEndpointFromRecord(record DNSRecord) (*endpoint.Endpoint, error) {
 	log.Debugf("Record to parse: %s", string(jsonBody))
 
 	var ep endpoint.Endpoint
-	log.Debugf("test123")
+	if record.Type == "" {
+		record.Type = "A"
+	}
 	switch record.Type {
 	case "A", "AAAA":
 		ep = endpoint.Endpoint{
