@@ -17,6 +17,12 @@ import (
 	"sigs.k8s.io/external-dns/endpoint"
 )
 
+// MikrotikApiClient encapsulates the client configuration and HTTP client
+type MikrotikApiClient struct {
+	*Config
+	*http.Client
+}
+
 // NewMikrotikClient creates a new instance of MikrotikApiClient
 func NewMikrotikClient(config *Config) (*MikrotikApiClient, error) {
 	log.Infof("Creating a new Mikrotik API Client")

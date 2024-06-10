@@ -44,7 +44,7 @@ func NewRecordFromEndpoint(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 	return &record, nil
 }
 
-func NewEndpointFromRecord(record *DNSRecord) (*endpoint.Endpoint, error) {
+func NewEndpointFromRecord(record DNSRecord) (*endpoint.Endpoint, error) {
 	jsonBody, err := json.Marshal(record)
 	if err != nil {
 		log.Errorf("Error marshalling record: %v", err)
@@ -53,6 +53,7 @@ func NewEndpointFromRecord(record *DNSRecord) (*endpoint.Endpoint, error) {
 	log.Debugf("Record to parse: %s", string(jsonBody))
 
 	var ep endpoint.Endpoint
+	log.Debugf("test123")
 	switch record.Type {
 	case "A", "AAAA":
 		ep = endpoint.Endpoint{

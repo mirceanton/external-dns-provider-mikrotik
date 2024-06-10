@@ -9,7 +9,7 @@ import (
 	"sigs.k8s.io/external-dns/provider"
 )
 
-type Provider struct {
+type MikrotikProvider struct {
 	provider.BaseProvider
 
 	client       *MikrotikApiClient
@@ -23,7 +23,7 @@ func NewMikrotikProvider(domainFilter endpoint.DomainFilter, config *Config) (pr
 		return nil, fmt.Errorf("failed to create the MikroTik client: %w", err)
 	}
 
-	p := &Provider{
+	p := &MikrotikProvider{
 		client:       c,
 		domainFilter: domainFilter,
 	}
@@ -31,7 +31,7 @@ func NewMikrotikProvider(domainFilter endpoint.DomainFilter, config *Config) (pr
 	return p, nil
 }
 
-func (p *Provider) Records(ctx context.Context) ([]*endpoint.Endpoint, error) {
+func (p *MikrotikProvider) Records(ctx context.Context) ([]*endpoint.Endpoint, error) {
 	records, err := p.client.GetAll()
 	if err != nil {
 		return nil, err
@@ -39,7 +39,7 @@ func (p *Provider) Records(ctx context.Context) ([]*endpoint.Endpoint, error) {
 
 	var endpoints []*endpoint.Endpoint
 	for _, record := range records {
-		ep, _ := NewEndpointFromRecord(&record)
+		ep, _ := NewEndpointFromRecord(record)
 
 		if !p.domainFilter.Match(ep.DNSName) {
 			continue
@@ -51,7 +51,7 @@ func (p *Provider) Records(ctx context.Context) ([]*endpoint.Endpoint, error) {
 	return endpoints, nil
 }
 
-func (p *Provider) ApplyChanges(ctx context.Context, changes *plan.Changes) error {
+func (p *MikrotikProvider) ApplyChanges(ctx context.Context, changes *plan.Changes) error {
 	for _, endpoint := range append(changes.UpdateOld, changes.Delete...) {
 		if err := p.client.Delete(endpoint); err != nil {
 			return err
@@ -67,6 +67,6 @@ func (p *Provider) ApplyChanges(ctx context.Context, changes *plan.Changes) erro
 	return nil
 }
 
-func (p *Provider) GetDomainFilter() endpoint.DomainFilter {
+func (p *MikrotikProvider) GetDomainFilter() endpoint.DomainFilter {
 	return p.domainFilter
 }
