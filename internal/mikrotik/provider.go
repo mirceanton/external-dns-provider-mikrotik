@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/external-dns/provider"
 )
 
+// DNS Provider for working with mikrotik
 type MikrotikProvider struct {
 	provider.BaseProvider
 
@@ -16,6 +17,7 @@ type MikrotikProvider struct {
 	domainFilter endpoint.DomainFilter
 }
 
+// NewMikrotikProvider initializes a new DNSProvider.
 func NewMikrotikProvider(domainFilter endpoint.DomainFilter, config *Config) (provider.Provider, error) {
 	c, err := NewMikrotikClient(config)
 
@@ -31,6 +33,7 @@ func NewMikrotikProvider(domainFilter endpoint.DomainFilter, config *Config) (pr
 	return p, nil
 }
 
+// Records returns the list of HostOverride records in Opnsense Unbound.
 func (p *MikrotikProvider) Records(ctx context.Context) ([]*endpoint.Endpoint, error) {
 	records, err := p.client.GetAllDNSRecords()
 	if err != nil {
@@ -51,6 +54,7 @@ func (p *MikrotikProvider) Records(ctx context.Context) ([]*endpoint.Endpoint, e
 	return endpoints, nil
 }
 
+// ApplyChanges applies a given set of changes in the DNS provider.
 func (p *MikrotikProvider) ApplyChanges(ctx context.Context, changes *plan.Changes) error {
 	for _, endpoint := range append(changes.UpdateOld, changes.Delete...) {
 		if err := p.client.DeleteDNSRecord(endpoint); err != nil {
@@ -67,6 +71,7 @@ func (p *MikrotikProvider) ApplyChanges(ctx context.Context, changes *plan.Chang
 	return nil
 }
 
+// GetDomainFilter returns the domain filter for the provider.
 func (p *MikrotikProvider) GetDomainFilter() endpoint.DomainFilter {
 	return p.domainFilter
 }
