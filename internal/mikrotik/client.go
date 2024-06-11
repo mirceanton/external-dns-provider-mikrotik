@@ -19,11 +19,11 @@ import (
 
 // NewMikrotikClient creates a new instance of MikrotikApiClient
 func NewMikrotikClient(config *Config) (*MikrotikApiClient, error) {
-	log.Infof("Creating a new Mikrotik API Client")
+	log.Debugf("creating a new Mikrotik API Client")
 
 	jar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
 	if err != nil {
-		log.Errorf("Failed to create cookie jar: %v", err)
+		log.Errorf("failed to create cookie jar: %v", err)
 		return nil, err
 	}
 
@@ -39,7 +39,6 @@ func NewMikrotikClient(config *Config) (*MikrotikApiClient, error) {
 		},
 	}
 
-	log.Infof("Connecting to the MikroTik RouterOS API Endpoint...")
 	info, err := client.GetSystemInfo()
 	if err != nil {
 		log.Errorf("Failed to connect to the MikroTik RouterOS API Endpoint: %v", err)
@@ -174,11 +173,11 @@ func (c *MikrotikApiClient) LookupDNSRecord(key, recordType string) (*DNSRecord,
 // _doRequest sends an HTTP request to the MikroTik API with credentials
 func (c *MikrotikApiClient) _doRequest(method, path string, body io.Reader) (*http.Response, error) {
 	endpoint_url := fmt.Sprintf("https://%s:%s/rest/%s", c.Config.Host, c.Config.Port, path)
-	log.Debugf("Sending %s request to: %s", method, endpoint_url)
+	log.WithField("function", "_doRequest").Debugf("Sending %s request to: %s", method, endpoint_url)
 
 	req, err := http.NewRequest(method, endpoint_url, body)
 	if err != nil {
-		log.Errorf("Failed to create HTTP request: %v", err)
+		log.WithField("function", "_doRequest").Errorf("Failed to create HTTP request: %v", err)
 		return nil, err
 	}
 
@@ -186,16 +185,16 @@ func (c *MikrotikApiClient) _doRequest(method, path string, body io.Reader) (*ht
 
 	resp, err := c.Client.Do(req)
 	if err != nil {
-		log.Errorf("HTTP request failed: %v", err)
+		log.WithField("function", "_doRequest").Errorf("HTTP request failed: %v", err)
 		return nil, err
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		respBody, _ := io.ReadAll(resp.Body)
-		log.Errorf("Request failed with status %s, response: %s", resp.Status, string(respBody))
+		log.WithField("function", "_doRequest").Errorf("Request failed with status %s, response: %s", resp.Status, string(respBody))
 		return nil, fmt.Errorf("request failed: %s", resp.Status)
 	}
-	log.Debugf("Request succeeded with status %s", resp.Status)
+	log.WithField("function", "_doRequest").Debugf("Request succeeded with status %s", resp.Status)
 
 	return resp, nil
 }
