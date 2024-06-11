@@ -17,12 +17,6 @@ import (
 	"sigs.k8s.io/external-dns/endpoint"
 )
 
-// MikrotikApiClient encapsulates the client configuration and HTTP client
-type MikrotikApiClient struct {
-	*Config
-	*http.Client
-}
-
 // NewMikrotikClient creates a new instance of MikrotikApiClient
 func NewMikrotikClient(config *Config) (*MikrotikApiClient, error) {
 	log.Infof("Creating a new Mikrotik API Client")
@@ -60,7 +54,7 @@ func NewMikrotikClient(config *Config) (*MikrotikApiClient, error) {
 func (c *MikrotikApiClient) GetSystemInfo() (*SystemInfo, error) {
 	log.Infof("Fetching system information.")
 
-	resp, err := c.doRequest(http.MethodGet, "system/resource", nil)
+	resp, err := c._doRequest(http.MethodGet, "system/resource", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -77,8 +71,8 @@ func (c *MikrotikApiClient) GetSystemInfo() (*SystemInfo, error) {
 	return &info, nil
 }
 
-// Create sends a request to create a new DNS record
-func (c *MikrotikApiClient) Create(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
+// CreateDNSRecord sends a request to create a new DNS record
+func (c *MikrotikApiClient) CreateDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 	log.Infof("Creating DNS record: %+v", endpoint)
 
 	record, err := NewRecordFromEndpoint(endpoint)
@@ -92,7 +86,7 @@ func (c *MikrotikApiClient) Create(endpoint *endpoint.Endpoint) (*DNSRecord, err
 		return nil, err
 	}
 
-	resp, err := c.doRequest(http.MethodPut, "ip/dns/static", bytes.NewReader(jsonBody))
+	resp, err := c._doRequest(http.MethodPut, "ip/dns/static", bytes.NewReader(jsonBody))
 	if err != nil {
 		return nil, err
 	}
@@ -108,11 +102,11 @@ func (c *MikrotikApiClient) Create(endpoint *endpoint.Endpoint) (*DNSRecord, err
 	return record, nil
 }
 
-// GetAll fetches all DNS records from the MikroTik API
-func (c *MikrotikApiClient) GetAll() ([]DNSRecord, error) {
+// GetAllDNSRecords fetches all DNS records from the MikroTik API
+func (c *MikrotikApiClient) GetAllDNSRecords() ([]DNSRecord, error) {
 	log.Infof("Fetching all DNS records")
 
-	resp, err := c.doRequest(http.MethodGet, "ip/dns/static", nil)
+	resp, err := c._doRequest(http.MethodGet, "ip/dns/static", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -128,16 +122,16 @@ func (c *MikrotikApiClient) GetAll() ([]DNSRecord, error) {
 	return records, nil
 }
 
-// Delete sends a request to delete a DNS record
-func (c *MikrotikApiClient) Delete(endpoint *endpoint.Endpoint) error {
+// DeleteDNSRecord sends a request to delete a DNS record
+func (c *MikrotikApiClient) DeleteDNSRecord(endpoint *endpoint.Endpoint) error {
 	log.Infof("Deleting DNS record: %+v", endpoint)
 
-	record, err := c.Search(endpoint.DNSName, endpoint.RecordType)
+	record, err := c.LookupDNSRecord(endpoint.DNSName, endpoint.RecordType)
 	if err != nil {
 		return err
 	}
 
-	_, err = c.doRequest(http.MethodDelete, fmt.Sprintf("ip/dns/static/%s", record.ID), nil)
+	_, err = c._doRequest(http.MethodDelete, fmt.Sprintf("ip/dns/static/%s", record.ID), nil)
 	if err != nil {
 		return err
 	}
@@ -146,8 +140,8 @@ func (c *MikrotikApiClient) Delete(endpoint *endpoint.Endpoint) error {
 	return nil
 }
 
-// Search searches for a DNS record by key and type
-func (c *MikrotikApiClient) Search(key, recordType string) (*DNSRecord, error) {
+// LookupDNSRecord searches for a DNS record by key and type
+func (c *MikrotikApiClient) LookupDNSRecord(key, recordType string) (*DNSRecord, error) {
 	log.Infof("Searching for DNS record: Key: %s, RecordType: %s", key, recordType)
 
 	searchParams := fmt.Sprintf("name=%s", key)
@@ -156,7 +150,7 @@ func (c *MikrotikApiClient) Search(key, recordType string) (*DNSRecord, error) {
 	}
 	log.Debugf("Search params: %s", searchParams)
 
-	resp, err := c.doRequest(http.MethodGet, fmt.Sprintf("ip/dns/static?%s", searchParams), nil)
+	resp, err := c._doRequest(http.MethodGet, fmt.Sprintf("ip/dns/static?%s", searchParams), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -177,8 +171,8 @@ func (c *MikrotikApiClient) Search(key, recordType string) (*DNSRecord, error) {
 	return &record[0], nil
 }
 
-// doRequest sends an HTTP request to the MikroTik API with credentials
-func (c *MikrotikApiClient) doRequest(method, path string, body io.Reader) (*http.Response, error) {
+// _doRequest sends an HTTP request to the MikroTik API with credentials
+func (c *MikrotikApiClient) _doRequest(method, path string, body io.Reader) (*http.Response, error) {
 	endpoint_url := fmt.Sprintf("https://%s:%s/rest/%s", c.Config.Host, c.Config.Port, path)
 	log.Debugf("Sending %s request to: %s", method, endpoint_url)
 

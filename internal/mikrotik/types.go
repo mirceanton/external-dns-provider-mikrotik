@@ -1,5 +1,13 @@
 package mikrotik
 
+import "net/http"
+
+// MikrotikApiClient encapsulates the client configuration and HTTP client
+type MikrotikApiClient struct {
+	*Config
+	*http.Client
+}
+
 // Config holds the configuration details for authentication with the MikroTik RouterOS API
 type Config struct {
 	Host          string `env:"MIKROTIK_HOST,notEmpty"`
