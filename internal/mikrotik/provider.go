@@ -32,7 +32,7 @@ func NewMikrotikProvider(domainFilter endpoint.DomainFilter, config *Config) (pr
 }
 
 func (p *MikrotikProvider) Records(ctx context.Context) ([]*endpoint.Endpoint, error) {
-	records, err := p.client.GetAll()
+	records, err := p.client.GetAllDNSRecords()
 	if err != nil {
 		return nil, err
 	}
@@ -53,13 +53,13 @@ func (p *MikrotikProvider) Records(ctx context.Context) ([]*endpoint.Endpoint, e
 
 func (p *MikrotikProvider) ApplyChanges(ctx context.Context, changes *plan.Changes) error {
 	for _, endpoint := range append(changes.UpdateOld, changes.Delete...) {
-		if err := p.client.Delete(endpoint); err != nil {
+		if err := p.client.DeleteDNSRecord(endpoint); err != nil {
 			return err
 		}
 	}
 
 	for _, endpoint := range append(changes.Create, changes.UpdateNew...) {
-		if _, err := p.client.Create(endpoint); err != nil {
+		if _, err := p.client.CreateDNSRecord(endpoint); err != nil {
 			return err
 		}
 	}
