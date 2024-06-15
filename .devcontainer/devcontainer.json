@@ -3,10 +3,10 @@
 
 	"image": "mcr.microsoft.com/devcontainers/go:1-1.22-bookworm@sha256:b07b62da12d021ca945b9b8d126f97f73311f120eadd190c4aa168fae071de55",
 	"features": {
-		"ghcr.io/devcontainers/features/docker-in-docker:2": {},
-		"ghcr.io/audacioustux/devcontainers/taskfile:1": {},
+		"ghcr.io/devcontainers/features/docker-in-docker:2@sha256:503f23cd692325b3cbb8c20a0ecfabb3444b0c786b363e0c82572bd7d71dc099": {},
+		"ghcr.io/audacioustux/devcontainers/taskfile:1@sha256:42b8d840cbf7aa339ad6ef25b6d79cfafc2989edeb3c2bc02e573a33fef339c6": {},
 		"ghcr.io/devcontainers/features/kubectl-helm-minikube": {},
-		"ghcr.io/dhoeric/features/k9s:1": {}
+		"ghcr.io/dhoeric/features/k9s:1@sha256:0a575cfb87abd4a03d68696db350c46d54f6f91931021603b3420f2bbbb98683": {}
 	},
 
 	"remoteUser": "vscode",
