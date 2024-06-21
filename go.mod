@@ -4,7 +4,7 @@ go 1.22.3
 
 require (
 	github.com/caarlos0/env/v11 v11.1.0
-	github.com/go-chi/chi/v5 v5.0.13
+	github.com/go-chi/chi/v5 v5.0.14
 	github.com/prometheus/client_golang v1.19.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.9.0
