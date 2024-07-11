@@ -1,7 +1,7 @@
 {
 	"name": "external-dns-mikrotik-webhook",
 
-	"image": "mcr.microsoft.com/devcontainers/go:1-1.22-bookworm@sha256:1a30ec37cbac64206357c4ff36238e1b8c01294905e9ee25979e617208c31a2f",
+	"image": "mcr.microsoft.com/devcontainers/go:1-1.22-bookworm@sha256:faa5dcd680b2c6317f1357221553b74c79ab0d5dc0b34138cde7e763b9c0017f",
 	"features": {
 		"ghcr.io/devcontainers/features/docker-in-docker:2@sha256:503f23cd692325b3cbb8c20a0ecfabb3444b0c786b363e0c82572bd7d71dc099": {},
 		"ghcr.io/audacioustux/devcontainers/taskfile:1@sha256:42b8d840cbf7aa339ad6ef25b6d79cfafc2989edeb3c2bc02e573a33fef339c6": {},
