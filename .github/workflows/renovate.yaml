@@ -31,7 +31,6 @@ env:
   RENOVATE_VERSION: 37.367.0
   RENOVATE_GIT_AUTHOR: 'mr-borboto[bot] <170036086+mr-borboto[bot]@users.noreply.github.com>'
 
-
 jobs:
   renovate:
     runs-on: "ubuntu-latest"
