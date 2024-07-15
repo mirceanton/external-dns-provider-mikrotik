@@ -13,8 +13,9 @@
     ":disableRateLimiting",
     ":semanticCommits",
 
-    "github>mirceanton/external-dns-provider-mikrotik//.github/renovate/autoMerge.json5",
-    "github>mirceanton/external-dns-provider-mikrotik//.github/renovate/semanticCommits.json5",
-    "github>mirceanton/external-dns-provider-mikrotik//.github/renovate/labels.json5"
+    "github>mirceanton/external-dns-provider-mikrotik//.github/configs/renovate/autoMerge.json5",
+    "github>mirceanton/external-dns-provider-mikrotik//.github/configs/renovate/devcontainerNoDigets.json5",
+    "github>mirceanton/external-dns-provider-mikrotik//.github/configs/renovate/semanticCommits.json5",
+    "github>mirceanton/external-dns-provider-mikrotik//.github/configs/renovate/labels.json5"
   ]
 }

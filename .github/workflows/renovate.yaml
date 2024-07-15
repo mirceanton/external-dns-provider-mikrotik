@@ -21,31 +21,36 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  LOG_LEVEL: "${{ inputs.logLevel || 'debug' }}"
+  RENOVATE_AUTODISCOVER: true
+  RENOVATE_AUTODISCOVER_FILTER: "${{ github.repository }}"
+  RENOVATE_DRY_RUN: "${{ inputs.dryRun == true }}"
+  RENOVATE_PLATFORM: github
+  RENOVATE_PLATFORM_COMMIT: true
+  RENOVATE_VERSION: 37.367.0
+  RENOVATE_GIT_AUTHOR: 'mr-borboto[bot] <170036086+mr-borboto[bot]@users.noreply.github.com>'
+
+
 jobs:
   renovate:
     runs-on: "ubuntu-latest"
     steps:
-      - name: Checkout
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
-
-      - name: Setup Renovate
-        run: npm install renovate@37.367.0
-
       - name: Generate Token
-        uses: actions/create-github-app-token@31c86eb3b33c9b601a1f60f98dcbfd1d70f379b4 # v1
+        uses: actions/create-github-app-token@31c86eb3b33c9b601a1f60f98dcbfd1d70f379b4 # v1.10.3
         id: app-token
         with:
           app-id: "${{ secrets.BOT_APP_ID }}"
           private-key: "${{ secrets.BOT_APP_PRIVATE_KEY }}"
 
-      - name: Run Renovate
-        run: npx renovate
-        env:
-          LOG_LEVEL: "${{ inputs.logLevel || 'debug' }}"
-          RENOVATE_PLATFORM: github
-          RENOVATE_PLATFORM_COMMIT: true
-          RENOVATE_DRY_RUN: "${{ inputs.dryRun == true }}"
-          RENOVATE_AUTODISCOVER: true
-          RENOVATE_AUTODISCOVER_FILTER: "${{ github.repository }}"
-          RENOVATE_GIT_AUTHOR: 'mr-borboto[bot] <170036086+mr-borboto[bot]@users.noreply.github.com>'
-          RENOVATE_TOKEN: "${{ steps.app-token.outputs.token }}"
+      - name: Checkout
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          token: "${{ steps.app-token.outputs.token }}"
+
+      - name: Renovate
+        uses: renovatebot/github-action@042670e39b8d7335e992c3fa526ecbfbd52ef57b # v40.2.2
+        with:
+          token: "${{ steps.app-token.outputs.token }}"
+          configurationFile: .github/renovate.json5
+          renovate-version: "${{ env.WORKFLOW_RENOVATE_VERSION }}"
