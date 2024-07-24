@@ -1,7 +1,7 @@
 # =================================================================================================
 # BUILDER STAGE
 # =================================================================================================
-FROM golang:1.22-alpine@sha256:63be73fdea9899269e98a4ad8fdebbdba6819bd7d30eae97726739a548448541 as builder
+FROM golang:1.22-alpine@sha256:0d3653dd6f35159ec6e3d10263a42372f6f194c3dea0b35235d72aabde86486e as builder
 
 ARG PKG=github.com/mirceanton/external-dns-provider-mikrotik
 ARG VERSION=dev
