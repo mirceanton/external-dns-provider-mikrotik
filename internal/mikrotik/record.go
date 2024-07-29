@@ -2,6 +2,8 @@ package mikrotik
 
 import (
 	"fmt"
+	"math"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/external-dns/endpoint"
@@ -33,12 +35,24 @@ type DNSRecord struct {
 }
 
 // NewDNSRecord converts an ExternalDNS Endpoint to a Mikrotik DNSRecord
-func NewRecordFromEndpoint(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
+func NewRecordFromEndpoint(endpoint *endpoint.Endpoint, defaultTtl endpoint.TTL) (*DNSRecord, error) {
 	log.Debugf("converting ExternalDNS endpoint: %v", endpoint)
+	tmpTtl := defaultTtl
+	if endpoint.RecordTTL.IsConfigured() {
+		tmpTtl = endpoint.RecordTTL
+	}
+
+	ttl, err := time.ParseDuration(fmt.Sprintf("%ds", tmpTtl))
+	if err != nil {
+		log.Errorf("Cannot parse TTL: %v", err)
+		return nil, err
+	}
+
 	record := DNSRecord{
 		Name:    endpoint.DNSName,
 		Type:    endpoint.RecordType,
 		Comment: "Managed by ExternalDNS",
+		TTL:     ttl.String(),
 	}
 
 	switch endpoint.RecordType {
@@ -60,10 +74,15 @@ func NewRecordFromEndpoint(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 func NewEndpointFromRecord(record DNSRecord) (*endpoint.Endpoint, error) {
 	log.Debugf("converting Mikrotik DNS record: %v", record)
 
+	dur, err := time.ParseDuration(record.TTL)
+	if err != nil {
+		return nil, err
+	}
+
 	ep := endpoint.Endpoint{
 		DNSName:    record.Name,
 		RecordType: record.Type,
-		// TODO: ttl
+		RecordTTL:  endpoint.TTL(math.Round(dur.Seconds())),
 		// TODO: ProviderSpecific
 	}
 	switch record.Type {

@@ -19,11 +19,12 @@ import (
 
 // Config holds the connection details for the API client
 type Config struct {
-	Host          string `env:"MIKROTIK_HOST,notEmpty"`
-	Port          string `env:"MIKROTIK_PORT,notEmpty" envDefault:"443"`
-	Username      string `env:"MIKROTIK_USERNAME,notEmpty"`
-	Password      string `env:"MIKROTIK_PASSWORD,notEmpty"`
-	SkipTLSVerify bool   `env:"MIKROTIK_SKIP_TLS_VERIFY" envDefault:"false"`
+	Host          string       `env:"MIKROTIK_HOST,notEmpty"`
+	Port          string       `env:"MIKROTIK_PORT,notEmpty" envDefault:"443"`
+	Username      string       `env:"MIKROTIK_USERNAME,notEmpty"`
+	Password      string       `env:"MIKROTIK_PASSWORD,notEmpty"`
+	SkipTLSVerify bool         `env:"MIKROTIK_SKIP_TLS_VERIFY" envDefault:"false"`
+	DefaultTTL    endpoint.TTL `env:"MIKROTIK_DEFAULT_TTL" envDefault:"3600"`
 }
 
 // MikrotikApiClient encapsulates the client configuration and HTTP client
@@ -113,7 +114,7 @@ func (c *MikrotikApiClient) GetSystemInfo() (*SystemInfo, error) {
 func (c *MikrotikApiClient) CreateDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 	log.Infof("creating DNS record: %+v", endpoint)
 
-	record, err := NewRecordFromEndpoint(endpoint)
+	record, err := NewRecordFromEndpoint(endpoint, c.Config.DefaultTTL)
 	if err != nil {
 		log.Errorf("error converting ExternalDNS endpoint to Mikrotik DNS Record: %v", err)
 		return nil, err
