@@ -33,12 +33,12 @@ type DNSRecord struct {
 }
 
 // NewDNSRecord converts an ExternalDNS Endpoint to a Mikrotik DNSRecord
-func NewRecordFromEndpoint(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
+func NewRecordFromEndpoint(endpoint *endpoint.Endpoint, defaultComment string) (*DNSRecord, error) {
 	log.Debugf("converting ExternalDNS endpoint: %v", endpoint)
 	record := DNSRecord{
 		Name:    endpoint.DNSName,
 		Type:    endpoint.RecordType,
-		Comment: "Managed by ExternalDNS",
+		Comment: defaultComment,
 	}
 
 	switch endpoint.RecordType {
