@@ -2,27 +2,35 @@ package logging
 
 import (
 	"os"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
 
 func Init() {
-	setLogLevel()
 	setLogFormat()
+	setLogLevel()
 }
 
 func setLogFormat() {
 	format := os.Getenv("LOG_FORMAT")
-	if format == "test" {
+
+	switch strings.ToLower(format) {
+	case "text":
 		log.SetFormatter(&log.TextFormatter{})
-	} else {
+	case "json":
 		log.SetFormatter(&log.JSONFormatter{})
+
+	default:
+		log.SetFormatter(&log.TextFormatter{})
+		log.Warn("unknown log format, using TEXT")
 	}
 }
 
 func setLogLevel() {
 	level := os.Getenv("LOG_LEVEL")
-	switch level {
+
+	switch strings.ToLower(level) {
 	case "debug":
 		log.SetLevel(log.DebugLevel)
 	case "info":
@@ -31,7 +39,9 @@ func setLogLevel() {
 		log.SetLevel(log.WarnLevel)
 	case "error":
 		log.SetLevel(log.ErrorLevel)
+
 	default:
+		log.Warn("unknown log level, using INFO")
 		log.SetLevel(log.InfoLevel)
 	}
 }

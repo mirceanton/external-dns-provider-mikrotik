@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/mirceanton/external-dns-provider-mikrotik/cmd/webhook/init/configuration"
+	"github.com/mirceanton/external-dns-provider-mikrotik/internal/configuration"
 	"github.com/mirceanton/external-dns-provider-mikrotik/pkg/webhook"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -20,12 +20,18 @@ import (
 
 func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
+	_, err := w.Write([]byte("OK"))
+	if err != nil {
+		log.Errorf("error writing response: %v", err)
+	}
 }
 
 func ReadinessHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
+	_, err := w.Write([]byte("OK"))
+	if err != nil {
+		log.Errorf("error writing response: %v", err)
+	}
 }
 
 func Init(config configuration.Config, p *webhook.Webhook) (*http.Server, *http.Server) {

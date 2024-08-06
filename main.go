@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 
-	"github.com/mirceanton/external-dns-provider-mikrotik/cmd/webhook/init/configuration"
-	"github.com/mirceanton/external-dns-provider-mikrotik/cmd/webhook/init/dnsprovider"
-	"github.com/mirceanton/external-dns-provider-mikrotik/cmd/webhook/init/logging"
-	"github.com/mirceanton/external-dns-provider-mikrotik/cmd/webhook/init/server"
+	"github.com/mirceanton/external-dns-provider-mikrotik/internal/configuration"
+	"github.com/mirceanton/external-dns-provider-mikrotik/internal/dnsprovider"
+	"github.com/mirceanton/external-dns-provider-mikrotik/internal/logging"
+	"github.com/mirceanton/external-dns-provider-mikrotik/internal/server"
 	"github.com/mirceanton/external-dns-provider-mikrotik/pkg/webhook"
 	log "github.com/sirupsen/logrus"
 )
@@ -14,6 +14,7 @@ import (
 const banner = `
 external-dns-provider-mikrotik
 version: %s (%s)
+
 `
 
 var (

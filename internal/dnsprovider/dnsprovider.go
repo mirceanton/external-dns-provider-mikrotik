@@ -6,15 +6,13 @@ import (
 	"strings"
 
 	"github.com/caarlos0/env/v11"
-	"github.com/mirceanton/external-dns-provider-mikrotik/cmd/webhook/init/configuration"
+	"github.com/mirceanton/external-dns-provider-mikrotik/internal/configuration"
 	"github.com/mirceanton/external-dns-provider-mikrotik/internal/mikrotik"
 	"sigs.k8s.io/external-dns/endpoint"
 	"sigs.k8s.io/external-dns/provider"
 
 	log "github.com/sirupsen/logrus"
 )
-
-type MikrotikProviderFactory func(baseProvider *provider.BaseProvider, mikrotikConfig *mikrotik.Config) provider.Provider
 
 func Init(config configuration.Config) (provider.Provider, error) {
 	var domainFilter endpoint.DomainFilter
