@@ -28,7 +28,7 @@ type DNSRecord struct {
 	NS             string `json:"ns,omitempty"`
 	Regexp         string `json:"regexp,omitempty"`
 	SrvPriority    string `json:"srv-priority,omitempty"`
-	SrvWeight      string `json:"srv-wright,omitempty"`
+	SrvWeight      string `json:"srv-weight,omitempty"`
 	TTL            string `json:"ttl,omitempty"`
 }
 
