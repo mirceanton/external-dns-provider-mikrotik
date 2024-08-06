@@ -24,7 +24,8 @@
 				"mhutchie.git-graph",
 				"bierner.emojisense",
 				"redhat.vscode-yaml",
-				"pkief.material-icon-theme"
+				"pkief.material-icon-theme",
+				"task.vscode-task"
 			],
 			"settings": {
 				"editor.fontFamily": "Cascadia Code",

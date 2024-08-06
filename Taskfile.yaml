@@ -1,0 +1,40 @@
+---
+version: "3"
+
+dotenv:
+  - .env
+
+tasks:
+  build:
+    desc: Build the webhook binary.
+    env:
+      VERSION:
+        sh: git describe --tags --always --dirty
+      REVISION:
+        sh: git rev-parse --short HEAD
+    sources:
+      - main.go
+      - internal/*
+      - go.mod
+      - go.sum
+    generates:
+      - webhook
+    cmd: go build  -ldflags "-s -w -X main.Version=${VERSION} -X main.Gitsha=${REVISION}" -o webhook
+
+  run:
+    desc: Run the webhook server.
+    deps:
+      - build
+    cmd: go run main.go
+
+  test:
+    desc: Run tests.
+    cmd: go test -v ./... -race -covermode=atomic
+
+  lint:
+    desc: Run linter.
+    cmd: golangci-lint run
+
+  docker-build:
+    desc: Build the docker image.
+    cmd: docker build . -t external-dns-provider-mikrotik
