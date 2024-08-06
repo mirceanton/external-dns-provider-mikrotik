@@ -212,3 +212,92 @@ func TestNewRecordFromEndpoint(t *testing.T) {
 		})
 	}
 }
+
+func TestNewEndpointFromRecord(t *testing.T) {
+	// Define test cases
+	tests := []struct {
+		name             string
+		shouldError      bool
+		record           DNSRecord
+		expectedEndpoint *endpoint.Endpoint
+	}{
+		{
+			name:        "Basic A record",
+			shouldError: false,
+			record: DNSRecord{
+				Name:    "example.com",
+				Type:    "A",
+				Address: "192.168.1.1",
+			},
+			expectedEndpoint: &endpoint.Endpoint{
+				DNSName:    "example.com",
+				Targets:    endpoint.NewTargets("192.168.1.1"),
+				RecordType: "A",
+			},
+		},
+		{
+			name:        "Basic CNAME record",
+			shouldError: false,
+			record: DNSRecord{
+				Name:  "example.com",
+				Type:  "CNAME",
+				CName: "cname.example.com",
+			},
+			expectedEndpoint: &endpoint.Endpoint{
+				DNSName:    "example.com",
+				Targets:    endpoint.NewTargets("cname.example.com"),
+				RecordType: "CNAME",
+			},
+		},
+		{
+			name:        "Basic TXT record",
+			shouldError: false,
+			record: DNSRecord{
+				Name: "example.com",
+				Type: "TXT",
+				Text: "some text",
+			},
+			expectedEndpoint: &endpoint.Endpoint{
+				DNSName:    "example.com",
+				Targets:    endpoint.NewTargets("some text"),
+				RecordType: "TXT",
+			},
+		},
+		{
+			name:        "Basic AAAA record",
+			shouldError: false,
+			record: DNSRecord{
+				Name:    "example.com",
+				Type:    "AAAA",
+				Address: "2001:db8::1",
+			},
+			expectedEndpoint: &endpoint.Endpoint{
+				DNSName:    "example.com",
+				Targets:    endpoint.NewTargets("2001:db8::1"),
+				RecordType: "AAAA",
+			},
+		},
+		{
+			name:        "Unsupported record type",
+			shouldError: true,
+			record: DNSRecord{
+				Name: "example.com",
+				Type: "SRV",
+			},
+			expectedEndpoint: nil,
+		},
+	}
+
+	// Run test cases
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			endpoint, err := NewEndpointFromRecord(tt.record)
+			if tt.shouldError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, tt.expectedEndpoint, endpoint)
+		})
+	}
+}
