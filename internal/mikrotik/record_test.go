@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"sigs.k8s.io/external-dns/endpoint"
 )
 
 func TestRecordJSONMarshaling(t *testing.T) {
@@ -41,53 +42,173 @@ func TestRecordJSONMarshaling(t *testing.T) {
 }
 
 func TestRecordJSONUnmarshaling(t *testing.T) {
-	data := []byte(`{
-        ".id": "1",
-        "address": "192.168.1.1",
-        "cname": "example.com",
-        "forward-to": "forward.example.com",
-        "mx-exchange": "mail.example.com",
-        "name": "example",
-        "srv-port": "8080",
-        "srv-target": "target.example.com",
-        "text": "some text",
-        "type": "A",
-        "address-list": "list",
-        "comment": "a comment",
-        "disabled": "false",
-        "match-subdomain": "sub.example.com",
-        "mx-preference": "10",
-        "ns": "ns.example.com",
-        "regexp": ".*",
-        "srv-priority": "1",
-        "srv-weight": "5"
-    }`)
-
-	var record DNSRecord
-	err := json.Unmarshal(data, &record)
-	assert.NoError(t, err)
-
-	expectedRecord := DNSRecord{
-		ID:             "1",
-		Address:        "192.168.1.1",
-		CName:          "example.com",
-		ForwardTo:      "forward.example.com",
-		MXExchange:     "mail.example.com",
-		Name:           "example",
-		SrvPort:        "8080",
-		SrvTarget:      "target.example.com",
-		Text:           "some text",
-		Type:           "A",
-		AddressList:    "list",
-		Comment:        "a comment",
-		Disabled:       "false",
-		MatchSubdomain: "sub.example.com",
-		MXPreference:   "10",
-		NS:             "ns.example.com",
-		Regexp:         ".*",
-		SrvPriority:    "1",
-		SrvWeight:      "5",
+	// Define test cases
+	tests := []struct {
+		name           string
+		data           []byte
+		expectedRecord DNSRecord
+	}{
+		{
+			name: "Complete record",
+			data: []byte(`{
+				".id": "1",
+				"address": "192.168.1.1",
+				"cname": "example.com",
+				"forward-to": "forward.example.com",
+				"mx-exchange": "mail.example.com",
+				"name": "example",
+				"srv-port": "8080",
+				"srv-target": "target.example.com",
+				"text": "some text",
+				"type": "A",
+				"address-list": "list",
+				"comment": "a comment",
+				"disabled": "false",
+				"match-subdomain": "sub.example.com",
+				"mx-preference": "10",
+				"ns": "ns.example.com",
+				"regexp": ".*",
+				"srv-priority": "1",
+				"srv-weight": "5"
+			}`),
+			expectedRecord: DNSRecord{
+				ID:             "1",
+				Address:        "192.168.1.1",
+				CName:          "example.com",
+				ForwardTo:      "forward.example.com",
+				MXExchange:     "mail.example.com",
+				Name:           "example",
+				SrvPort:        "8080",
+				SrvTarget:      "target.example.com",
+				Text:           "some text",
+				Type:           "A",
+				AddressList:    "list",
+				Comment:        "a comment",
+				Disabled:       "false",
+				MatchSubdomain: "sub.example.com",
+				MXPreference:   "10",
+				NS:             "ns.example.com",
+				Regexp:         ".*",
+				SrvPriority:    "1",
+				SrvWeight:      "5",
+			},
+		},
+		{
+			name: "Simple record",
+			data: []byte(`{
+				"name": "example.com",
+				"address": "192.168.1.1",
+				"type": "A"
+			}`),
+			expectedRecord: DNSRecord{
+				Name:    "example.com",
+				Address: "192.168.1.1",
+				Type:    "A",
+			},
+		},
 	}
 
-	assert.Equal(t, expectedRecord, record)
+	// Run test cases
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var record DNSRecord
+			err := json.Unmarshal(tt.data, &record)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedRecord, record)
+		})
+	}
+}
+
+func TestNewRecordFromEndpoint(t *testing.T) {
+	// Define test cases
+	tests := []struct {
+		name           string
+		endpoint       *endpoint.Endpoint
+		shouldError    bool
+		expectedRecord *DNSRecord
+	}{
+		{
+			name:        "Basic A record",
+			shouldError: false,
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "example.com",
+				Targets:    []string{"1.2.3.4"},
+				RecordType: "A",
+			},
+			expectedRecord: &DNSRecord{
+				Name:    "example.com",
+				Type:    "A",
+				Address: "1.2.3.4",
+				Comment: "Managed by ExternalDNS",
+			},
+		},
+		{
+			name:        "Basic CNAME record",
+			shouldError: false,
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "example.com",
+				Targets:    []string{"cname.example.com"},
+				RecordType: "CNAME",
+			},
+			expectedRecord: &DNSRecord{
+				Name:    "example.com",
+				Type:    "CNAME",
+				CName:   "cname.example.com",
+				Comment: "Managed by ExternalDNS",
+			},
+		},
+		{
+			name:        "Basic TXT record",
+			shouldError: false,
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "example.com",
+				Targets:    []string{"some text"},
+				RecordType: "TXT",
+			},
+			expectedRecord: &DNSRecord{
+				Name:    "example.com",
+				Type:    "TXT",
+				Text:    "some text",
+				Comment: "Managed by ExternalDNS",
+			},
+		},
+		{
+			name:        "Basic AAAA record",
+			shouldError: false,
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "example.com",
+				Targets:    []string{"2001:db8::1"},
+				RecordType: "AAAA",
+			},
+			expectedRecord: &DNSRecord{
+				Name:    "example.com",
+				Type:    "AAAA",
+				Address: "2001:db8::1",
+				Comment: "Managed by ExternalDNS",
+			},
+		},
+		{
+			name:        "Unsupported record type",
+			shouldError: true,
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "example.com",
+				Targets:    []string{""},
+				RecordType: "SRV",
+			},
+			expectedRecord: nil,
+		},
+	}
+
+	// Run test cases
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			record, err := NewRecordFromEndpoint(tt.endpoint)
+			if tt.shouldError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, tt.expectedRecord, record)
+		})
+	}
 }
