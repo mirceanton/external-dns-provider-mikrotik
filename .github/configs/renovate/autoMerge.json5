@@ -1,27 +1,50 @@
 {
-    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-    "packageRules": [
-      {
-        "description": ["Auto-merge go updates for minor and patch"],
-        "matchDatasources": ["gomod"],
-        "automerge": true,
-        "automergeType": "pr",
-        "matchUpdateTypes": ["minor", "patch"]
-      },
-      {
-        "description": ["Auto-merge container updates for minor and patch"],
-        "matchDatasources": ["docker"],
-        "automerge": true,
-        "automergeType": "pr",
-        "matchUpdateTypes": ["minor", "patch"]
-      },
-      {
-        "description": ["Auto-merge GitHub Actions for minor and patch"],
-        "matchManagers": ["github-actions"],
-        "matchDatasources": ["github-tags"],
-        "automerge": true,
-        "automergeType": "pr",
-        "matchUpdateTypes": ["minor", "patch"]
-      }
-    ]
-  }
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "packageRules": [
+    {
+      "description": [
+        "Auto-merge go updates for minor and patch"
+      ],
+      "matchDatasources": [
+        "gomod"
+      ],
+      "automerge": true,
+      "automergeType": "pr",
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ]
+    },
+    {
+      "description": [
+        "Auto-merge container updates for minor and patch"
+      ],
+      "matchDatasources": [
+        "docker"
+      ],
+      "automerge": true,
+      "automergeType": "pr",
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ]
+    },
+    {
+      "description": [
+        "Auto-merge GitHub Actions for minor and patch"
+      ],
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchDatasources": [
+        "github-tags"
+      ],
+      "automerge": true,
+      "automergeType": "pr",
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ]
+    }
+  ]
+}

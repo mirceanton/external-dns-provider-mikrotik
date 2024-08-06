@@ -2,9 +2,11 @@
 	"$schema": "https://docs.renovatebot.com/renovate-schema.json",
 	"packageRules": [
 		{
-			"matchFileNames": [".devcontainer/**"],
+			"matchFileNames": [
+				".devcontainer/**"
+			],
 			"extends": [
-				"default:pinDigestsDisabled",
+				"default:pinDigestsDisabled"
 			]
 		}
 	]
