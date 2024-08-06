@@ -3,10 +3,12 @@
 name: Label Sync
 
 on:
-  workflow_dispatch: {}  # Manual Trigger
+  workflow_dispatch: {}
   push:
-    branches: [ "main" ]
-    paths: [ ".github/labels.yaml" ]
+    branches: ["main"]
+    paths:
+      - ".github/configs/labels.yaml"
+      - ".github/workflows/meta-label-sync.yaml"
   schedule:
     - cron: "0 0 * * *" # Every day at midnight
 
@@ -15,25 +17,7 @@ permissions:
 
 jobs:
   label-sync:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Generate Token
-        uses: actions/create-github-app-token@31c86eb3b33c9b601a1f60f98dcbfd1d70f379b4 # v1.10.3
-        id: app-token
-        with:
-          app-id: "${{ secrets.BOT_APP_ID }}"
-          private-key: "${{ secrets.BOT_APP_PRIVATE_KEY }}"
-
-      - name: Checkout
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
-        with:
-          token: "${{ steps.app-token.outputs.token }}"
-          sparse-checkout: .github/configs/labels.yaml
-
-      - name: Sync Labels
-        uses: EndBug/label-sync@52074158190acb45f3077f9099fea818aa43f97a # v2.3.3
-        with:
-          token: "${{ steps.app-token.outputs.token }}"
-          config-file: .github/configs/labels.yaml
-          delete-other-labels: true
+    uses: mirceanton/reusable-workflows/.github/workflows/meta-label-sync.yaml@main
+    secrets: inherit
+    with:
+      config-file: .github/configs/labels.yaml

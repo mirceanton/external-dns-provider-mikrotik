@@ -1,0 +1,13 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Go Release
+
+on:
+  workflow_dispatch: {}
+  push:
+    tags: ["*"]
+
+jobs:
+  release:
+    uses: mirceanton/reusable-workflows/.github/workflows/go-release.yaml@main
+    secrets: inherit
