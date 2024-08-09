@@ -60,14 +60,19 @@ func NewRecordFromEndpoint(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 func NewEndpointFromRecord(record DNSRecord) (*endpoint.Endpoint, error) {
 	log.Debugf("converting Mikrotik DNS record: %v", record)
 
+	recType := record.Type
+	if recType == "" {
+		recType = "A"
+	}
+
 	ep := endpoint.Endpoint{
 		DNSName:    record.Name,
-		RecordType: record.Type,
+		RecordType: recType,
 		// TODO: ttl
 		// TODO: ProviderSpecific
 	}
-	switch record.Type {
-	case "", "A", "AAAA": // "" means A record because mikrotik is weird like that... :P
+	switch ep.RecordType {
+	case "A", "AAAA":
 		ep.Targets = endpoint.NewTargets(record.Address)
 	case "CNAME":
 		ep.Targets = endpoint.NewTargets(record.CName)
@@ -75,7 +80,7 @@ func NewEndpointFromRecord(record DNSRecord) (*endpoint.Endpoint, error) {
 		ep.Targets = endpoint.NewTargets(record.Text)
 
 	default:
-		return nil, fmt.Errorf("unsupported DNS type: %s", record.Type)
+		return nil, fmt.Errorf("unsupported DNS type: %s", ep.RecordType)
 	}
 	log.Debugf("converted ExternalDNS endpoint: %v", ep)
 
