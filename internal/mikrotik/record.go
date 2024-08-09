@@ -7,6 +7,12 @@ import (
 	"sigs.k8s.io/external-dns/endpoint"
 )
 
+// DefaultDNSRecordValues holds the default values for DNS records
+type DefaultDNSRecordValues struct {
+	TTL     string `env:"MIKROTIK_DEFAULT_TTL" envDefault:"1h"`
+	COMMENT string `env:"MIKROTIK_DEFAULT_COMMENT" envDefault:"Managed by ExternalDNS"`
+}
+
 // DNSRecord represents a MikroTik DNS record
 // https://help.mikrotik.com/docs/display/ROS/DNS#DNS-DNSStatic
 type DNSRecord struct {
@@ -35,10 +41,11 @@ type DNSRecord struct {
 // NewDNSRecord converts an ExternalDNS Endpoint to a Mikrotik DNSRecord
 func NewRecordFromEndpoint(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 	log.Debugf("converting ExternalDNS endpoint: %v", endpoint)
+
 	record := DNSRecord{
 		Name:    endpoint.DNSName,
 		Type:    endpoint.RecordType,
-		Comment: "Managed by ExternalDNS",
+		Comment: DefaultDNSRecordValues{}.COMMENT,
 	}
 
 	switch endpoint.RecordType {
