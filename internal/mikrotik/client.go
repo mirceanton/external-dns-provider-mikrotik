@@ -24,7 +24,7 @@ type Config struct {
 	Username      string       `env:"MIKROTIK_USERNAME,notEmpty"`
 	Password      string       `env:"MIKROTIK_PASSWORD,notEmpty"`
 	SkipTLSVerify bool         `env:"MIKROTIK_SKIP_TLS_VERIFY" envDefault:"false"`
-	DefaultTTL    endpoint.TTL `env:"MIKROTIK_DEFAULT_TTL" envDefault:"3600"`
+	DefaultTTL    endpoint.TTL `env:"MIKROTIK_DEFAULT_TTL"`
 }
 
 // MikrotikApiClient encapsulates the client configuration and HTTP client

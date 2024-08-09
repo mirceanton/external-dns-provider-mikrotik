@@ -37,22 +37,25 @@ type DNSRecord struct {
 // NewDNSRecord converts an ExternalDNS Endpoint to a Mikrotik DNSRecord
 func NewRecordFromEndpoint(endpoint *endpoint.Endpoint, defaultTtl endpoint.TTL) (*DNSRecord, error) {
 	log.Debugf("converting ExternalDNS endpoint: %v", endpoint)
-	tmpTtl := defaultTtl
-	if endpoint.RecordTTL.IsConfigured() {
-		tmpTtl = endpoint.RecordTTL
-	}
-
-	ttl, err := time.ParseDuration(fmt.Sprintf("%ds", tmpTtl))
-	if err != nil {
-		log.Errorf("Cannot parse TTL: %v", err)
-		return nil, err
-	}
 
 	record := DNSRecord{
 		Name:    endpoint.DNSName,
 		Type:    endpoint.RecordType,
 		Comment: "Managed by ExternalDNS",
-		TTL:     ttl.String(),
+	}
+
+	tmpTtl := defaultTtl
+	if endpoint.RecordTTL.IsConfigured() {
+		tmpTtl = endpoint.RecordTTL
+	}
+
+	if tmpTtl > 0 {
+		ttl, err := time.ParseDuration(fmt.Sprintf("%ds", tmpTtl))
+		if err != nil {
+			log.Errorf("Cannot parse TTL: %v", err)
+			return nil, err
+		}
+		record.TTL = ttl.String()
 	}
 
 	switch endpoint.RecordType {
