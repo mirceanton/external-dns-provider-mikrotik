@@ -202,7 +202,7 @@ func TestNewRecordFromEndpoint(t *testing.T) {
 	// Run test cases
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			record, err := NewRecordFromEndpoint(tt.endpoint)
+			record, err := NewRecordFromEndpoint(tt.endpoint, 0)
 			if tt.shouldError {
 				assert.Error(t, err)
 			} else {
@@ -228,11 +228,13 @@ func TestNewEndpointFromRecord(t *testing.T) {
 				Name:    "example.com",
 				Type:    "A",
 				Address: "192.168.1.1",
+				TTL:     "24h",
 			},
 			expectedEndpoint: &endpoint.Endpoint{
 				DNSName:    "example.com",
 				Targets:    endpoint.NewTargets("192.168.1.1"),
 				RecordType: "A",
+				RecordTTL:  86400,
 			},
 		},
 		{
@@ -242,11 +244,13 @@ func TestNewEndpointFromRecord(t *testing.T) {
 				Name:  "example.com",
 				Type:  "CNAME",
 				CName: "cname.example.com",
+				TTL:   "24h",
 			},
 			expectedEndpoint: &endpoint.Endpoint{
 				DNSName:    "example.com",
 				Targets:    endpoint.NewTargets("cname.example.com"),
 				RecordType: "CNAME",
+				RecordTTL:  86400,
 			},
 		},
 		{
@@ -256,11 +260,13 @@ func TestNewEndpointFromRecord(t *testing.T) {
 				Name: "example.com",
 				Type: "TXT",
 				Text: "some text",
+				TTL:  "24h",
 			},
 			expectedEndpoint: &endpoint.Endpoint{
 				DNSName:    "example.com",
 				Targets:    endpoint.NewTargets("some text"),
 				RecordType: "TXT",
+				RecordTTL:  86400,
 			},
 		},
 		{
@@ -270,11 +276,13 @@ func TestNewEndpointFromRecord(t *testing.T) {
 				Name:    "example.com",
 				Type:    "AAAA",
 				Address: "2001:db8::1",
+				TTL:     "24h",
 			},
 			expectedEndpoint: &endpoint.Endpoint{
 				DNSName:    "example.com",
 				Targets:    endpoint.NewTargets("2001:db8::1"),
 				RecordType: "AAAA",
+				RecordTTL:  86400,
 			},
 		},
 		{
