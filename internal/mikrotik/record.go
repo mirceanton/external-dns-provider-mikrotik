@@ -36,9 +36,12 @@ type DNSRecord struct {
 func NewRecordFromEndpoint(endpoint *endpoint.Endpoint, defaultComment string) (*DNSRecord, error) {
 	log.Debugf("converting ExternalDNS endpoint: %v", endpoint)
 	record := DNSRecord{
-		Name:    endpoint.DNSName,
-		Type:    endpoint.RecordType,
-		Comment: defaultComment,
+		Name: endpoint.DNSName,
+		Type: endpoint.RecordType,
+	}
+
+	if defaultComment != "" {
+		record.Comment = defaultComment
 	}
 
 	switch endpoint.RecordType {
