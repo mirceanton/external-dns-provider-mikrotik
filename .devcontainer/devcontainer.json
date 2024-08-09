@@ -23,7 +23,8 @@
 				"bierner.emojisense",
 				"redhat.vscode-yaml",
 				"pkief.material-icon-theme",
-				"task.vscode-task"
+				"task.vscode-task",
+				"GitHub.copilot"
 			],
 			"settings": {
 				"editor.fontFamily": "Cascadia Code",
