@@ -9,13 +9,15 @@ import (
 	"sigs.k8s.io/external-dns/provider"
 )
 
-type Provider struct {
+// DNS Provider for working with mikrotik
+type MikrotikProvider struct {
 	provider.BaseProvider
 
 	client       *MikrotikApiClient
 	domainFilter endpoint.DomainFilter
 }
 
+// NewMikrotikProvider initializes a new DNSProvider.
 func NewMikrotikProvider(domainFilter endpoint.DomainFilter, config *Config) (provider.Provider, error) {
 	c, err := NewMikrotikClient(config)
 
@@ -23,7 +25,7 @@ func NewMikrotikProvider(domainFilter endpoint.DomainFilter, config *Config) (pr
 		return nil, fmt.Errorf("failed to create the MikroTik client: %w", err)
 	}
 
-	p := &Provider{
+	p := &MikrotikProvider{
 		client:       c,
 		domainFilter: domainFilter,
 	}
@@ -31,20 +33,16 @@ func NewMikrotikProvider(domainFilter endpoint.DomainFilter, config *Config) (pr
 	return p, nil
 }
 
-func (p *Provider) Records(ctx context.Context) ([]*endpoint.Endpoint, error) {
-	records, err := p.client.GetAll()
+// Records returns the list of HostOverride records in Opnsense Unbound.
+func (p *MikrotikProvider) Records(ctx context.Context) ([]*endpoint.Endpoint, error) {
+	records, err := p.client.GetAllDNSRecords()
 	if err != nil {
 		return nil, err
 	}
 
 	var endpoints []*endpoint.Endpoint
 	for _, record := range records {
-		ep := &endpoint.Endpoint{
-			DNSName:    record.Name,
-			RecordType: record.Type,
-			// RecordTTL:  record.TTL, //FIXME
-			Targets: endpoint.NewTargets(record.Address),
-		}
+		ep, _ := NewEndpointFromRecord(record)
 
 		if !p.domainFilter.Match(ep.DNSName) {
 			continue
@@ -56,15 +54,16 @@ func (p *Provider) Records(ctx context.Context) ([]*endpoint.Endpoint, error) {
 	return endpoints, nil
 }
 
-func (p *Provider) ApplyChanges(ctx context.Context, changes *plan.Changes) error {
+// ApplyChanges applies a given set of changes in the DNS provider.
+func (p *MikrotikProvider) ApplyChanges(ctx context.Context, changes *plan.Changes) error {
 	for _, endpoint := range append(changes.UpdateOld, changes.Delete...) {
-		if err := p.client.Delete(endpoint); err != nil {
+		if err := p.client.DeleteDNSRecord(endpoint); err != nil {
 			return err
 		}
 	}
 
 	for _, endpoint := range append(changes.Create, changes.UpdateNew...) {
-		if _, err := p.client.Create(endpoint); err != nil {
+		if _, err := p.client.CreateDNSRecord(endpoint); err != nil {
 			return err
 		}
 	}
@@ -72,6 +71,7 @@ func (p *Provider) ApplyChanges(ctx context.Context, changes *plan.Changes) erro
 	return nil
 }
 
-func (p *Provider) GetDomainFilter() endpoint.DomainFilter {
+// GetDomainFilter returns the domain filter for the provider.
+func (p *MikrotikProvider) GetDomainFilter() endpoint.DomainFilter {
 	return p.domainFilter
 }

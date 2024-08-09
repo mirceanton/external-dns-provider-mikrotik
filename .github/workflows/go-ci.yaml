@@ -5,7 +5,6 @@ name: Golang CI
 on:
   workflow_dispatch: {}
   pull_request:
-    branches: ["main"]
     paths:
       - "*.go"
       - "go.mod"

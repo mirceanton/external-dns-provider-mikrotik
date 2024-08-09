@@ -10,7 +10,6 @@ on:
         description: Additional custom tags for the image.
         required: false
   pull_request:
-    branches: ["main"]
     paths:
       - Dockerfile
       - .github/workflows/docker-release.yaml
