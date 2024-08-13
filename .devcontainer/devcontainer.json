@@ -24,7 +24,8 @@
 				"redhat.vscode-yaml",
 				"pkief.material-icon-theme",
 				"task.vscode-task",
-				"GitHub.copilot"
+				"GitHub.copilot",
+				"Postman.postman-for-vscode"
 			],
 			"settings": {
 				"editor.fontFamily": "Cascadia Code",
