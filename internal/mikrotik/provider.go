@@ -33,7 +33,7 @@ func NewMikrotikProvider(domainFilter endpoint.DomainFilter, config *Config) (pr
 	return p, nil
 }
 
-// Records returns the list of HostOverride records in Opnsense Unbound.
+// Records returns the list of all DNS records.
 func (p *MikrotikProvider) Records(ctx context.Context) ([]*endpoint.Endpoint, error) {
 	records, err := p.client.GetAllDNSRecords()
 	if err != nil {
@@ -42,7 +42,7 @@ func (p *MikrotikProvider) Records(ctx context.Context) ([]*endpoint.Endpoint, e
 
 	var endpoints []*endpoint.Endpoint
 	for _, record := range records {
-		ep, _ := NewEndpointFromRecord(record)
+		ep, _ := record.toExternalDNSEndpoint()
 
 		if !p.domainFilter.Match(ep.DNSName) {
 			continue

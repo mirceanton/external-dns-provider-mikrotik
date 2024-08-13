@@ -113,7 +113,7 @@ func (c *MikrotikApiClient) GetSystemInfo() (*SystemInfo, error) {
 func (c *MikrotikApiClient) CreateDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 	log.Infof("creating DNS record: %+v", endpoint)
 
-	record, err := NewRecordFromEndpoint(endpoint)
+	record, err := NewDNSRecord(endpoint)
 	if err != nil {
 		log.Errorf("error converting ExternalDNS endpoint to Mikrotik DNS Record: %v", err)
 		return nil, err

@@ -13,22 +13,14 @@ func TestRecordJSONMarshaling(t *testing.T) {
 		ID:             "1",
 		Address:        "192.168.1.1",
 		CName:          "example.com",
-		ForwardTo:      "forward.example.com",
-		MXExchange:     "mail.example.com",
 		Name:           "example",
-		SrvPort:        "8080",
-		SrvTarget:      "target.example.com",
 		Text:           "some text",
 		Type:           "A",
 		AddressList:    "list",
 		Comment:        "a comment",
 		Disabled:       "false",
 		MatchSubdomain: "sub.example.com",
-		MXPreference:   "10",
-		NS:             "ns.example.com",
 		Regexp:         ".*",
-		SrvPriority:    "1",
-		SrvWeight:      "5",
 	}
 
 	data, err := json.Marshal(record)
@@ -75,22 +67,14 @@ func TestRecordJSONUnmarshaling(t *testing.T) {
 				ID:             "1",
 				Address:        "192.168.1.1",
 				CName:          "example.com",
-				ForwardTo:      "forward.example.com",
-				MXExchange:     "mail.example.com",
 				Name:           "example",
-				SrvPort:        "8080",
-				SrvTarget:      "target.example.com",
 				Text:           "some text",
 				Type:           "A",
 				AddressList:    "list",
 				Comment:        "a comment",
 				Disabled:       "false",
 				MatchSubdomain: "sub.example.com",
-				MXPreference:   "10",
-				NS:             "ns.example.com",
 				Regexp:         ".*",
-				SrvPriority:    "1",
-				SrvWeight:      "5",
 			},
 		},
 		{
@@ -128,37 +112,59 @@ func TestNewRecordFromEndpoint(t *testing.T) {
 		expectedRecord *DNSRecord
 	}{
 		{
-			name:        "Basic A record",
+			name:        "A record",
 			shouldError: false,
 			endpoint: &endpoint.Endpoint{
 				DNSName:    "example.com",
 				Targets:    []string{"1.2.3.4"},
 				RecordType: "A",
+				ProviderSpecific: []endpoint.ProviderSpecificProperty{
+					{
+						Name:  "comment",
+						Value: "custom comment",
+					},
+					{
+						Name:  "disabled",
+						Value: "false",
+					},
+				},
 			},
 			expectedRecord: &DNSRecord{
-				Name:    "example.com",
-				Type:    "A",
-				Address: "1.2.3.4",
-				Comment: "Managed by ExternalDNS",
+				Name:     "example.com",
+				Type:     "A",
+				Address:  "1.2.3.4",
+				Comment:  "custom comment",
+				Disabled: "false",
 			},
 		},
 		{
-			name:        "Basic CNAME record",
+			name:        "CNAME record",
 			shouldError: false,
 			endpoint: &endpoint.Endpoint{
 				DNSName:    "example.com",
 				Targets:    []string{"cname.example.com"},
 				RecordType: "CNAME",
+				ProviderSpecific: []endpoint.ProviderSpecificProperty{
+					{
+						Name:  "comment",
+						Value: "cname comment",
+					},
+					{
+						Name:  "disabled",
+						Value: "true",
+					},
+				},
 			},
 			expectedRecord: &DNSRecord{
-				Name:    "example.com",
-				Type:    "CNAME",
-				CName:   "cname.example.com",
-				Comment: "Managed by ExternalDNS",
+				Name:     "example.com",
+				Type:     "CNAME",
+				CName:    "cname.example.com",
+				Comment:  "cname comment",
+				Disabled: "true",
 			},
 		},
 		{
-			name:        "Basic TXT record",
+			name:        "TXT record",
 			shouldError: false,
 			endpoint: &endpoint.Endpoint{
 				DNSName:    "example.com",
@@ -166,14 +172,15 @@ func TestNewRecordFromEndpoint(t *testing.T) {
 				RecordType: "TXT",
 			},
 			expectedRecord: &DNSRecord{
-				Name:    "example.com",
-				Type:    "TXT",
-				Text:    "some text",
-				Comment: "Managed by ExternalDNS",
+				Name: "example.com",
+				Type: "TXT",
+				Text: "some text",
+				// TTL:     "1d",
+				Comment: "",
 			},
 		},
 		{
-			name:        "Basic AAAA record",
+			name:        "AAAA record",
 			shouldError: false,
 			endpoint: &endpoint.Endpoint{
 				DNSName:    "example.com",
@@ -184,7 +191,7 @@ func TestNewRecordFromEndpoint(t *testing.T) {
 				Name:    "example.com",
 				Type:    "AAAA",
 				Address: "2001:db8::1",
-				Comment: "Managed by ExternalDNS",
+				Comment: "",
 			},
 		},
 		{
@@ -202,7 +209,7 @@ func TestNewRecordFromEndpoint(t *testing.T) {
 	// Run test cases
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			record, err := NewRecordFromEndpoint(tt.endpoint)
+			record, err := NewDNSRecord(tt.endpoint)
 			if tt.shouldError {
 				assert.Error(t, err)
 			} else {
@@ -291,7 +298,7 @@ func TestNewEndpointFromRecord(t *testing.T) {
 	// Run test cases
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			endpoint, err := NewEndpointFromRecord(tt.record)
+			endpoint, err := tt.record.toExternalDNSEndpoint()
 			if tt.shouldError {
 				assert.Error(t, err)
 			} else {
