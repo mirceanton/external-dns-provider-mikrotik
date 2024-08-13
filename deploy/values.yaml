@@ -1,0 +1,61 @@
+---
+fullnameOverride: external-dns-mikrotik
+
+logLevel: debug
+policy: sync
+sources: ["ingress", "service"]
+txtOwnerId: default
+txtPrefix: k8s.
+domainFilters: ["example.com"]
+
+provider:
+  name: webhook
+  webhook:
+    image:
+      repository: ghcr.io/mirceanton/external-dns-mikrotik-webhook
+      tag: 
+    env:
+      - name: MIKROTIK_HOST
+        valueFrom:
+          secretKeyRef:
+            name: mikrotik-credentials
+            key: MIKROTIK_HOST
+      - name: MIKROTIK_PORT
+        valueFrom:
+          secretKeyRef:
+            name: mikrotik-credentials
+            key: MIKROTIK_PORT
+      - name: MIKROTIK_USER
+        valueFrom:
+          secretKeyRef:
+            name: mikrotik-credentials
+            key: MIKROTIK_USER
+      - name: MIKROTIK_PASS
+        valueFrom:
+          secretKeyRef:
+            name: mikrotik-credentials
+            key: MIKROTIK_PASS
+      - name: MIKROTIK_SKIP_TLS_VERIFY
+        valueFrom:
+          secretKeyRef:
+            name: mikrotik-credentials
+            key: MIKROTIK_SKIP_TLS_VERIFY
+
+      - name: LOG_LEVEL
+        value: debug
+
+    livenessProbe:
+      httpGet:
+        path: /healthz
+        port: http-wh-metrics
+      initialDelaySeconds: 10
+      timeoutSeconds: 5
+    readinessProbe:
+      httpGet:
+        path: /readyz
+        port: http-wh-metrics
+      initialDelaySeconds: 10
+      timeoutSeconds: 5
+
+extraArgs:
+  - --ignore-ingress-tls-spec
