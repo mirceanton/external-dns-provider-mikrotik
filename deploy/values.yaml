@@ -4,6 +4,7 @@ fullnameOverride: external-dns-mikrotik
 logLevel: debug
 policy: sync
 sources: ["ingress", "service"]
+interval: 10s
 txtOwnerId: default
 txtPrefix: k8s.
 domainFilters: ["example.com"]
@@ -12,8 +13,9 @@ provider:
   name: webhook
   webhook:
     image:
-      repository: ghcr.io/mirceanton/external-dns-mikrotik-webhook
-      tag: 
+      repository: ghcr.io/mirceanton/external-dns-provider-mikrotik
+      tag: pr-14
+      pullPolicy: Always
     env:
       - name: MIKROTIK_HOST
         valueFrom:
@@ -25,16 +27,16 @@ provider:
           secretKeyRef:
             name: mikrotik-credentials
             key: MIKROTIK_PORT
-      - name: MIKROTIK_USER
+      - name: MIKROTIK_USERNAME
         valueFrom:
           secretKeyRef:
             name: mikrotik-credentials
-            key: MIKROTIK_USER
-      - name: MIKROTIK_PASS
+            key: MIKROTIK_USERNAME
+      - name: MIKROTIK_PASSWORD
         valueFrom:
           secretKeyRef:
             name: mikrotik-credentials
-            key: MIKROTIK_PASS
+            key: MIKROTIK_PASSWORD
       - name: MIKROTIK_SKIP_TLS_VERIFY
         valueFrom:
           secretKeyRef:
@@ -59,3 +61,16 @@ provider:
 
 extraArgs:
   - --ignore-ingress-tls-spec
+  - --source=crd
+  - --crd-source-apiversion=externaldns.k8s.io/v1alpha1
+  - --crd-source-kind=DNSEndpoint
+
+rbac:
+  create: true
+  additionalPermissions:
+    - apiGroups: ["externaldns.k8s.io"]
+      resources: ["dnsendpoints"]
+      verbs: ["get", "watch", "list"]
+    - apiGroups: ["externaldns.k8s.io"]
+      resources: ["dnsendpoints/status"]
+      verbs: ["*"]
