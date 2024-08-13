@@ -8,10 +8,11 @@ tasks:
   run:
     desc: Deploy the external-dns-mikrotik webhook to the test cluster.
     cmds:
-      - kubectl create ns external-dns
-      - kubectl create secret generic --namespace external-dns --from-env-file=.env mikrotik-credentials
-      - helm repo add https://kubernetes-sigs.github.io/external-dns
-      - helm update --install --namespace external-dns external-dns external-dns/external-dns -f deploy/values.yaml
+      - kubectl create ns external-dns || true
+      - kubectl delete secret --namespace external-dns mikrotik-credentials || true
+      - kubectl create secret generic --namespace external-dns --from-env-file=.env mikrotik-credentials || true
+      - helm repo add external-dns https://kubernetes-sigs.github.io/external-dns && helm repo update
+      - helm upgrade --install --namespace external-dns external-dns external-dns/external-dns -f deploy/values.yaml
 
   build:
     desc: Build the webhook binary.
