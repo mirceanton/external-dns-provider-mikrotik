@@ -5,6 +5,14 @@ dotenv:
   - .env
 
 tasks:
+  run:
+    desc: Deploy the external-dns-mikrotik webhook to the test cluster.
+    cmds:
+      - kubectl create ns external-dns
+      - kubectl create secret generic --namespace external-dns --from-env-file=.env mikrotik-credentials
+      - helm repo add https://kubernetes-sigs.github.io/external-dns
+      - helm update --install --namespace external-dns external-dns external-dns/external-dns -f deploy/values.yaml
+
   build:
     desc: Build the webhook binary.
     env:
@@ -20,12 +28,6 @@ tasks:
     generates:
       - webhook
     cmd: go build  -ldflags "-s -w -X main.Version=${VERSION} -X main.Gitsha=${REVISION}" -o webhook
-
-  run:
-    desc: Run the webhook server.
-    deps:
-      - build
-    cmd: go run main.go
 
   test:
     desc: Run tests.
