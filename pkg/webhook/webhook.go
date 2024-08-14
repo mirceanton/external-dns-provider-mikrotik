@@ -59,7 +59,7 @@ func (p *Webhook) headerCheck(isContentType bool, w http.ResponseWriter, r *http
 		} else {
 			msg += "an accept header"
 		}
-		err := fmt.Errorf(msg)
+		err := fmt.Errorf("%s", msg)
 
 		_, writeErr := fmt.Fprint(w, err.Error())
 		if writeErr != nil {
