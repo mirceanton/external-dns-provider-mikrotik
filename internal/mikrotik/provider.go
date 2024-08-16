@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/external-dns/endpoint"
 	"sigs.k8s.io/external-dns/plan"
 	"sigs.k8s.io/external-dns/provider"
@@ -56,6 +57,22 @@ func (p *MikrotikProvider) Records(ctx context.Context) ([]*endpoint.Endpoint, e
 
 // ApplyChanges applies a given set of changes in the DNS provider.
 func (p *MikrotikProvider) ApplyChanges(ctx context.Context, changes *plan.Changes) error {
+	// if changes.UpdateNew has a record that is in changes.UpdateOld, but old has no provider specific "disabled",
+	// and new has provider specific "disabled" set to "false", then we should ignore the record
+	for _, newEndpoint := range changes.UpdateNew {
+		for _, oldEndpoint := range changes.UpdateOld {
+			if newEndpoint.DNSName == oldEndpoint.DNSName && newEndpoint.RecordType == oldEndpoint.RecordType {
+				newDisabled, _ := newEndpoint.GetProviderSpecificProperty("disabled")
+				oldDisabled, _ := oldEndpoint.GetProviderSpecificProperty("disabled")
+				if newDisabled == "false" && oldDisabled == "" {
+					log.Debugf("Ignoring update for %s because it is disabled", newEndpoint.DNSName)
+					// TODO: remove the record from changes.UpdateNew and changes.UpdateOld
+				}
+
+			}
+		}
+	}
+
 	for _, endpoint := range append(changes.UpdateOld, changes.Delete...) {
 		if err := p.client.DeleteDNSRecord(endpoint); err != nil {
 			return err
