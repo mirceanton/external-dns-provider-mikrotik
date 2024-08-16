@@ -122,6 +122,11 @@ func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 func (r *DNSRecord) toExternalDNSEndpoint() (*endpoint.Endpoint, error) {
 	log.Debugf("converting MikrotikDNS record to ExternalDNS: %v", r.toString())
 
+	if r.Type == "" {
+		log.Debugf("Record type not set. Using default value 'A'")
+		r.Type = "A"
+	}
+
 	ep := endpoint.Endpoint{
 		DNSName:    r.Name,
 		RecordType: r.Type,
