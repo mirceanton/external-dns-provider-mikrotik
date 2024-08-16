@@ -1,3 +1,4 @@
 webhook
 .env
 .task/
+logs.json
