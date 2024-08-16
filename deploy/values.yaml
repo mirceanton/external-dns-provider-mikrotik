@@ -4,7 +4,7 @@ fullnameOverride: external-dns-mikrotik
 logLevel: debug
 policy: sync
 sources: ["ingress", "service"]
-interval: 10s
+interval: 1s
 txtOwnerId: default
 txtPrefix: k8s.
 domainFilters: ["example.com"]
@@ -14,9 +14,13 @@ provider:
   webhook:
     image:
       repository: ghcr.io/mirceanton/external-dns-provider-mikrotik
-      tag: pr-14
+      tag: sha-bbadbca
       pullPolicy: Always
     env:
+      - name: LOG_FORMAT
+        value: json
+      - name: LOG_LEVEL
+        value: debug
       - name: MIKROTIK_HOST
         valueFrom:
           secretKeyRef:
