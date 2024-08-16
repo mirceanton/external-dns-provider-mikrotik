@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/mirceanton/external-dns-provider-mikrotik/internal/configuration"
 	"github.com/mirceanton/external-dns-provider-mikrotik/internal/dnsprovider"
 	"github.com/mirceanton/external-dns-provider-mikrotik/internal/logging"
@@ -11,21 +9,16 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const banner = `
-external-dns-provider-mikrotik
-version: %s (%s)
-
-`
-
 var (
 	Version = "local"
 	Gitsha  = "?"
 )
 
 func main() {
-	fmt.Printf(banner, Version, Gitsha)
-
 	logging.Init()
+
+	log.Infof("starting external-dns-provider-mikrotik")
+	log.Infof("version: %s (%s)", Version, Gitsha)
 
 	config := configuration.Init()
 	provider, err := dnsprovider.Init(config)
