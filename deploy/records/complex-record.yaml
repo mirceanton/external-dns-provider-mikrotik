@@ -1,0 +1,22 @@
+---
+---
+apiVersion: externaldns.k8s.io/v1alpha1
+kind: DNSEndpoint
+metadata:
+  name: a-record
+spec:
+  endpoints:
+    - dnsName: example.com
+      recordTTL: 180
+      recordType: A
+      targets:
+        - 1.2.3.4
+      providerSpecific:
+        - name: disabled
+          value: "true"
+        - name: comment
+          value: "This is a comment"
+        - name: address-list
+          value: "1.2.3.1"
+        - name: match-subdomain
+          value: "true"
