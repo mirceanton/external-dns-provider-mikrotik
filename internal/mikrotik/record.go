@@ -115,12 +115,13 @@ func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 		log.Debugf("Disabled set to: %s", record.Disabled)
 	}
 
-	log.Debugf("Converted ExternalDNS endpoint to MikrotikDNS: %s", record.toString())
+	log.Debugf("Converted ExternalDNS endpoint to MikrotikDNS: %v", record)
 	return record, nil
 }
 
+// toExternalDNSEndpoint converts a Mikrotik DNSRecord to an ExternalDNS Endpoint
 func (r *DNSRecord) toExternalDNSEndpoint() (*endpoint.Endpoint, error) {
-	log.Debugf("converting MikrotikDNS record to ExternalDNS: %v", r.toString())
+	log.Debugf("converting MikrotikDNS record to ExternalDNS: %v", r)
 
 	if r.Type == "" {
 		log.Debugf("Record type not set. Using default value 'A'")
