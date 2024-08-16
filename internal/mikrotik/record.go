@@ -47,14 +47,10 @@ func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 	record := &DNSRecord{Name: endpoint.DNSName}
 	log.Debugf("Name set to: %s", record.Name)
 
-	recordType := endpoint.RecordType
-	if recordType == "" {
-		recordType = "A"
-	}
-	record.Type = recordType
+	record.Type = endpoint.RecordType
 	log.Debugf("Type set to: %s", record.Type)
 
-	switch recordType {
+	switch record.Type {
 	case "A", "AAAA":
 		record.Address = endpoint.Targets[0]
 		log.Debugf("Address set to: %s", record.Address)
@@ -98,7 +94,7 @@ func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 			return nil, fmt.Errorf(
 				"unsupported provider specific configuration '%s' for DNS Record of type %s ",
 				providerSpecific.Name,
-				recordType,
+				record.Type,
 			)
 		}
 	}
@@ -109,11 +105,11 @@ func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 		log.Debugf("Comment set to: %s", record.Comment)
 	}
 
-	if record.Disabled == "" {
-		log.Debugf("Disabled not set on ExternalDNS side. Setting to 'false'")
-		record.Disabled = "false"
-		log.Debugf("Disabled set to: %s", record.Disabled)
-	}
+	// if record.Disabled == "" {
+	// 	log.Debugf("Disabled not set on ExternalDNS side. Setting to 'false'")
+	// 	record.Disabled = "false"
+	// 	log.Debugf("Disabled set to: %s", record.Disabled)
+	// }
 
 	log.Debugf("Converted ExternalDNS endpoint to MikrotikDNS: %v", record)
 	return record, nil
@@ -227,7 +223,7 @@ func endpointTTLtoMikrotikTTL(ttl endpoint.TTL) (string, error) {
 		ttlString = "0s"
 	}
 
-	if ttl.IsConfigured() {
+	if ttl > 0 {
 		log.Debugf("ExternalDNS Endpoint has TTL defined: %v", ttl)
 		ttlString = strconv.FormatInt(int64(ttl), 10) + "s"
 		log.Debugf("Using TTL from endpoint: %s", ttlString)
