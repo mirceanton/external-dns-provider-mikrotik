@@ -14,7 +14,7 @@ provider:
   webhook:
     image:
       repository: ghcr.io/mirceanton/external-dns-provider-mikrotik
-      tag: sha-bbadbca
+      tag: sha-8d9b466
       pullPolicy: Always
     env:
       - name: LOG_FORMAT
@@ -46,9 +46,6 @@ provider:
           secretKeyRef:
             name: mikrotik-credentials
             key: MIKROTIK_SKIP_TLS_VERIFY
-
-      - name: LOG_LEVEL
-        value: debug
 
     livenessProbe:
       httpGet:
