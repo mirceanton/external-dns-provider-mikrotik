@@ -12,8 +12,6 @@ spec:
       targets:
         - 1.2.3.4
       providerSpecific:
-        - name: disabled
-          value: "true"
         - name: comment
           value: "This is a comment"
         - name: address-list

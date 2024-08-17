@@ -5,8 +5,8 @@ metadata:
   name: cname-record
 spec:
   endpoints:
-    - dnsName: example.com
+    - dnsName: cname.example.com
       recordTTL: 180
       recordType: CNAME
       targets:
-        - subdomain.example.com
+        - subdomain.cname.example.com
