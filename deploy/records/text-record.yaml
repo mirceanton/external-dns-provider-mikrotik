@@ -6,7 +6,7 @@ metadata:
 spec:
   endpoints:
     - dnsName: text.example.com
-      recordTTL: 180
+      recordTTL: 0
       recordType: TXT
       targets:
         - lorem ipsum dolor sit amet

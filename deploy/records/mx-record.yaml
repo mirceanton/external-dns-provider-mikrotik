@@ -5,7 +5,7 @@ metadata:
   name: mx-record
 spec:
   endpoints:
-    - dnsName: example.com
+    - dnsName: mx.example.com
       recordTTL: 180
       recordType: MX
       targets:

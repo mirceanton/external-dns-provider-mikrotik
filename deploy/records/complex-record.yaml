@@ -3,10 +3,10 @@
 apiVersion: externaldns.k8s.io/v1alpha1
 kind: DNSEndpoint
 metadata:
-  name: a-record
+  name: complex-record
 spec:
   endpoints:
-    - dnsName: example.com
+    - dnsName: complex.example.com
       recordTTL: 180
       recordType: A
       targets:
