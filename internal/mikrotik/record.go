@@ -2,7 +2,6 @@ package mikrotik
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 	"time"
 
@@ -95,12 +94,6 @@ func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 				record.Type,
 			)
 		}
-	}
-
-	if record.Comment == "" {
-		log.Debugf("Comment not set. Using default value from environment variable MIKROTIK_DEFAULT_COMMENT")
-		record.Comment = os.Getenv("MIKROTIK_DEFAULT_COMMENT")
-		log.Debugf("Comment set to: %s", record.Comment)
 	}
 
 	log.Debugf("Converted ExternalDNS endpoint to MikrotikDNS: %v", record)
@@ -202,18 +195,14 @@ func mikrotikTTLtoEndpointTTL(ttl string) (endpoint.TTL, error) {
 func endpointTTLtoMikrotikTTL(ttl endpoint.TTL) (string, error) {
 	log.Debugf("Converting Endpoint TTL to Mikrotil TTL: %v", ttl)
 
-	ttlString := os.Getenv("MIKROTIK_DEFAULT_TTL")
-	if ttlString == "" {
-		log.Debugf("No default TTL set in environment variable MIKROTIK_DEFAULT_TTL. Using '0s' as default.")
-		ttlString = "0s"
-	}
+	ttlString := "0s"
 
 	if ttl > 0 {
 		log.Debugf("ExternalDNS Endpoint has TTL defined: %v", ttl)
 		ttlString = strconv.FormatInt(int64(ttl), 10) + "s"
 		log.Debugf("Using TTL from endpoint: %s", ttlString)
 	} else {
-		log.Debugf("No TTL configured in the ExternalDNS endpoint. Using default TTL: %s", ttlString)
+		log.Debugf("No TTL configured in the ExternalDNS endpoint. Using TTL: %s", ttlString)
 	}
 
 	duration, err := time.ParseDuration(ttlString)
