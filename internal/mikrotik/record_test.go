@@ -82,7 +82,6 @@ func TestRecordConversion(t *testing.T) {
 				RecordTTL:  10,
 				Targets:    endpoint.Targets{"1.1.1.1"},
 				ProviderSpecific: []endpoint.ProviderSpecificProperty{
-					{Name: "disabled", Value: "true"},
 					{Name: "comment", Value: "test comment"},
 					{Name: "regexp", Value: "test regexp"},
 					{Name: "match-subdomain", Value: "true"},
@@ -94,7 +93,6 @@ func TestRecordConversion(t *testing.T) {
 				Type:           "A",
 				TTL:            "10s",
 				Address:        "1.1.1.1",
-				Disabled:       "true",
 				Comment:        "test comment",
 				Regexp:         "test regexp",
 				MatchSubdomain: "true",

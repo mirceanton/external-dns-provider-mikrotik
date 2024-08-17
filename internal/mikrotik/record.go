@@ -18,11 +18,12 @@ type DNSRecord struct {
 	Name           string `json:"name"`                      // endpoint.DNSName
 	Type           string `json:"type"`                      // endpoint.RecordType
 	TTL            string `json:"ttl,omitempty"`             // endpoint.RecordTTL
-	Disabled       string `json:"disabled,omitempty"`        // provider-specific
 	Comment        string `json:"comment,omitempty"`         // provider-specific
 	Regexp         string `json:"regexp,omitempty"`          // provider-specific
 	MatchSubdomain string `json:"match-subdomain,omitempty"` // provider-specific
 	AddressList    string `json:"address-list,omitempty"`    // provider-specific
+
+	// Disabled       string `json:"disabled,omitempty"`        // provider-specific
 
 	// Record specific fields
 	Address string `json:"address,omitempty"` // A, AAAA -> endpoint.Targets[0]
@@ -74,9 +75,6 @@ func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 
 	for _, providerSpecific := range endpoint.ProviderSpecific {
 		switch providerSpecific.Name {
-		case "disabled":
-			record.Disabled = providerSpecific.Value
-			log.Debugf("Disabled set to: %s", record.Disabled)
 		case "comment":
 			record.Comment = providerSpecific.Value
 			log.Debugf("Comment set to: %s", record.Comment)
@@ -104,12 +102,6 @@ func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 		record.Comment = os.Getenv("MIKROTIK_DEFAULT_COMMENT")
 		log.Debugf("Comment set to: %s", record.Comment)
 	}
-
-	// if record.Disabled == "" {
-	// 	log.Debugf("Disabled not set on ExternalDNS side. Setting to 'false'")
-	// 	record.Disabled = "false"
-	// 	log.Debugf("Disabled set to: %s", record.Disabled)
-	// }
 
 	log.Debugf("Converted ExternalDNS endpoint to MikrotikDNS: %v", record)
 	return record, nil
@@ -151,13 +143,6 @@ func (r *DNSRecord) toExternalDNSEndpoint() (*endpoint.Endpoint, error) {
 	ep.RecordTTL = ttl
 	log.Debugf("RecordTTL set to: %v", ep.RecordTTL)
 
-	if r.Disabled != "" {
-		ep.ProviderSpecific = append(ep.ProviderSpecific, endpoint.ProviderSpecificProperty{
-			Name:  "disabled",
-			Value: r.Disabled,
-		})
-		log.Debugf("Disabled set to: %s", r.Disabled)
-	}
 	if r.Comment != "" {
 		ep.ProviderSpecific = append(ep.ProviderSpecific, endpoint.ProviderSpecificProperty{
 			Name:  "comment",

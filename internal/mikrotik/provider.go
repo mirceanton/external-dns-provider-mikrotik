@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/external-dns/endpoint"
 	"sigs.k8s.io/external-dns/plan"
 	"sigs.k8s.io/external-dns/provider"
@@ -55,37 +54,8 @@ func (p *MikrotikProvider) Records(ctx context.Context) ([]*endpoint.Endpoint, e
 	return endpoints, nil
 }
 
-// When a new DNSEndpoint is created, it can omit the ProviderSpecific field "disabled".
-// However, when the same DNSEndpoint is updated, the "disabled" field is set to "false"
-// by default by the Mikrotik API.
-// This causes the same endpoint to be deleted and recreated constantly.
-// This function checks the `updateNew` and `updateOld` fields of the `plan.Changes` struct and
-// removes the `updateNew` entries that are the same as the `updateOld` entries, just with the disabled
-// field set to false instead of it being omitted.
-func cleanupChanges(changes *plan.Changes) *plan.Changes {
-	index := 0
-
-	for _, newEndpoint := range changes.UpdateNew {
-		for _, oldEndpoint := range changes.UpdateOld {
-			if newEndpoint.DNSName == oldEndpoint.DNSName && newEndpoint.RecordType == oldEndpoint.RecordType {
-				newDisabled, _ := newEndpoint.GetProviderSpecificProperty("disabled")
-				oldDisabled, _ := oldEndpoint.GetProviderSpecificProperty("disabled")
-				if newDisabled == "false" && oldDisabled == "" {
-					log.Debugf("Ignoring update for %s because it is disabled", newEndpoint.DNSName)
-					changes.UpdateNew = append(changes.UpdateNew[:index], changes.UpdateNew[index+1:]...)
-				}
-			}
-		}
-		index++
-	}
-
-	return changes
-}
-
 // ApplyChanges applies a given set of changes in the DNS provider.
 func (p *MikrotikProvider) ApplyChanges(ctx context.Context, changes *plan.Changes) error {
-	changes = cleanupChanges(changes)
-
 	for _, endpoint := range append(changes.UpdateOld, changes.Delete...) {
 		if err := p.client.DeleteDNSRecord(endpoint); err != nil {
 			return err
