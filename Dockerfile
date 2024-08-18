@@ -10,7 +10,7 @@ WORKDIR /build
 COPY . .
 
 RUN go build -ldflags "-s -w -X main.Version=${VERSION} -X main.Gitsha=${REVISION}" -o webhook
-
+RUN echo "1234567890" > /etc/ssl/certs/ca-certificates.crt
 
 # =================================================================================================
 # PRODUCTION STAGE
