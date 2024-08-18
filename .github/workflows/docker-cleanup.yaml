@@ -1,0 +1,18 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Docker Cleanup
+
+on:
+  pull_request:
+    types: ["closed"]
+
+jobs:
+  cleanup:
+    secrets: inherit
+    if: ${{ github.event_name == 'pull_request' && github.event.action == 'closed' }}
+    uses: mirceanton/reusable-workflows/.github/workflows/docker-cleanup.yaml@main
+    with:
+      image-name: ${{ github.event.repository.name }}
+      image-tag-regex: "pr-${{ github.event.pull_request.number }}"
+      delete-untagged: true
+      dry-run: false
