@@ -1,6 +1,6 @@
 {
 	"name": "external-dns-mikrotik-webhook",
-	"image": "mcr.microsoft.com/devcontainers/go:1.22-bookworm",
+	"image": "mcr.microsoft.com/devcontainers/go:1.23-bookworm",
 	"features": {
 		"ghcr.io/devcontainers/features/docker-in-docker:2": {},
 		"ghcr.io/audacioustux/devcontainers/taskfile:1": {},
