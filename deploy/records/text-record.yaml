@@ -1,0 +1,12 @@
+---
+apiVersion: externaldns.k8s.io/v1alpha1
+kind: DNSEndpoint
+metadata:
+  name: text-record
+spec:
+  endpoints:
+    - dnsName: text.example.com
+      recordTTL: 0
+      recordType: TXT
+      targets:
+        - lorem ipsum dolor sit amet

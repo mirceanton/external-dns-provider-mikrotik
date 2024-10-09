@@ -1,0 +1,13 @@
+---
+apiVersion: externaldns.k8s.io/v1alpha1
+kind: DNSEndpoint
+metadata:
+  name: mx-record
+spec:
+  endpoints:
+    - dnsName: mx.example.com
+      recordTTL: 180
+      recordType: MX
+      targets:
+        - 10 mailhost1.example.com
+        - 20 mailhost2.example.com

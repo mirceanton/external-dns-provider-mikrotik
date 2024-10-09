@@ -1,0 +1,13 @@
+---
+apiVersion: externaldns.k8s.io/v1alpha1
+kind: DNSEndpoint
+metadata:
+  name: ns-record
+spec:
+  endpoints:
+    - dnsName: zone.example.com
+      recordTTL: 300
+      recordType: NS
+      targets:
+        - ns1.example.com
+        - ns2.example.com

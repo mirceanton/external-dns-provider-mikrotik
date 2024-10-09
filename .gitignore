@@ -1,4 +1,4 @@
-external-dns-mikrotik-webhook
 webhook
 .env
 .task/
+logs.json

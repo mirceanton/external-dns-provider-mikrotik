@@ -1,0 +1,12 @@
+---
+apiVersion: externaldns.k8s.io/v1alpha1
+kind: DNSEndpoint
+metadata:
+  name: cname-record
+spec:
+  endpoints:
+    - dnsName: cname.example.com
+      recordTTL: 180
+      recordType: CNAME
+      targets:
+        - subdomain.cname.example.com

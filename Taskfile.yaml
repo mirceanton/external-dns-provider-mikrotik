@@ -5,7 +5,36 @@ dotenv:
   - .env
 
 tasks:
-  build:
+  kube:up:
+    desc: Create the test cluster.
+    cmds:
+      - minikube start
+      - minikube addons enable metallb
+      - minikube addons enable ingress
+      - minikube addons enable metrics-server
+      - minikube addons enable dashboard
+
+  kube:deploy:
+    desc: Deploy the external-dns-mikrotik webhook to the test cluster.
+    cmds:
+      - kubectl create ns external-dns || true
+      - kubectl delete secret --namespace external-dns mikrotik-credentials || true
+      - kubectl create secret generic --namespace external-dns --from-env-file=.env mikrotik-credentials || true
+      - helm repo add external-dns https://kubernetes-sigs.github.io/external-dns && helm repo update
+      - helm upgrade --install --namespace external-dns external-dns external-dns/external-dns -f deploy/values.yaml
+
+  kube:logs:
+    desc: Fetch the logs from the external-dns-mikrotik webhook container to a local file.
+    cmd: kubectl -n external-dns logs deployments/external-dns-mikrotik webhook > logs.json
+
+  kube:clean:
+    desc: Remove the external-dns-mikrotik webhook from the test cluster.
+    cmds:
+      - kubectl delete ns external-dns || true
+      - kubectl delete -f deploy/records || true
+      - kubectl delete -f deploy/ingress || true
+
+  go:build:
     desc: Build the webhook binary.
     env:
       VERSION:
@@ -21,20 +50,14 @@ tasks:
       - webhook
     cmd: go build  -ldflags "-s -w -X main.Version=${VERSION} -X main.Gitsha=${REVISION}" -o webhook
 
-  run:
-    desc: Run the webhook server.
-    deps:
-      - build
-    cmd: go run main.go
-
-  test:
+  go:test:
     desc: Run tests.
     cmd: go test -v ./... -race -covermode=atomic
 
-  lint:
+  go:lint:
     desc: Run linter.
     cmd: golangci-lint run
 
-  docker-build:
+  docker:build:
     desc: Build the docker image.
     cmd: docker build . -t external-dns-provider-mikrotik
