@@ -196,7 +196,7 @@ func (p *Webhook) Negotiate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	b, err := p.provider.GetDomainFilter().MarshalJSON()
+	b, err := json.Marshal(p.provider.GetDomainFilter())
 	if err != nil {
 		log.Errorf("failed to marshal domain filter, request method: %s, request path: %s", r.Method, r.URL.Path)
 		w.WriteHeader(http.StatusInternalServerError)
