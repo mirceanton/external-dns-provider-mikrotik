@@ -34,21 +34,13 @@ tasks:
       - kubectl delete -f deploy/records || true
       - kubectl delete -f deploy/ingress || true
 
+  go:release:
+    desc: Run goreleaser in snapshot mode.
+    cmd: goreleaser release --snapshot --clean
+
   go:build:
-    desc: Build the webhook binary.
-    env:
-      VERSION:
-        sh: git describe --tags --always --dirty
-      REVISION:
-        sh: git rev-parse --short HEAD
-    sources:
-      - main.go
-      - internal/*
-      - go.mod
-      - go.sum
-    generates:
-      - webhook
-    cmd: go build  -ldflags "-s -w -X main.Version=${VERSION} -X main.Gitsha=${REVISION}" -o webhook
+    desc: Build the binary.
+    cmd: go build -o ./external-dns-provider-mikrotik .
 
   go:test:
     desc: Run tests.
@@ -56,8 +48,4 @@ tasks:
 
   go:lint:
     desc: Run linter.
-    cmd: golangci-lint run
-
-  docker:build:
-    desc: Build the docker image.
-    cmd: docker build . -t external-dns-provider-mikrotik
+    cmd: golangci-lint run --fix
