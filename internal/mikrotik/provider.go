@@ -20,7 +20,6 @@ type MikrotikProvider struct {
 // NewMikrotikProvider initializes a new DNSProvider.
 func NewMikrotikProvider(domainFilter endpoint.DomainFilter, config *Config) (provider.Provider, error) {
 	c, err := NewMikrotikClient(config)
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the MikroTik client: %w", err)
 	}
