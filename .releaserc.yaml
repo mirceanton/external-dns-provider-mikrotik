@@ -1,0 +1,41 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/semantic-release.json
+branches:
+  - master
+  - main
+
+plugins:
+  - "@semantic-release/commit-analyzer"
+  - "@semantic-release/release-notes-generator"
+  - "@semantic-release/github"
+
+preset: "angular"
+
+releaseRules:
+  - type: "feat"
+    release: "minor"
+  - type: "feat"
+    breaking: true
+    release: "major"
+  - type: "fix"
+    release: "patch"
+  - type: "fix"
+    breaking: true
+    release: "major"
+  - type: "patch"
+    release: "patch"
+  - type: "patch"
+    breaking: true
+    release: "major"
+  - type: "chore"
+    release: false
+  - type: "ci"
+    release: false
+  - type: "style"
+    release: false
+
+parserOpts:
+  noteKeywords:
+    - "BREAKING"
+    - "BREAKING CHANGE"
+    - "BREAKING CHANGES"
