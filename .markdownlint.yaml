@@ -1,0 +1,5 @@
+---
+default: true
+MD013: false # Ignore long lines
+MD033: false # Ignore inline HTML
+MD041: false # Ignore images without alt tags

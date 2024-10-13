@@ -1,0 +1,46 @@
+{
+    "rules": {
+        "type-enum": [
+            2,
+            "always",
+            [
+                "chore",
+                "ci",
+                "deps",
+                "feat",
+                "fix",
+                "patch",
+                "style"
+            ]
+        ],
+        "subject-empty": [
+            2,
+            "never"
+        ],
+        "type-case": [
+            2,
+            "always",
+            "lower-case"
+        ],
+        "subject-case": [
+            0
+        ],
+        "type-empty": [
+            2,
+            "never"
+        ],
+        "scope-case": [
+            2,
+            "always",
+            "lower-case"
+        ],
+        "scope-enum": [
+            0
+        ],
+        "header-max-length": [
+            2,
+            "always",
+            120
+        ]
+    }
+}
