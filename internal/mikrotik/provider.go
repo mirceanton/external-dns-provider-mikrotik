@@ -71,6 +71,6 @@ func (p *MikrotikProvider) ApplyChanges(ctx context.Context, changes *plan.Chang
 }
 
 // GetDomainFilter returns the domain filter for the provider.
-func (p *MikrotikProvider) GetDomainFilter() endpoint.DomainFilter {
+func (p *MikrotikProvider) GetDomainFilter() endpoint.DomainFilterInterface {
 	return p.domainFilter
 }
