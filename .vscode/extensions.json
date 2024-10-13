@@ -11,6 +11,7 @@
         "pkief.material-icon-theme",
         "task.vscode-task",
         "foxundermoon.shell-format",
-        "DavidAnson.vscode-markdownlint"
+        "DavidAnson.vscode-markdownlint",
+        "Postman.postman-for-vscode"
     ],
 }
