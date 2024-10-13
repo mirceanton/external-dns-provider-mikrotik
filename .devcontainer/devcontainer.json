@@ -1,59 +1,14 @@
 {
-	"name": "external-dns-mikrotik-webhook",
-	"image": "mcr.microsoft.com/devcontainers/go:1.23-bookworm",
-	"features": {
-		"ghcr.io/devcontainers/features/docker-in-docker:2": {},
-		"ghcr.io/audacioustux/devcontainers/taskfile:1": {},
-		"ghcr.io/devcontainers/features/kubectl-helm-minikube": {},
-		"ghcr.io/dhoeric/features/k9s:1": {},
-		"ghcr.io/devcontainers/features/github-cli:1": {}
-	},
-	"remoteUser": "vscode",
-	"containerUser": "vscode",
-	"updateRemoteUserUID": true,
-	"customizations": {
-		"vscode": {
-			"extensions": [
-				"golang.go",
-				"aaron-bond.better-comments",
-				"ms-azuretools.vscode-docker",
-				"davidanson.vscode-markdownlint",
-				"albert.TabOut",
-				"mhutchie.git-graph",
-				"bierner.emojisense",
-				"redhat.vscode-yaml",
-				"pkief.material-icon-theme",
-				"task.vscode-task",
-				"GitHub.copilot",
-				"Postman.postman-for-vscode"
-			],
-			"settings": {
-				"editor.fontFamily": "Cascadia Code",
-				"editor.fontSize": 14,
-				"editor.fontLigatures": true,
-				"editor.cursorBlinking": "phase",
-				"editor.bracketPairColorization.enabled": true,
-				"editor.bracketPairColorization.independentColorPoolPerBracketType": true,
-				"editor.guides.bracketPairs": true,
-				"editor.guides.bracketPairsHorizontal": true,
-				"editor.guides.highlightActiveBracketPair": true,
-				"editor.hover.delay": 500,
-				"editor.renderWhitespace": "boundary",
-				"editor.rulers": [
-					150,
-					200
-				],
-				"editor.stickyScroll.enabled": false,
-				"explorer.autoReveal": false,
-				"files.associations": {
-					"**/*.json5": "jsonc"
-				},
-				"files.trimTrailingWhitespace": true,
-				"editor.formatOnSave": true,
-				"files.autoSave": "afterDelay",
-				"files.autoSaveDelay": 1000,
-				"workbench.iconTheme": "material-icon-theme"
-			}
-		}
-	}
+  "name": "external-dns-mikrotik-webhook",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/kubectl-helm-minikube": {} //! Replace with custom images
+  },
+  "remoteUser": "vscode",
+  "containerUser": "vscode",
+  "updateRemoteUserUID": true
 }

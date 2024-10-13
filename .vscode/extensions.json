@@ -1,0 +1,16 @@
+{
+    "recommendations": [
+        "golang.go",
+        "aaron-bond.better-comments",
+        "ms-azuretools.vscode-docker",
+        "davidanson.vscode-markdownlint",
+        "albert.TabOut",
+        "mhutchie.git-graph",
+        "bierner.emojisense",
+        "redhat.vscode-yaml",
+        "pkief.material-icon-theme",
+        "task.vscode-task",
+        "foxundermoon.shell-format",
+        "DavidAnson.vscode-markdownlint"
+    ],
+}
