@@ -1,22 +1,4 @@
-# =================================================================================================
-# BUILDER STAGE
-# =================================================================================================
-FROM golang:1.23-alpine@sha256:44a2d64f00857d544048dd31d8e1fbd885bb90306819f4313d7bc85b87ca04b0 AS builder
-
-ARG VERSION=dev
-ARG REVISION=dev
-
-WORKDIR /build
-COPY . .
-
-RUN go build -ldflags "-s -w -X main.Version=${VERSION} -X main.Gitsha=${REVISION}" -o webhook
-
-
-# =================================================================================================
-# PRODUCTION STAGE
-# =================================================================================================
-FROM scratch
+FROM alpine:3.20.3@sha256:beefdbd8a1da6d2915566fde36db9db0b524eb737fc57cd1367effd16dc0d06d
 USER 8675:8675
-COPY --from=builder --chmod=555 /build/webhook /external-dns-mikrotik-webhook
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY external-dns-mikrotik-webhook /
 ENTRYPOINT ["/external-dns-mikrotik-webhook"]
