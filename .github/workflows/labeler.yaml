@@ -1,0 +1,13 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Labeler
+
+on:
+  pull_request_target: {}
+
+jobs:
+  pr-labeler:
+    uses: mirceanton/reusable-workflows/.github/workflows/reusable-labeler.yaml@1f67ebf2d8aa5a366dc1a2179911c7edaea8a5af # v3.4.18
+    secrets: inherit
+    with:
+      config-file: .github/labeler.yaml
