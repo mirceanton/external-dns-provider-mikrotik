@@ -640,3 +640,157 @@ func TestDeleteDNSRecord(t *testing.T) {
 		})
 	}
 }
+
+func TestGetAllDNSRecords(t *testing.T) {
+	testCases := []struct {
+		name         string
+		records      []DNSRecord
+		expectError  bool
+		unauthorized bool
+	}{
+		{
+			name: "Multiple DNS records",
+			records: []DNSRecord{
+				{
+					ID:      "*1",
+					Address: "192.168.88.1",
+					Comment: "defconf",
+					Name:    "router.lan",
+					TTL:     "1d",
+					Type:    "A",
+				},
+				{
+					ID:      "*3",
+					Address: "1.2.3.4",
+					Comment: "test A-Record",
+					Name:    "example.com",
+					TTL:     "1d",
+					Type:    "A",
+				},
+				{
+					ID:      "*4",
+					CName:   "example.com",
+					Comment: "test CNAME",
+					Name:    "subdomain.example.com",
+					TTL:     "1d",
+					Type:    "CNAME",
+				},
+				{
+					ID:      "*5",
+					Address: "::1",
+					Comment: "test AAAA",
+					Name:    "test quad-A",
+					TTL:     "1d",
+					Type:    "AAAA",
+				},
+				{
+					ID:      "*6",
+					Comment: "test TXT",
+					Name:    "example.com",
+					Text:    "lorem ipsum",
+					TTL:     "1d",
+					Type:    "TXT",
+				},
+			},
+		},
+		{
+			name:    "No DNS records",
+			records: []DNSRecord{},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Set up the mock server for this test case
+			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// Basic Auth validation
+				username, password, ok := r.BasicAuth()
+				if !ok || username != mockUsername || password != mockPassword || tc.unauthorized {
+					http.Error(w, "Unauthorized", http.StatusUnauthorized)
+					return
+				}
+
+				// Handle GET requests to /rest/ip/dns/static
+				if r.Method == http.MethodGet && r.URL.Path == "/rest/ip/dns/static" {
+					w.Header().Set("Content-Type", "application/json")
+					if err := json.NewEncoder(w).Encode(tc.records); err != nil {
+						http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+						return
+					}
+					return
+				}
+
+				// Return 404 for any other path
+				http.NotFound(w, r)
+			}))
+			defer server.Close()
+
+			// Set up the client
+			config := &Config{
+				BaseUrl:       server.URL,
+				Username:      mockUsername,
+				Password:      mockPassword,
+				SkipTLSVerify: true,
+			}
+			client, err := NewMikrotikClient(config)
+			if err != nil {
+				t.Fatalf("Failed to create client: %v", err)
+			}
+
+			// Call GetAllDNSRecords
+			records, err := client.GetAllDNSRecords()
+			if tc.expectError {
+				if err == nil {
+					t.Fatalf("Expected error, got none")
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("Expected no error, got %v", err)
+				}
+
+				// Verify the number of records
+				if len(records) != len(tc.records) {
+					t.Fatalf("Expected %d records, got %d", len(tc.records), len(records))
+				}
+
+				// Compare records if there are any
+				if len(tc.records) > 0 {
+					expectedRecordsMap := make(map[string]DNSRecord)
+					for _, rec := range tc.records {
+						key := rec.Name + "|" + rec.Type
+						expectedRecordsMap[key] = rec
+					}
+
+					for _, record := range records {
+						key := record.Name + "|" + record.Type
+						expectedRecord, exists := expectedRecordsMap[key]
+						if !exists {
+							t.Errorf("Unexpected record found: %v", record)
+							continue
+						}
+						// Compare fields
+						if record.ID != expectedRecord.ID {
+							t.Errorf("Expected ID '%s', got '%s' for record %s", expectedRecord.ID, record.ID, key)
+						}
+						switch record.Type {
+						case "A", "AAAA":
+							if record.Address != expectedRecord.Address {
+								t.Errorf("Expected Address '%s', got '%s' for record %s", expectedRecord.Address, record.Address, key)
+							}
+						case "CNAME":
+							if record.CName != expectedRecord.CName {
+								t.Errorf("Expected CName '%s', got '%s' for record %s", expectedRecord.CName, record.CName, key)
+							}
+						case "TXT":
+							if record.Text != expectedRecord.Text {
+								t.Errorf("Expected Text '%s', got '%s' for record %s", expectedRecord.Text, record.Text, key)
+							}
+						default:
+							t.Errorf("Unsupported RecordType '%s' for record %s", record.Type, key)
+						}
+					}
+				}
+			}
+		})
+	}
+}
