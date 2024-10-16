@@ -578,14 +578,12 @@ func TestDeleteDNSRecord(t *testing.T) {
 						recordType = "A"
 					}
 					key := name + "|" + recordType
-					record, exists := recordStore[key]
-					if !exists {
-						w.Header().Set("Content-Type", "application/json")
-						json.NewEncoder(w).Encode([]DNSRecord{})
-						return
-					}
+					record := recordStore[key]
 					w.Header().Set("Content-Type", "application/json")
-					json.NewEncoder(w).Encode([]DNSRecord{record})
+					err := json.NewEncoder(w).Encode([]DNSRecord{record})
+					if err != nil {
+						t.Errorf("error json encoding dns record")
+					}
 					return
 				}
 
