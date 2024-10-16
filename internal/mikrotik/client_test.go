@@ -83,7 +83,10 @@ func TestGetSystemInfo(t *testing.T) {
 		// Return dummy data for /rest/system/resource
 		if r.URL.Path == "/rest/system/resource" && r.Method == http.MethodGet {
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(mockServerInfo)
+			err := json.NewEncoder(w).Encode(mockServerInfo)
+			if err != nil {
+				t.Errorf("error json encoding server info")
+			}
 			return
 		}
 
