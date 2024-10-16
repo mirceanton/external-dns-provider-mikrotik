@@ -19,8 +19,7 @@ import (
 
 // Config holds the connection details for the API client
 type Config struct {
-	Host          string `env:"MIKROTIK_HOST,notEmpty"`
-	Port          string `env:"MIKROTIK_PORT,notEmpty" envDefault:"443"`
+	BaseUrl       string `env:"MIKROTIK_BASEURL,notEmpty"`
 	Username      string `env:"MIKROTIK_USERNAME,notEmpty"`
 	Password      string `env:"MIKROTIK_PASSWORD,notEmpty"`
 	SkipTLSVerify bool   `env:"MIKROTIK_SKIP_TLS_VERIFY" envDefault:"false"`
@@ -87,7 +86,7 @@ func (c *MikrotikApiClient) GetSystemInfo() (*SystemInfo, error) {
 	// Send the request
 	resp, err := c.doRequest(http.MethodGet, "system/resource", nil)
 	if err != nil {
-		log.Errorf("error getching system info: %v", err)
+		log.Errorf("error fetching system info: %v", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
@@ -219,7 +218,7 @@ func (c *MikrotikApiClient) lookupDNSRecord(key, recordType string) (*DNSRecord,
 
 // doRequest sends an HTTP request to the MikroTik API with credentials
 func (c *MikrotikApiClient) doRequest(method, path string, body io.Reader) (*http.Response, error) {
-	endpoint_url := fmt.Sprintf("https://%s:%s/rest/%s", c.Config.Host, c.Config.Port, path)
+	endpoint_url := fmt.Sprintf("%s/rest/%s", c.Config.BaseUrl, path)
 	log.Debugf("sending %s request to: %s", method, endpoint_url)
 
 	req, err := http.NewRequest(method, endpoint_url, body)
