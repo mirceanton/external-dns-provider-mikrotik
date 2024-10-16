@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/external-dns/endpoint"
 	"sigs.k8s.io/external-dns/plan"
 	"sigs.k8s.io/external-dns/provider"
@@ -17,15 +18,25 @@ type MikrotikProvider struct {
 	domainFilter endpoint.DomainFilter
 }
 
-// NewMikrotikProvider initializes a new DNSProvider.
+// NewMikrotikProvider initializes a new DNSProvider, of the Mikrotik variety
 func NewMikrotikProvider(domainFilter endpoint.DomainFilter, config *Config) (provider.Provider, error) {
-	c, err := NewMikrotikClient(config)
+	// Create the Mikrotik API Client
+	client, err := NewMikrotikClient(config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the MikroTik client: %w", err)
 	}
 
+	// Ensure the Client can connect to the API by fetching system info
+	info, err := client.GetSystemInfo()
+	if err != nil {
+		log.Errorf("failed to connect to the MikroTik RouterOS API Endpoint: %v", err)
+		return nil, err
+	}
+	log.Infof("connected to board %s running RouterOS version %s (%s)", info.BoardName, info.Version, info.ArchitectureName)
+
+	// If the client connects properly, create the DNS Provider
 	p := &MikrotikProvider{
-		client:       c,
+		client:       client,
 		domainFilter: domainFilter,
 	}
 
