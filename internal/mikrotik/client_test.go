@@ -189,6 +189,7 @@ func TestGetSystemInfo(t *testing.T) {
 		})
 	}
 }
+
 func TestCreateDNSRecord(t *testing.T) {
 	// Define test cases
 	testCases := []struct {
