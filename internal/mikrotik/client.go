@@ -77,13 +77,6 @@ func NewMikrotikClient(config *Config) (*MikrotikApiClient, error) {
 		},
 	}
 
-	info, err := client.GetSystemInfo()
-	if err != nil {
-		log.Errorf("failed to connect to the MikroTik RouterOS API Endpoint: %v", err)
-		return nil, err
-	}
-
-	log.Infof("connected to board %s running RouterOS version %s (%s)", info.BoardName, info.Version, info.ArchitectureName)
 	return client, nil
 }
 
