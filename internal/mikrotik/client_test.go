@@ -12,28 +12,8 @@ import (
 )
 
 var (
-	mockUsername   = "testuser"
-	mockPassword   = "testpass"
-	mockServerInfo = SystemInfo{
-		ArchitectureName:     "arm64",
-		BadBlocks:            "0.1",
-		BoardName:            "RB5009UG+S+",
-		BuildTime:            "2024-09-20 13:00:27",
-		CPU:                  "ARM64",
-		CPUCount:             "4",
-		CPUFrequency:         "1400",
-		CPULoad:              "0",
-		FactorySoftware:      "7.4.1",
-		FreeHDDSpace:         "1019346944",
-		FreeMemory:           "916791296",
-		Platform:             "MikroTik",
-		TotalHDDSpace:        "1073741824",
-		TotalMemory:          "1073741824",
-		Uptime:               "4d19h9m34s",
-		Version:              "7.16 (stable)",
-		WriteSectSinceReboot: "5868",
-		WriteSectTotal:       "131658",
-	}
+	mockUsername = "testuser"
+	mockPassword = "testpass"
 )
 
 func TestNewMikrotikClient(t *testing.T) {
@@ -70,6 +50,27 @@ func TestNewMikrotikClient(t *testing.T) {
 }
 
 func TestGetSystemInfo(t *testing.T) {
+	mockServerInfo := SystemInfo{
+		ArchitectureName:     "arm64",
+		BadBlocks:            "0.1",
+		BoardName:            "RB5009UG+S+",
+		BuildTime:            "2024-09-20 13:00:27",
+		CPU:                  "ARM64",
+		CPUCount:             "4",
+		CPUFrequency:         "1400",
+		CPULoad:              "0",
+		FactorySoftware:      "7.4.1",
+		FreeHDDSpace:         "1019346944",
+		FreeMemory:           "916791296",
+		Platform:             "MikroTik",
+		TotalHDDSpace:        "1073741824",
+		TotalMemory:          "1073741824",
+		Uptime:               "4d19h9m34s",
+		Version:              "7.16 (stable)",
+		WriteSectSinceReboot: "5868",
+		WriteSectTotal:       "131658",
+	}
+
 	// Set up your mock server
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Validate the Basic Auth header
