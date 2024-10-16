@@ -84,14 +84,15 @@ func NewMikrotikClient(config *Config) (*MikrotikApiClient, error) {
 func (c *MikrotikApiClient) GetSystemInfo() (*SystemInfo, error) {
 	log.Debugf("fetching system information.")
 
+	// Send the request
 	resp, err := c.doRequest(http.MethodGet, "system/resource", nil)
 	if err != nil {
 		log.Errorf("error getching system info: %v", err)
 		return nil, err
 	}
-
 	defer resp.Body.Close()
 
+	// Parse the response
 	var info SystemInfo
 	if err = json.NewDecoder(resp.Body).Decode(&info); err != nil {
 		log.Errorf("error decoding response body: %v", err)
@@ -106,26 +107,29 @@ func (c *MikrotikApiClient) GetSystemInfo() (*SystemInfo, error) {
 func (c *MikrotikApiClient) CreateDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 	log.Infof("creating DNS record: %+v", endpoint)
 
+	// Convert ExternalDNS to Mikrotik DNS
 	record, err := NewDNSRecord(endpoint)
 	if err != nil {
 		log.Errorf("error converting ExternalDNS endpoint to Mikrotik DNS Record: %v", err)
 		return nil, err
 	}
 
+	// Serialize the data to JSON to be sent to the API
 	jsonBody, err := json.Marshal(record)
 	if err != nil {
 		log.Errorf("error marshalling DNS record: %v", err)
 		return nil, err
 	}
 
+	// Send the request
 	resp, err := c.doRequest(http.MethodPut, "ip/dns/static", bytes.NewReader(jsonBody))
 	if err != nil {
 		log.Errorf("error creating DNS record: %v", err)
 		return nil, err
 	}
-
 	defer resp.Body.Close()
 
+	// Parse the response
 	if err = json.NewDecoder(resp.Body).Decode(&record); err != nil {
 		log.Errorf("Error decoding response body: %v", err)
 		return nil, err
@@ -139,14 +143,15 @@ func (c *MikrotikApiClient) CreateDNSRecord(endpoint *endpoint.Endpoint) (*DNSRe
 func (c *MikrotikApiClient) GetAllDNSRecords() ([]DNSRecord, error) {
 	log.Infof("fetching all DNS records")
 
+	// Send the request
 	resp, err := c.doRequest(http.MethodGet, "ip/dns/static", nil)
 	if err != nil {
 		log.Errorf("error fetching DNS records: %v", err)
 		return nil, err
 	}
-
 	defer resp.Body.Close()
 
+	// Parse the response
 	var records []DNSRecord
 	if err = json.NewDecoder(resp.Body).Decode(&records); err != nil {
 		log.Errorf("error decoding response body: %v", err)
@@ -161,17 +166,20 @@ func (c *MikrotikApiClient) GetAllDNSRecords() ([]DNSRecord, error) {
 func (c *MikrotikApiClient) DeleteDNSRecord(endpoint *endpoint.Endpoint) error {
 	log.Infof("deleting DNS record: %+v", endpoint)
 
+	// Send the request
 	record, err := c.lookupDNSRecord(endpoint.DNSName, endpoint.RecordType)
 	if err != nil {
 		log.Errorf("failed lookup for DNS record: %+v", err)
 		return err
 	}
 
-	_, err = c.doRequest(http.MethodDelete, fmt.Sprintf("ip/dns/static/%s", record.ID), nil)
+	// Parse the response
+	resp, err := c.doRequest(http.MethodDelete, fmt.Sprintf("ip/dns/static/%s", record.ID), nil)
 	if err != nil {
 		log.Errorf("error deleting DNS record: %+v", err)
 		return err
 	}
+	defer resp.Body.Close()
 	log.Infof("record deleted")
 
 	return nil
@@ -187,13 +195,14 @@ func (c *MikrotikApiClient) lookupDNSRecord(key, recordType string) (*DNSRecord,
 	}
 	log.Debugf("Search params: %s", searchParams)
 
+	// Send the request
 	resp, err := c.doRequest(http.MethodGet, fmt.Sprintf("ip/dns/static?%s", searchParams), nil)
 	if err != nil {
 		return nil, err
 	}
-
 	defer resp.Body.Close()
 
+	// Parse the response
 	var record []DNSRecord
 	if err = json.NewDecoder(resp.Body).Decode(&record); err != nil {
 		log.Errorf("Error decoding response body: %v", err)
