@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 )
 
@@ -67,60 +66,7 @@ func TestNewMikrotikClient(t *testing.T) {
 	}
 }
 
-func TestGetSystemInfo(t *testing.T) { // Set up your mock server
-	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Validate the Basic Auth header
-		username, password, ok := r.BasicAuth()
-		if !ok {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-		if username != mockUsername || password != mockPassword {
-			http.Error(w, "Forbidden", http.StatusForbidden)
-			return
-		}
-
-		// Return dummy data
-		if r.URL.Path == "/rest/system/resource" {
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(mockServerInfo)
-			return
-		}
-
-		// 404 on anything else
-		http.NotFound(w, r)
-	}))
-	defer server.Close()
-
-	// Set up the client with the test server's URL
-	config := &Config{
-		BaseUrl:       server.URL,
-		Username:      mockUsername,
-		Password:      mockPassword,
-		SkipTLSVerify: true,
-	}
-
-	client, err := NewMikrotikClient(config)
-	if err != nil {
-		t.Fatalf("Failed to create client: %v", err)
-	}
-
-	// Call GetSystemInfo
-	info, err := client.GetSystemInfo()
-	if err != nil {
-		t.Fatalf("Expected no error, got %v", err)
-	}
-
-	// Verify the returned system info
-	if info.ArchitectureName != mockServerInfo.ArchitectureName {
-		t.Errorf("Expected ArchitectureName %s, got %s", mockServerInfo.ArchitectureName, info.ArchitectureName)
-	}
-	if info.Version != mockServerInfo.Version {
-		t.Errorf("Expected Version %s, got %s", mockServerInfo.Version, info.Version)
-	}
-}
-
-func TestGetSystemInfo_Unauthorized(t *testing.T) {
+func TestGetSystemInfo(t *testing.T) {
 	// Set up your mock server
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Validate the Basic Auth header
@@ -146,27 +92,94 @@ func TestGetSystemInfo_Unauthorized(t *testing.T) {
 	}))
 	defer server.Close()
 
-	// Set up the client with incorrect credentials
-	config := &Config{
-		BaseUrl:       server.URL + "/rest",
-		Username:      "wronguser",
-		Password:      "wrongpass",
-		SkipTLSVerify: true,
+	// Define test cases
+	testCases := []struct {
+		name          string
+		config        Config
+		expectedError bool
+	}{
+		{
+			name: "Valid credentials",
+			config: Config{
+				BaseUrl:       server.URL,
+				Username:      mockUsername,
+				Password:      mockPassword,
+				SkipTLSVerify: true,
+			},
+			expectedError: false,
+		},
+		{
+			name: "Incorrect password",
+			config: Config{
+				BaseUrl:       server.URL,
+				Username:      mockUsername,
+				Password:      "wrongpass",
+				SkipTLSVerify: true,
+			},
+			expectedError: true,
+		},
+		{
+			name: "Incorrect username",
+			config: Config{
+				BaseUrl:       server.URL,
+				Username:      "wronguser",
+				Password:      mockPassword,
+				SkipTLSVerify: true,
+			},
+			expectedError: true,
+		},
+		{
+			name: "Incorrect username and password",
+			config: Config{
+				BaseUrl:       server.URL,
+				Username:      "wronguser",
+				Password:      "wrongpass",
+				SkipTLSVerify: true,
+			},
+			expectedError: true,
+		},
+		{
+			name: "Missing credentials",
+			config: Config{
+				BaseUrl:       server.URL,
+				Username:      "",
+				Password:      "",
+				SkipTLSVerify: true,
+			},
+			expectedError: true,
+		},
 	}
 
-	client, err := NewMikrotikClient(config)
-	if err != nil {
-		t.Fatalf("Failed to create client: %v", err)
-	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			config := &tc.config
 
-	// Call GetSystemInfo and expect an error
-	_, err = client.GetSystemInfo()
-	if err == nil {
-		t.Fatalf("Expected error due to unauthorized access, got none")
-	}
+			client, err := NewMikrotikClient(config)
+			if err != nil {
+				t.Fatalf("Failed to create client: %v", err)
+			}
 
-	// Optionally, check that the error message contains expected text
-	if !strings.Contains(err.Error(), "request failed") {
-		t.Errorf("Expected error message to contain 'request failed', got %v", err)
+			// Call GetSystemInfo
+			info, err := client.GetSystemInfo()
+
+			if tc.expectedError {
+				if err == nil {
+					t.Fatalf("Expected error due to unauthorized access, got none")
+				}
+				if info != nil {
+					t.Errorf("Expected no system info, got %v", info)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("Expected no error, got %v", err)
+				}
+				if info.ArchitectureName != mockServerInfo.ArchitectureName {
+					t.Errorf("Expected ArchitectureName %s, got %s", mockServerInfo.ArchitectureName, info.ArchitectureName)
+				}
+				if info.Version != mockServerInfo.Version {
+					t.Errorf("Expected Version %s, got %s", mockServerInfo.Version, info.Version)
+				}
+			}
+		})
 	}
 }
