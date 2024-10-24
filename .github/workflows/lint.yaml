@@ -11,27 +11,27 @@ on:
 
 jobs:
   golangci-lint:
-    uses: mirceanton/reusable-workflows/.github/workflows/reusable-go-lint.yaml@155cb0eb3f146478d30884e385490eb28ce6fd7c # v3.4.21
+    uses: mirceanton/reusable-workflows/.github/workflows/reusable-go-lint.yaml@eb91426a79e7b63c4649650b2aaa80c11d966ee8 # v3.4.24
     secrets: inherit
 
   yamllint:
-    uses: mirceanton/reusable-workflows/.github/workflows/reusable-yamllint.yaml@155cb0eb3f146478d30884e385490eb28ce6fd7c # v3.4.21
+    uses: mirceanton/reusable-workflows/.github/workflows/reusable-yamllint.yaml@eb91426a79e7b63c4649650b2aaa80c11d966ee8 # v3.4.24
     secrets: inherit
     with:
       yamllint-args: "--config-file=.yamllint.yaml"
 
   actionlint:
-    uses: mirceanton/reusable-workflows/.github/workflows/reusable-actionlint.yaml@155cb0eb3f146478d30884e385490eb28ce6fd7c # v3.4.21
+    uses: mirceanton/reusable-workflows/.github/workflows/reusable-actionlint.yaml@eb91426a79e7b63c4649650b2aaa80c11d966ee8 # v3.4.24
     secrets: inherit
 
   shellcheck:
-    uses: mirceanton/reusable-workflows/.github/workflows/reusable-shellcheck.yaml@155cb0eb3f146478d30884e385490eb28ce6fd7c # v3.4.21
+    uses: mirceanton/reusable-workflows/.github/workflows/reusable-shellcheck.yaml@eb91426a79e7b63c4649650b2aaa80c11d966ee8 # v3.4.24
     secrets: inherit
 
   markdownlint:
-    uses: mirceanton/reusable-workflows/.github/workflows/reusable-markdownlint.yaml@155cb0eb3f146478d30884e385490eb28ce6fd7c # v3.4.21
+    uses: mirceanton/reusable-workflows/.github/workflows/reusable-markdownlint.yaml@eb91426a79e7b63c4649650b2aaa80c11d966ee8 # v3.4.24
     secrets: inherit
 
   commitlint:
-    uses: mirceanton/reusable-workflows/.github/workflows/reusable-commitlint.yaml@155cb0eb3f146478d30884e385490eb28ce6fd7c # v3.4.21
+    uses: mirceanton/reusable-workflows/.github/workflows/reusable-commitlint.yaml@eb91426a79e7b63c4649650b2aaa80c11d966ee8 # v3.4.24
     secrets: inherit
