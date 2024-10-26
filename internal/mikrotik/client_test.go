@@ -17,7 +17,7 @@ var (
 )
 
 func TestNewMikrotikClient(t *testing.T) {
-	config := &Config{
+	config := &MikrotikConnectionConfig{
 		BaseUrl:       "https://192.168.88.1:443",
 		Username:      "admin",
 		Password:      "password",
@@ -29,8 +29,8 @@ func TestNewMikrotikClient(t *testing.T) {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	if client.Config != config {
-		t.Errorf("Expected config to be %v, got %v", config, client.Config)
+	if client.MikrotikConnectionConfig != config {
+		t.Errorf("Expected config to be %v, got %v", config, client.MikrotikConnectionConfig)
 	}
 
 	if client.Client == nil {
@@ -50,7 +50,7 @@ func TestNewMikrotikClient(t *testing.T) {
 }
 
 func TestGetSystemInfo(t *testing.T) {
-	mockServerInfo := SystemInfo{
+	mockServerInfo := MikrotikSystemInfo{
 		ArchitectureName:     "arm64",
 		BadBlocks:            "0.1",
 		BoardName:            "RB5009UG+S+",
@@ -71,7 +71,7 @@ func TestGetSystemInfo(t *testing.T) {
 		WriteSectTotal:       "131658",
 	}
 
-	// Set up your mock server
+	// Set up mock server
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Validate the Basic Auth header
 		username, password, ok := r.BasicAuth()
@@ -102,12 +102,12 @@ func TestGetSystemInfo(t *testing.T) {
 	// Define test cases
 	testCases := []struct {
 		name          string
-		config        Config
+		config        MikrotikConnectionConfig
 		expectedError bool
 	}{
 		{
 			name: "Valid credentials",
-			config: Config{
+			config: MikrotikConnectionConfig{
 				BaseUrl:       server.URL,
 				Username:      mockUsername,
 				Password:      mockPassword,
@@ -117,7 +117,7 @@ func TestGetSystemInfo(t *testing.T) {
 		},
 		{
 			name: "Incorrect password",
-			config: Config{
+			config: MikrotikConnectionConfig{
 				BaseUrl:       server.URL,
 				Username:      mockUsername,
 				Password:      "wrongpass",
@@ -127,7 +127,7 @@ func TestGetSystemInfo(t *testing.T) {
 		},
 		{
 			name: "Incorrect username",
-			config: Config{
+			config: MikrotikConnectionConfig{
 				BaseUrl:       server.URL,
 				Username:      "wronguser",
 				Password:      mockPassword,
@@ -137,7 +137,7 @@ func TestGetSystemInfo(t *testing.T) {
 		},
 		{
 			name: "Incorrect username and password",
-			config: Config{
+			config: MikrotikConnectionConfig{
 				BaseUrl:       server.URL,
 				Username:      "wronguser",
 				Password:      "wrongpass",
@@ -147,7 +147,7 @@ func TestGetSystemInfo(t *testing.T) {
 		},
 		{
 			name: "Missing credentials",
-			config: Config{
+			config: MikrotikConnectionConfig{
 				BaseUrl:       server.URL,
 				Username:      "",
 				Password:      "",
@@ -166,8 +166,6 @@ func TestGetSystemInfo(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to create client: %v", err)
 			}
-
-			// Call GetSystemInfo
 			info, err := client.GetSystemInfo()
 
 			if tc.expectedError {
@@ -187,13 +185,13 @@ func TestGetSystemInfo(t *testing.T) {
 				if info.Version != mockServerInfo.Version {
 					t.Errorf("Expected Version %s, got %s", mockServerInfo.Version, info.Version)
 				}
+				// i think there's no point in checking any more fields
 			}
 		})
 	}
 }
 
 func TestCreateDNSRecord(t *testing.T) {
-	// Define test cases
 	testCases := []struct {
 		name           string
 		initialRecords map[string]DNSRecord
@@ -267,14 +265,13 @@ func TestCreateDNSRecord(t *testing.T) {
 			},
 			expectedError: true,
 		},
-
 		{
 			name:           "Empty target for A record",
 			initialRecords: map[string]DNSRecord{},
 			endpoint: &endpoint.Endpoint{
 				DNSName:    "empty-target.example.com",
 				RecordType: "A",
-				Targets:    endpoint.Targets{""}, // Empty target
+				Targets:    endpoint.Targets{""},
 			},
 			expectedError: true,
 		},
@@ -284,7 +281,7 @@ func TestCreateDNSRecord(t *testing.T) {
 			endpoint: &endpoint.Endpoint{
 				DNSName:    "malformed-ip.example.com",
 				RecordType: "A",
-				Targets:    endpoint.Targets{"999.999.999.999"}, // Invalid IP
+				Targets:    endpoint.Targets{"999.999.999.999"},
 			},
 			expectedError: true,
 		},
@@ -294,7 +291,7 @@ func TestCreateDNSRecord(t *testing.T) {
 			endpoint: &endpoint.Endpoint{
 				DNSName:    "malformed-ipv6.example.com",
 				RecordType: "AAAA",
-				Targets:    endpoint.Targets{"gggg::1"}, // Invalid IPv6
+				Targets:    endpoint.Targets{"gggg::1"},
 			},
 			expectedError: true,
 		},
@@ -304,7 +301,7 @@ func TestCreateDNSRecord(t *testing.T) {
 			endpoint: &endpoint.Endpoint{
 				DNSName:    "empty-cname.example.com",
 				RecordType: "CNAME",
-				Targets:    endpoint.Targets{""}, // Empty target
+				Targets:    endpoint.Targets{""},
 			},
 			expectedError: true,
 		},
@@ -324,7 +321,7 @@ func TestCreateDNSRecord(t *testing.T) {
 			endpoint: &endpoint.Endpoint{
 				DNSName:    "empty-txt.example.com",
 				RecordType: "TXT",
-				Targets:    endpoint.Targets{""}, // Empty text
+				Targets:    endpoint.Targets{""},
 			},
 			expectedError: true,
 		},
@@ -350,7 +347,7 @@ func TestCreateDNSRecord(t *testing.T) {
 				recordStore[k] = v
 			}
 
-			// Set up your mock server
+			// Set up mock server
 			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				// Validate the Basic Auth header
 				username, password, ok := r.BasicAuth()
@@ -393,7 +390,7 @@ func TestCreateDNSRecord(t *testing.T) {
 			defer server.Close()
 
 			// Set up the client with correct credentials
-			config := &Config{
+			config := &MikrotikConnectionConfig{
 				BaseUrl:       server.URL,
 				Username:      mockUsername,
 				Password:      mockPassword,
@@ -404,16 +401,13 @@ func TestCreateDNSRecord(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to create client: %v", err)
 			}
-
-			// Call CreateDNSRecord
 			record, err := client.CreateDNSRecord(tc.endpoint)
 
 			if tc.expectedError {
 				if err == nil {
 					t.Fatalf("Expected error, got none")
 				}
-				// Optionally, check for specific error messages
-				return // Error was expected and occurred, test passes
+				return
 			}
 
 			if err != nil {
@@ -561,7 +555,7 @@ func TestDeleteDNSRecord(t *testing.T) {
 				recordStore[k] = v
 			}
 
-			// Set up your mock server
+			// Set up mock server
 			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				username, password, ok := r.BasicAuth()
 				if !ok || username != mockUsername || password != mockPassword {
@@ -610,7 +604,7 @@ func TestDeleteDNSRecord(t *testing.T) {
 			}))
 			defer server.Close()
 
-			config := &Config{
+			config := &MikrotikConnectionConfig{
 				BaseUrl:       server.URL,
 				Username:      mockUsername,
 				Password:      mockPassword,
@@ -700,7 +694,6 @@ func TestGetAllDNSRecords(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Set up the mock server for this test case
 			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				// Basic Auth validation
 				username, password, ok := r.BasicAuth()
@@ -725,7 +718,7 @@ func TestGetAllDNSRecords(t *testing.T) {
 			defer server.Close()
 
 			// Set up the client
-			config := &Config{
+			config := &MikrotikConnectionConfig{
 				BaseUrl:       server.URL,
 				Username:      mockUsername,
 				Password:      mockPassword,
@@ -735,9 +728,8 @@ func TestGetAllDNSRecords(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to create client: %v", err)
 			}
-
-			// Call GetAllDNSRecords
 			records, err := client.GetAllDNSRecords()
+
 			if tc.expectError {
 				if err == nil {
 					t.Fatalf("Expected error, got none")

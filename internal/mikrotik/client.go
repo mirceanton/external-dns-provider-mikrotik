@@ -17,8 +17,8 @@ import (
 	"sigs.k8s.io/external-dns/endpoint"
 )
 
-// Config holds the connection details for the API client
-type Config struct {
+// MikrotikConnectionConfig holds the connection details for the API client
+type MikrotikConnectionConfig struct {
 	BaseUrl       string `env:"MIKROTIK_BASEURL,notEmpty"`
 	Username      string `env:"MIKROTIK_USERNAME,notEmpty"`
 	Password      string `env:"MIKROTIK_PASSWORD,notEmpty"`
@@ -27,13 +27,13 @@ type Config struct {
 
 // MikrotikApiClient encapsulates the client configuration and HTTP client
 type MikrotikApiClient struct {
-	*Config
+	*MikrotikConnectionConfig
 	*http.Client
 }
 
-// SystemInfo represents MikroTik system information
+// MikrotikSystemInfo represents MikroTik system information
 // https://help.mikrotik.com/docs/display/ROS/Resource
-type SystemInfo struct {
+type MikrotikSystemInfo struct {
 	ArchitectureName     string `json:"architecture-name"`
 	BadBlocks            string `json:"bad-blocks"`
 	BoardName            string `json:"board-name"`
@@ -55,7 +55,7 @@ type SystemInfo struct {
 }
 
 // NewMikrotikClient creates a new instance of MikrotikApiClient
-func NewMikrotikClient(config *Config) (*MikrotikApiClient, error) {
+func NewMikrotikClient(config *MikrotikConnectionConfig) (*MikrotikApiClient, error) {
 	log.Infof("creating a new Mikrotik API Client")
 
 	jar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
@@ -65,7 +65,7 @@ func NewMikrotikClient(config *Config) (*MikrotikApiClient, error) {
 	}
 
 	client := &MikrotikApiClient{
-		Config: config,
+		MikrotikConnectionConfig: config,
 		Client: &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
@@ -80,7 +80,7 @@ func NewMikrotikClient(config *Config) (*MikrotikApiClient, error) {
 }
 
 // GetSystemInfo fetches system information from the MikroTik API
-func (c *MikrotikApiClient) GetSystemInfo() (*SystemInfo, error) {
+func (c *MikrotikApiClient) GetSystemInfo() (*MikrotikSystemInfo, error) {
 	log.Debugf("fetching system information.")
 
 	// Send the request
@@ -92,7 +92,7 @@ func (c *MikrotikApiClient) GetSystemInfo() (*SystemInfo, error) {
 	defer resp.Body.Close()
 
 	// Parse the response
-	var info SystemInfo
+	var info MikrotikSystemInfo
 	if err = json.NewDecoder(resp.Body).Decode(&info); err != nil {
 		log.Errorf("error decoding response body: %v", err)
 		return nil, err
@@ -218,7 +218,7 @@ func (c *MikrotikApiClient) lookupDNSRecord(key, recordType string) (*DNSRecord,
 
 // doRequest sends an HTTP request to the MikroTik API with credentials
 func (c *MikrotikApiClient) doRequest(method, path string, body io.Reader) (*http.Response, error) {
-	endpoint_url := fmt.Sprintf("%s/rest/%s", c.Config.BaseUrl, path)
+	endpoint_url := fmt.Sprintf("%s/rest/%s", c.MikrotikConnectionConfig.BaseUrl, path)
 	log.Debugf("sending %s request to: %s", method, endpoint_url)
 
 	req, err := http.NewRequest(method, endpoint_url, body)
@@ -227,7 +227,7 @@ func (c *MikrotikApiClient) doRequest(method, path string, body io.Reader) (*htt
 		return nil, err
 	}
 
-	req.SetBasicAuth(c.Config.Username, c.Config.Password)
+	req.SetBasicAuth(c.MikrotikConnectionConfig.Username, c.MikrotikConnectionConfig.Password)
 
 	resp, err := c.Client.Do(req)
 	if err != nil {

@@ -19,7 +19,7 @@ type MikrotikProvider struct {
 }
 
 // NewMikrotikProvider initializes a new DNSProvider, of the Mikrotik variety
-func NewMikrotikProvider(domainFilter endpoint.DomainFilter, config *Config) (provider.Provider, error) {
+func NewMikrotikProvider(domainFilter endpoint.DomainFilter, config *MikrotikConnectionConfig) (provider.Provider, error) {
 	// Create the Mikrotik API Client
 	client, err := NewMikrotikClient(config)
 	if err != nil {
