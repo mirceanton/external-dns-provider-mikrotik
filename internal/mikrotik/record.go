@@ -34,11 +34,12 @@ type DNSRecord struct {
 
 	MXExchange   string `json:"mx-exchange,omitempty"`   // MX -> provider-specific
 	MXPreference string `json:"mx-preference,omitempty"` // MX -> provider-specific
+	SrvPort      string `json:"srv-port,omitempty"`      // SRV -> provider-specific
+	SrvTarget    string `json:"srv-target,omitempty"`    // SRV -> provider-specific
+	SrvPriority  string `json:"srv-priority,omitempty"`  // SRV -> provider-specific
+	SrvWeight    string `json:"srv-weight,omitempty"`    // SRV -> provider-specific
+
 	// Additional fields for other record types that are not currently supported
-	// SrvPort      string `json:"srv-port,omitempty"`      // SRV -> provider-specific
-	// SrvTarget    string `json:"srv-target,omitempty"`    // SRV -> provider-specific
-	// SrvPriority  string `json:"srv-priority,omitempty"`  // SRV -> provider-specific
-	// SrvWeight    string `json:"srv-weight,omitempty"`    // SRV -> provider-specific
 	// NS           string `json:"ns,omitempty"`            // NS -> provider-specific
 	// ForwardTo    string `json:"forward-to,omitempty"`    // FWD
 }
@@ -109,6 +110,13 @@ func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 		log.Debugf("MX preference set to: %s", record.MXPreference)
 		record.MXExchange = exchange
 		log.Debugf("MX exchange set to: %s", record.MXExchange)
+
+	case "SRV":
+		split := strings.Split(endpoint.Targets[0], " ")
+		record.SrvPriority = split[0]
+		record.SrvWeight = split[1]
+		record.SrvPort = split[2]
+		record.SrvTarget = split[3]
 
 	default:
 		return nil, fmt.Errorf("unsupported DNS type: %s", endpoint.RecordType)
@@ -213,6 +221,12 @@ func (r *DNSRecord) toExternalDNSEndpoint() (*endpoint.Endpoint, error) {
 		log.Debugf("MX preference set to: %s", r.MXPreference)
 		log.Debugf("MX exchange set to: %s", r.MXExchange)
 
+	case "SRV":
+		ep.Targets = endpoint.NewTargets(fmt.Sprintf("%s %s %s %s", r.SrvPriority, r.SrvWeight, r.SrvPort, r.SrvTarget))
+		log.Debugf("SRV priority set to: %s", r.SrvPriority)
+		log.Debugf("SRV weight set to: %s", r.SrvWeight)
+		log.Debugf("SRV port set to: %s", r.SrvPort)
+		log.Debugf("SRV target set to: %s", r.SrvTarget)
 	default:
 		return nil, fmt.Errorf("unsupported DNS type: %s", ep.RecordType)
 	}
