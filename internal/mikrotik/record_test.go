@@ -114,7 +114,7 @@ func TestValidateMXPreference(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateMXPreference(tt.preference)
+			err := validateUnsignedInteger(tt.preference)
 			if (err != nil) != tt.expectError {
 				t.Errorf("expected error: %v, got: %v for MX preference: %s", tt.expectError, err, tt.preference)
 			}
