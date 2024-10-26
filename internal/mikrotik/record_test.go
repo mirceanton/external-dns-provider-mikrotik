@@ -8,70 +8,9 @@ import (
 	"sigs.k8s.io/external-dns/endpoint"
 )
 
-func TestMikrotikTTLtoEndpointTTL(t *testing.T) {
-	tests := []struct {
-		name        string
-		inputTTL    string
-		expectedTTL endpoint.TTL
-		expectError bool
-	}{
-		{"Valid TTL with days", "1d5h20m15s", endpoint.TTL(105615), false},
-		{"Valid TTL with hours", "2h30m", endpoint.TTL(9000), false},
-		{"Valid TTL with minutes and seconds", "45m15s", endpoint.TTL(2715), false},
-		{"Valid TTL with only days", "3d", endpoint.TTL(259200), false},
-		{"Valid TTL with decimal days", "1.5d", endpoint.TTL(129600), false},
-		{"Valid TTL with decimal hours", "2.5h", endpoint.TTL(9000), false},
-		{"Invalid TTL string", "invalid", 0, true},
-		{"Invalid unit", "1x", 0, true},
-		{"Empty TTL string", "", endpoint.TTL(0), false},
-		{"TTL with zero seconds", "0s", endpoint.TTL(0), false},
-		{"TTL with negative value", "-1h", 0, true},
-		{"TTL with unexpected characters", "1h30m20x", 0, true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ttl, err := mikrotikTTLtoEndpointTTL(tt.inputTTL)
-			if tt.expectError {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.expectedTTL, ttl)
-			}
-		})
-	}
-}
-
-func TestEndpointTTLtoMikrotikTTL(t *testing.T) {
-	tests := []struct {
-		name        string
-		inputTTL    endpoint.TTL
-		expectedTTL string
-		expectError bool
-	}{
-		{"TTL with days, hours, minutes, and seconds", endpoint.TTL(105615), "1d5h20m15s", false},
-		{"TTL with hours and minutes", endpoint.TTL(9000), "2h30m", false},
-		{"TTL with minutes and seconds", endpoint.TTL(2715), "45m15s", false},
-		{"TTL with only days", endpoint.TTL(259200), "3d", false},
-		{"TTL with decimal days", endpoint.TTL(129600), "1d12h", false},
-		{"TTL zero", endpoint.TTL(0), "0s", false},
-		{"TTL negative", endpoint.TTL(-3600), "", true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ttlStr, err := endpointTTLtoMikrotikTTL(tt.inputTTL)
-			if tt.expectError {
-				assert.Error(t, err)
-				assert.Equal(t, "", ttlStr)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.expectedTTL, ttlStr)
-			}
-		})
-	}
-}
-
+// ================================================================================================
+// Test Validation Functions
+// ================================================================================================
 func TestValidateIPv4(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -160,6 +99,76 @@ func TestValidateDomain(t *testing.T) {
 	}
 }
 
+// ================================================================================================
+// Test TTL Conversion Functions
+// ================================================================================================
+func TestMikrotikTTLtoEndpointTTL(t *testing.T) {
+	tests := []struct {
+		name        string
+		inputTTL    string
+		expectedTTL endpoint.TTL
+		expectError bool
+	}{
+		{"Valid TTL with days", "1d5h20m15s", endpoint.TTL(105615), false},
+		{"Valid TTL with hours", "2h30m", endpoint.TTL(9000), false},
+		{"Valid TTL with minutes and seconds", "45m15s", endpoint.TTL(2715), false},
+		{"Valid TTL with only days", "3d", endpoint.TTL(259200), false},
+		{"Valid TTL with decimal days", "1.5d", endpoint.TTL(129600), false},
+		{"Valid TTL with decimal hours", "2.5h", endpoint.TTL(9000), false},
+		{"Invalid TTL string", "invalid", 0, true},
+		{"Invalid unit", "1x", 0, true},
+		{"Empty TTL string", "", endpoint.TTL(0), false},
+		{"TTL with zero seconds", "0s", endpoint.TTL(0), false},
+		{"TTL with negative value", "-1h", 0, true},
+		{"TTL with unexpected characters", "1h30m20x", 0, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ttl, err := mikrotikTTLtoEndpointTTL(tt.inputTTL)
+			if tt.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedTTL, ttl)
+			}
+		})
+	}
+}
+
+func TestEndpointTTLtoMikrotikTTL(t *testing.T) {
+	tests := []struct {
+		name        string
+		inputTTL    endpoint.TTL
+		expectedTTL string
+		expectError bool
+	}{
+		{"TTL with days, hours, minutes, and seconds", endpoint.TTL(105615), "1d5h20m15s", false},
+		{"TTL with hours and minutes", endpoint.TTL(9000), "2h30m", false},
+		{"TTL with minutes and seconds", endpoint.TTL(2715), "45m15s", false},
+		{"TTL with only days", endpoint.TTL(259200), "3d", false},
+		{"TTL with decimal days", endpoint.TTL(129600), "1d12h", false},
+		{"TTL zero", endpoint.TTL(0), "0s", false},
+		{"TTL negative", endpoint.TTL(-3600), "", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ttlStr, err := endpointTTLtoMikrotikTTL(tt.inputTTL)
+			if tt.expectError {
+				assert.Error(t, err)
+				assert.Equal(t, "", ttlStr)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedTTL, ttlStr)
+			}
+		})
+	}
+}
+
+// ================================================================================================
+// Test DNS Record Conversion Functions
+// ================================================================================================
 func TestDNSRecordToExternalDNSEndpoint(t *testing.T) {
 	tests := []struct {
 		name        string
