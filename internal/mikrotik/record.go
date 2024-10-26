@@ -38,9 +38,9 @@ type DNSRecord struct {
 	SrvTarget    string `json:"srv-target,omitempty"`    // SRV -> provider-specific
 	SrvPriority  string `json:"srv-priority,omitempty"`  // SRV -> provider-specific
 	SrvWeight    string `json:"srv-weight,omitempty"`    // SRV -> provider-specific
+	NS           string `json:"ns,omitempty"`            // NS -> provider-specific
 
 	// Additional fields for other record types that are not currently supported
-	// NS           string `json:"ns,omitempty"`            // NS -> provider-specific
 	// ForwardTo    string `json:"forward-to,omitempty"`    // FWD
 }
 
@@ -124,6 +124,13 @@ func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 		log.Debugf("SRV port set to: %s", record.SrvPort)
 		record.SrvTarget = target
 		log.Debugf("SRV target set to: %s", record.SrvTarget)
+
+	case "NS":
+		if err := validateDomain(endpoint.Targets[0]); err != nil {
+			return nil, err
+		}
+		record.NS = endpoint.Targets[0]
+		log.Debugf("NS set to: %s", record.NS)
 
 	default:
 		return nil, fmt.Errorf("unsupported DNS type: %s", endpoint.RecordType)
@@ -247,6 +254,14 @@ func (r *DNSRecord) toExternalDNSEndpoint() (*endpoint.Endpoint, error) {
 		log.Debugf("SRV weight set to: %s", r.SrvWeight)
 		log.Debugf("SRV port set to: %s", r.SrvPort)
 		log.Debugf("SRV target set to: %s", r.SrvTarget)
+
+	case "NS":
+		if err := validateDomain(r.NS); err != nil {
+			return nil, err
+		}
+		ep.Targets = endpoint.NewTargets(r.NS)
+		log.Debugf("NS set to: %s", r.NS)
+
 	default:
 		return nil, fmt.Errorf("unsupported DNS type: %s", ep.RecordType)
 	}

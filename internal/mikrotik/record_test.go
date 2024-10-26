@@ -615,6 +615,48 @@ func TestDNSRecordToExternalDNSEndpoint(t *testing.T) {
 		},
 
 		// ===============================================================
+		// NS RECORD TEST CASES
+		// ===============================================================
+		{
+			name: "Valid NS record",
+			record: &DNSRecord{
+				Name: "example.com",
+				Type: "NS",
+				NS:   "ns1.example.net",
+				TTL:  "1h",
+			},
+			expected: &endpoint.Endpoint{
+				DNSName:    "example.com",
+				RecordType: "NS",
+				Targets:    endpoint.NewTargets("ns1.example.net"),
+				RecordTTL:  endpoint.TTL(3600),
+			},
+			expectError: false,
+		},
+		{
+			name: "Invalid NS record (empty NS field)",
+			record: &DNSRecord{
+				Name: "example.com",
+				Type: "NS",
+				NS:   "",
+				TTL:  "1h",
+			},
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name: "Invalid NS record (malformed NS domain)",
+			record: &DNSRecord{
+				Name: "example.com",
+				Type: "NS",
+				NS:   "invalid_domain..com",
+				TTL:  "1h",
+			},
+			expected:    nil,
+			expectError: true,
+		},
+
+		// ===============================================================
 		// PROVIDER-SPECIFIC DATA TEST CASES
 		// ===============================================================
 		{
@@ -1153,6 +1195,48 @@ func TestExternalDNSEndpointToDNSRecord(t *testing.T) {
 				DNSName:    "_sip._tcp.example.com",
 				RecordType: "SRV",
 				Targets:    endpoint.NewTargets("10 20 80 invalid_domain..com"),
+				RecordTTL:  endpoint.TTL(3600),
+			},
+			expected:    nil,
+			expectError: true,
+		},
+
+		// ===============================================================
+		// NS RECORD TEST CASES
+		// ===============================================================
+		{
+			name: "Valid NS record",
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "example.com",
+				RecordType: "NS",
+				Targets:    endpoint.NewTargets("ns1.example.net"),
+				RecordTTL:  endpoint.TTL(3600),
+			},
+			expected: &DNSRecord{
+				Name: "example.com",
+				Type: "NS",
+				NS:   "ns1.example.net",
+				TTL:  "1h",
+			},
+			expectError: false,
+		},
+		{
+			name: "Invalid NS record (empty NS field)",
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "example.com",
+				RecordType: "NS",
+				Targets:    endpoint.NewTargets(""),
+				RecordTTL:  endpoint.TTL(3600),
+			},
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name: "Invalid NS record (malformed NS domain)",
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "example.com",
+				RecordType: "NS",
+				Targets:    endpoint.NewTargets("invalid_domain..com"),
 				RecordTTL:  endpoint.TTL(3600),
 			},
 			expected:    nil,
