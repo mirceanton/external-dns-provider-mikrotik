@@ -176,7 +176,9 @@ func TestDNSRecordToExternalDNSEndpoint(t *testing.T) {
 		expected    *endpoint.Endpoint
 		expectError bool
 	}{
-		// Basic Record Types
+		// ===============================================================
+		// A RECORD TEST CASES
+		// ===============================================================
 		{
 			name: "Valid A record",
 			record: &DNSRecord{
@@ -194,6 +196,43 @@ func TestDNSRecordToExternalDNSEndpoint(t *testing.T) {
 			expectError: false,
 		},
 		{
+			name: "Invalid A record (empty address)",
+			record: &DNSRecord{
+				Name:    "invalid.example.com",
+				Type:    "A",
+				Address: "",
+				TTL:     "1h",
+			},
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name: "Invalid A record (malformed address)",
+			record: &DNSRecord{
+				Name:    "invalid.example.com",
+				Type:    "A",
+				Address: "999.999.999.999",
+				TTL:     "1h",
+			},
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name: "Invalid A record (IPv6 address)",
+			record: &DNSRecord{
+				Name:    "invalid.example.com",
+				Type:    "A",
+				Address: "2001:db8::1",
+				TTL:     "1h",
+			},
+			expected:    nil,
+			expectError: true,
+		},
+
+		// ===============================================================
+		// AAAA RECORD TEST CASES
+		// ===============================================================
+		{
 			name: "Valid AAAA record",
 			record: &DNSRecord{
 				Name:    "ipv6.example.com",
@@ -209,6 +248,43 @@ func TestDNSRecordToExternalDNSEndpoint(t *testing.T) {
 			},
 			expectError: false,
 		},
+		{
+			name: "Invalid AAAA record (empty address)",
+			record: &DNSRecord{
+				Name:    "invalid.example.com",
+				Type:    "AAAA",
+				Address: "",
+				TTL:     "1h",
+			},
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name: "Invalid AAAA record (IPv4 address)",
+			record: &DNSRecord{
+				Name:    "invalid.example.com",
+				Type:    "AAAA",
+				Address: "1.2.3.4",
+				TTL:     "1h",
+			},
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name: "Invalid AAAA record (malformed address)",
+			record: &DNSRecord{
+				Name:    "invalid.example.com",
+				Type:    "AAAA",
+				Address: "1200:0000:AB00:1234:0000:2552:7777:1313:3:31",
+				TTL:     "1h",
+			},
+			expected:    nil,
+			expectError: true,
+		},
+
+		// ===============================================================
+		// CNAME RECORD TEST CASES
+		// ===============================================================
 		{
 			name: "Valid CNAME record",
 			record: &DNSRecord{
@@ -226,6 +302,32 @@ func TestDNSRecordToExternalDNSEndpoint(t *testing.T) {
 			expectError: false,
 		},
 		{
+			name: "Invalid CNAME record (empty cname)",
+			record: &DNSRecord{
+				Name:  "invalid.example.com",
+				Type:  "CNAME",
+				CName: "",
+				TTL:   "30m",
+			},
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name: "Invalid CNAME record (malformed domain)",
+			record: &DNSRecord{
+				Name:  "invalid.example.com",
+				Type:  "CNAME",
+				CName: "sub......domain...here-",
+				TTL:   "30m",
+			},
+			expected:    nil,
+			expectError: true,
+		},
+
+		// ===============================================================
+		// TXT RECORD TEST CASES
+		// ===============================================================
+		{
 			name: "Valid TXT record",
 			record: &DNSRecord{
 				Name: "example.com",
@@ -241,10 +343,23 @@ func TestDNSRecordToExternalDNSEndpoint(t *testing.T) {
 			},
 			expectError: false,
 		},
-
-		// Provider-specific stuff
 		{
-			name: "Provider-specific properties",
+			name: "Invalid TXT record (empty text)",
+			record: &DNSRecord{
+				Name: "invalid.example.com",
+				Type: "TXT",
+				Text: "",
+				TTL:  "10m",
+			},
+			expected:    nil,
+			expectError: true,
+		},
+
+		// ===============================================================
+		// PROVIDER-SPECIFIC DATA TEST CASES
+		// ===============================================================
+		{
+			name: "Valid Provider-specific properties",
 			record: &DNSRecord{
 				Name:           "example.com",
 				Type:           "TXT",
@@ -269,8 +384,11 @@ func TestDNSRecordToExternalDNSEndpoint(t *testing.T) {
 			},
 			expectError: false,
 		},
+		// TODO: invalid provider specific
 
-		// Edge Cases
+		// ===============================================================
+		// DEFAULT VALUES FOR UNSET FIELDS TEST CASES
+		// ===============================================================
 		{
 			name: "Empty Type (should default to 'A')",
 			record: &DNSRecord{
@@ -304,7 +422,20 @@ func TestDNSRecordToExternalDNSEndpoint(t *testing.T) {
 			expectError: false,
 		},
 
-		// Error Cases
+		// ===============================================================
+		// GENERIC ERROR CASES
+		// ===============================================================
+		{
+			name: "Invalid TTL in DNSRecord",
+			record: &DNSRecord{
+				Name:    "example.com",
+				Type:    "A",
+				Address: "192.0.2.1",
+				TTL:     "invalid",
+			},
+			expected:    nil,
+			expectError: true,
+		},
 		{
 			name: "Invalid TTL in DNSRecord",
 			record: &DNSRecord{
@@ -322,72 +453,6 @@ func TestDNSRecordToExternalDNSEndpoint(t *testing.T) {
 				Name: "example.com",
 				Type: "FWD",
 				TTL:  "1h",
-			},
-			expected:    nil,
-			expectError: true,
-		},
-		{
-			name: "Invalid A record (empty address)",
-			record: &DNSRecord{
-				Name:    "invalid.example.com",
-				Type:    "A",
-				Address: "",
-				TTL:     "1h",
-			},
-			expected:    nil,
-			expectError: true,
-		},
-		{
-			name: "Invalid A record (malformed address)",
-			record: &DNSRecord{
-				Name:    "invalid.example.com",
-				Type:    "A",
-				Address: "2001:db8::1",
-				TTL:     "1h",
-			},
-			expected:    nil,
-			expectError: true,
-		},
-		{
-			name: "Invalid AAAA record (empty address)",
-			record: &DNSRecord{
-				Name:    "invalid.example.com",
-				Type:    "AAAA",
-				Address: "",
-				TTL:     "1h",
-			},
-			expected:    nil,
-			expectError: true,
-		},
-		{
-			name: "Invalid AAAA record (malformed address)",
-			record: &DNSRecord{
-				Name:    "invalid.example.com",
-				Type:    "AAAA",
-				Address: "1.2.3.4",
-				TTL:     "1h",
-			},
-			expected:    nil,
-			expectError: true,
-		},
-		{
-			name: "Invalid CNAME record (empty cname)",
-			record: &DNSRecord{
-				Name:  "invalid.example.com",
-				Type:  "CNAME",
-				CName: "",
-				TTL:   "30m",
-			},
-			expected:    nil,
-			expectError: true,
-		},
-		{
-			name: "Invalid TXT record (empty text)",
-			record: &DNSRecord{
-				Name: "invalid.example.com",
-				Type: "TXT",
-				Text: "",
-				TTL:  "10m",
 			},
 			expected:    nil,
 			expectError: true,
