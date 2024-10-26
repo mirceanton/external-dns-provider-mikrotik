@@ -10,4 +10,3 @@ spec:
       recordType: MX
       targets:
         - 10 mailhost1.example.com
-        - 20 mailhost2.example.com

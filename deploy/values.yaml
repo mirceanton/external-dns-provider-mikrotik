@@ -14,23 +14,18 @@ provider:
   webhook:
     image:
       repository: ghcr.io/mirceanton/external-dns-provider-mikrotik
-      tag: sha-36f6f8d
+      tag: pr-95
       pullPolicy: Always
     env:
       - name: LOG_FORMAT
         value: json
       - name: LOG_LEVEL
         value: debug
-      - name: MIKROTIK_HOST
+      - name: MIKROTIK_BASEURL
         valueFrom:
           secretKeyRef:
             name: mikrotik-credentials
-            key: MIKROTIK_HOST
-      - name: MIKROTIK_PORT
-        valueFrom:
-          secretKeyRef:
-            name: mikrotik-credentials
-            key: MIKROTIK_PORT
+            key: MIKROTIK_BASEURL
       - name: MIKROTIK_USERNAME
         valueFrom:
           secretKeyRef:
@@ -50,13 +45,13 @@ provider:
     livenessProbe:
       httpGet:
         path: /healthz
-        port: http-wh-metrics
+        port: http-webhook
       initialDelaySeconds: 10
       timeoutSeconds: 5
     readinessProbe:
       httpGet:
         path: /readyz
-        port: http-wh-metrics
+        port: http-webhook
       initialDelaySeconds: 10
       timeoutSeconds: 5
 
@@ -65,6 +60,11 @@ extraArgs:
   - --source=crd
   - --crd-source-apiversion=externaldns.k8s.io/v1alpha1
   - --crd-source-kind=DNSEndpoint
+  - --managed-record-types=A
+  - --managed-record-types=AAAA
+  - --managed-record-types=CNAME
+  - --managed-record-types=TXT
+  - --managed-record-types=MX
 
 rbac:
   create: true

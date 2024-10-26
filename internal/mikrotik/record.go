@@ -32,9 +32,9 @@ type DNSRecord struct {
 	CName   string `json:"cname,omitempty"`   // CNAME -> endpoint.Targets[0]
 	Text    string `json:"text,omitempty"`    // TXT -> endpoint.Targets[0]
 
+	MXExchange   string `json:"mx-exchange,omitempty"`   // MX -> provider-specific
+	MXPreference string `json:"mx-preference,omitempty"` // MX -> provider-specific
 	// Additional fields for other record types that are not currently supported
-	// MXExchange   string `json:"mx-exchange,omitempty"`   // MX -> provider-specific
-	// MXPreference string `json:"mx-preference,omitempty"` // MX -> provider-specific
 	// SrvPort      string `json:"srv-port,omitempty"`      // SRV -> provider-specific
 	// SrvTarget    string `json:"srv-target,omitempty"`    // SRV -> provider-specific
 	// SrvPriority  string `json:"srv-priority,omitempty"`  // SRV -> provider-specific
@@ -99,6 +99,16 @@ func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 		}
 		record.Text = endpoint.Targets[0]
 		log.Debugf("Text set to: %s", record.Text)
+
+	case "MX":
+		preference, exchange, err := parseMX(endpoint.Targets[0])
+		if err != nil {
+			return nil, err
+		}
+		record.MXPreference = fmt.Sprintf("%v", preference)
+		log.Debugf("MX preference set to: %s", record.MXPreference)
+		record.MXExchange = exchange
+		log.Debugf("MX exchange set to: %s", record.MXExchange)
 
 	default:
 		return nil, fmt.Errorf("unsupported DNS type: %s", endpoint.RecordType)
@@ -191,6 +201,17 @@ func (r *DNSRecord) toExternalDNSEndpoint() (*endpoint.Endpoint, error) {
 		}
 		ep.Targets = endpoint.NewTargets(r.Text)
 		log.Debugf("Text set to: %s", r.Text)
+
+	case "MX":
+		if err := validateDomain(r.MXExchange); err != nil {
+			return nil, err
+		}
+		if err := validateMXPreference(r.MXPreference); err != nil {
+			return nil, err
+		}
+		ep.Targets = endpoint.NewTargets(fmt.Sprintf("%s %s", r.MXPreference, r.MXExchange))
+		log.Debugf("MX preference set to: %s", r.MXPreference)
+		log.Debugf("MX exchange set to: %s", r.MXExchange)
 
 	default:
 		return nil, fmt.Errorf("unsupported DNS type: %s", ep.RecordType)
@@ -394,4 +415,42 @@ func validateDomain(domain string) error {
 	}
 
 	return nil
+}
+
+// validateMXPreference checks if the provided MX preference is valid.
+func validateMXPreference(preference string) error {
+	if preference == "" {
+		return fmt.Errorf("MX preference cannot be empty")
+	}
+	preferenceVal, err := strconv.Atoi(preference)
+	if err != nil {
+		return fmt.Errorf("invalid MX preference value: %s . Value cannot be converrted to int", preference)
+	}
+
+	if preferenceVal < 0 || preferenceVal > 65535 {
+		return fmt.Errorf("invalid MX preference value: %s . Value must be between 0 and 65535", preference)
+	}
+	return nil
+}
+
+// parseMX parses and validates an MX record
+func parseMX(data string) (string, string, error) {
+	data_split := strings.Split(data, " ")
+	if len(data_split) != 2 {
+		return "", "", fmt.Errorf("malformed MX record %s", data)
+	}
+
+	// Extract and Validate MX Preference
+	preference := data_split[0]
+	if err := validateMXPreference(preference); err != nil {
+		return "", "", err
+	}
+
+	// Extract and Validate MX Exchange
+	exchange := data_split[1]
+	if err := validateDomain(exchange); err != nil {
+		return "", "", err
+	}
+
+	return preference, exchange, nil
 }

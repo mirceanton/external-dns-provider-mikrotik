@@ -99,6 +99,29 @@ func TestValidateDomain(t *testing.T) {
 	}
 }
 
+func TestValidateMXPreference(t *testing.T) {
+	tests := []struct {
+		name        string
+		preference  string
+		expectError bool
+	}{
+		{"Valid MX preference", "10", false},
+		{"Empty MX preference", "", true},
+		{"Negative MX preference", "-10", true},
+		{"Too high MX preference", "70000", true},
+		{"Not a number", "abc", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateMXPreference(tt.preference)
+			if (err != nil) != tt.expectError {
+				t.Errorf("expected error: %v, got: %v for MX preference: %s", tt.expectError, err, tt.preference)
+			}
+		})
+	}
+}
+
 // ================================================================================================
 // Test TTL Conversion Functions
 // ================================================================================================
@@ -350,6 +373,111 @@ func TestDNSRecordToExternalDNSEndpoint(t *testing.T) {
 				Type: "TXT",
 				Text: "",
 				TTL:  "10m",
+			},
+			expected:    nil,
+			expectError: true,
+		},
+
+		// ===============================================================
+		// MX RECORD TEST CASES
+		// ===============================================================
+		{
+			name: "Valid MX record",
+			record: &DNSRecord{
+				Name:         "mx.example.com",
+				Type:         "MX",
+				MXExchange:   "mailhost1.example.com",
+				MXPreference: "10",
+				TTL:          "10m",
+			},
+			expected: &endpoint.Endpoint{
+				DNSName:    "mx.example.com",
+				RecordType: "MX",
+				Targets:    endpoint.NewTargets("10 mailhost1.example.com"),
+				RecordTTL:  endpoint.TTL(600),
+			},
+			expectError: false,
+		},
+		{
+			name: "Invalid MX record (empty preference)",
+			record: &DNSRecord{
+				Name:         "invalid.example.com",
+				Type:         "MX",
+				MXExchange:   "mailhost1.example.com",
+				MXPreference: "",
+				TTL:          "10m",
+			},
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name: "Invalid MX record (negative preference)",
+			record: &DNSRecord{
+				Name:         "invalid.example.com",
+				Type:         "MX",
+				MXExchange:   "mailhost1.example.com",
+				MXPreference: "-10",
+				TTL:          "10m",
+			},
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name: "Invalid MX record (too large preference)",
+			record: &DNSRecord{
+				Name:         "invalid.example.com",
+				Type:         "MX",
+				MXExchange:   "mailhost1.example.com",
+				MXPreference: "70000",
+				TTL:          "10m",
+			},
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name: "Invalid MX record (non-numeric preference)",
+			record: &DNSRecord{
+				Name:         "invalid.example.com",
+				Type:         "MX",
+				MXExchange:   "mailhost1.example.com",
+				MXPreference: "invalid",
+				TTL:          "10m",
+			},
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name: "Invalid MX record (empty exchange)",
+			record: &DNSRecord{
+				Name:         "invalid.example.com",
+				Type:         "MX",
+				MXExchange:   "",
+				MXPreference: "1",
+				TTL:          "10m",
+			},
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name: "Invalid MX record (exchange missing TLD)",
+			record: &DNSRecord{
+				Name:         "invalid.example.com",
+				Type:         "MX",
+				MXExchange:   "invalid_domain",
+				MXPreference: "10",
+				TTL:          "10m",
+			},
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name: "Invalid MX record (malformed domain)",
+			record: &DNSRecord{
+				Name:         "invalid.example.com",
+				Type:         "MX",
+				MXExchange:   "sub....domain.com",
+				MXPreference: "10",
+				TTL:          "10m",
 			},
 			expected:    nil,
 			expectError: true,
@@ -702,6 +830,79 @@ func TestExternalDNSEndpointToDNSRecord(t *testing.T) {
 				DNSName:    "invalid.example.com",
 				RecordType: "TXT",
 				Targets:    endpoint.NewTargets(""),
+				RecordTTL:  endpoint.TTL(600),
+			},
+			expected:    nil,
+			expectError: true,
+		},
+
+		{
+			name: "Valid MX record",
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "mx.example.com",
+				RecordType: "MX",
+				Targets:    endpoint.NewTargets("10 mailhost1.example.com"),
+				RecordTTL:  endpoint.TTL(600),
+			},
+			expected: &DNSRecord{
+				Name:         "mx.example.com",
+				Type:         "MX",
+				MXExchange:   "mailhost1.example.com",
+				MXPreference: "10",
+				TTL:          "10m",
+			},
+			expectError: false,
+		},
+		{
+			name: "Invalid MX record (empty preference)",
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "mx.example.com",
+				RecordType: "MX",
+				Targets:    endpoint.NewTargets(" mailhost1.example.com"),
+				RecordTTL:  endpoint.TTL(600),
+			},
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name: "Invalid MX record (negative preference)",
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "mx.example.com",
+				RecordType: "MX",
+				Targets:    endpoint.NewTargets("-10 mailhost1.example.com"),
+				RecordTTL:  endpoint.TTL(600),
+			},
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name: "Invalid MX record (too large preference)",
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "mx.example.com",
+				RecordType: "MX",
+				Targets:    endpoint.NewTargets("70000 mailhost1.example.com"),
+				RecordTTL:  endpoint.TTL(600),
+			},
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name: "Invalid MX record (non-numeric preference)",
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "mx.example.com",
+				RecordType: "MX",
+				Targets:    endpoint.NewTargets("123 "),
+				RecordTTL:  endpoint.TTL(600),
+			},
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name: "Invalid MX record (malformed exchange)",
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "mx.example.com",
+				RecordType: "MX",
+				Targets:    endpoint.NewTargets("123 sub....domain.com"),
 				RecordTTL:  endpoint.TTL(600),
 			},
 			expected:    nil,
