@@ -21,16 +21,11 @@ provider:
         value: json
       - name: LOG_LEVEL
         value: debug
-      - name: MIKROTIK_HOST
+      - name: MIKROTIK_BASEURL
         valueFrom:
           secretKeyRef:
             name: mikrotik-credentials
-            key: MIKROTIK_HOST
-      - name: MIKROTIK_PORT
-        valueFrom:
-          secretKeyRef:
-            name: mikrotik-credentials
-            key: MIKROTIK_PORT
+            key: MIKROTIK_BASEURL
       - name: MIKROTIK_USERNAME
         valueFrom:
           secretKeyRef:
@@ -50,13 +45,13 @@ provider:
     livenessProbe:
       httpGet:
         path: /healthz
-        port: http-wh-metrics
+        port: http-webhook
       initialDelaySeconds: 10
       timeoutSeconds: 5
     readinessProbe:
       httpGet:
         path: /readyz
-        port: http-wh-metrics
+        port: http-webhook
       initialDelaySeconds: 10
       timeoutSeconds: 5
 
