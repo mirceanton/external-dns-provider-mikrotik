@@ -5,4 +5,7 @@ resources:
   - aaaa-record.yaml
   - cname-record.yaml
   - complex-record.yaml
+  - mx-record.yaml
+  - ns-record.yaml
+  - srv-record.yaml
   - text-record.yaml
