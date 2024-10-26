@@ -43,7 +43,7 @@ func Init(config configuration.Config) (provider.Provider, error) {
 	}
 	log.Info(createMsg)
 
-	mikrotikConfig := mikrotik.Config{}
+	mikrotikConfig := mikrotik.MikrotikConnectionConfig{}
 	if err := env.Parse(&mikrotikConfig); err != nil {
 		return nil, fmt.Errorf("reading mikrotik configuration failed: %v", err)
 	}
