@@ -1,6 +1,7 @@
 package mikrotik
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -71,6 +72,94 @@ func TestEndpointTTLtoMikrotikTTL(t *testing.T) {
 	}
 }
 
+func TestValidateIPv4(t *testing.T) {
+	tests := []struct {
+		name        string
+		address     string
+		expectError bool
+	}{
+		{"Valid IPv4 address", "192.168.1.1", false},
+		{"Invalid IPv4 address", "256.256.256.256", true},
+		{"Looks like IPv6", "2001:0db8:85a3:0000:0000:8a2e:0370:7334", true},
+		{"Empty address", "", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateIPv4(tt.address)
+			if (err != nil) != tt.expectError {
+				t.Errorf("expected error: %v, got: %v for address: %s", tt.expectError, err, tt.address)
+			}
+		})
+	}
+}
+
+func TestValidateIPv6(t *testing.T) {
+	tests := []struct {
+		name        string
+		address     string
+		expectError bool
+	}{
+		{"Valid IPv6 address", "2001:0db8:85a3:0000:0000:8a2e:0370:7334", false},
+		{"Invalid IPv6 address", "1200:0000:AB00:1234:0000:2552:7777:1313:3", true},
+		{"Looks like IPv4", "192.168.1.1", true},
+		{"Empty address", "", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateIPv6(tt.address)
+			if (err != nil) != tt.expectError {
+				t.Errorf("expected error: %v, got: %v for address: %s", tt.expectError, err, tt.address)
+			}
+		})
+	}
+}
+
+func TestValidateTXT(t *testing.T) {
+	tests := []struct {
+		name        string
+		text        string
+		expectError bool
+	}{
+		{"Valid TXT record", "This is a valid TXT record", false},
+		{"Empty TXT record", "", true},
+		{"Single space TXT record", " ", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateTXT(tt.text)
+			if (err != nil) != tt.expectError {
+				t.Errorf("expected error: %v, got: %v for TXT record: %s", tt.expectError, err, tt.text)
+			}
+		})
+	}
+}
+
+func TestValidateDomain(t *testing.T) {
+	tests := []struct {
+		name        string
+		domain      string
+		expectError bool
+	}{
+		{"Valid domain", "example.com", false},
+		{"Invalid domain with underscores", "example_domain.com", true},
+		{"Too long domain", strings.Repeat("a", 255) + ".com", true},
+		{"Empty domain", "", true},
+		{"Invalid domain format", "invalid_domain", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateDomain(tt.domain)
+			if (err != nil) != tt.expectError {
+				t.Errorf("expected error: %v, got: %v for domain: %s", tt.expectError, err, tt.domain)
+			}
+		})
+	}
+}
+
 func TestDNSRecordToExternalDNSEndpoint(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -78,6 +167,7 @@ func TestDNSRecordToExternalDNSEndpoint(t *testing.T) {
 		expected    *endpoint.Endpoint
 		expectError bool
 	}{
+		// Basic Record Types
 		{
 			name: "Valid A record",
 			record: &DNSRecord{
@@ -143,67 +233,7 @@ func TestDNSRecordToExternalDNSEndpoint(t *testing.T) {
 			expectError: false,
 		},
 
-		{
-			name: "Record with match-subdomain",
-			record: &DNSRecord{
-				Name:           "example.com",
-				Type:           "CNAME",
-				CName:          "example.org",
-				TTL:            "30m",
-				MatchSubdomain: "yes",
-			},
-			expected: &endpoint.Endpoint{
-				DNSName:    "example.com",
-				RecordType: "CNAME",
-				Targets:    endpoint.NewTargets("example.org"),
-				RecordTTL:  endpoint.TTL(1800),
-				ProviderSpecific: endpoint.ProviderSpecific{
-					{Name: "match-subdomain", Value: "yes"},
-				},
-			},
-			expectError: false,
-		},
-		{
-			name: "Record with address-list",
-			record: &DNSRecord{
-				Name:        "blocked.example.com",
-				Type:        "A",
-				Address:     "192.0.2.123",
-				TTL:         "1h",
-				AddressList: "blocked",
-			},
-			expected: &endpoint.Endpoint{
-				DNSName:    "blocked.example.com",
-				RecordType: "A",
-				Targets:    endpoint.NewTargets("192.0.2.123"),
-				RecordTTL:  endpoint.TTL(3600),
-				ProviderSpecific: endpoint.ProviderSpecific{
-					{Name: "address-list", Value: "blocked"},
-				},
-			},
-			expectError: false,
-		},
-		{
-			name: "Invalid TTL in DNSRecord",
-			record: &DNSRecord{
-				Name:    "example.com",
-				Type:    "A",
-				Address: "192.0.2.1",
-				TTL:     "invalid",
-			},
-			expected:    nil,
-			expectError: true,
-		},
-		{
-			name: "Unsupported record type",
-			record: &DNSRecord{
-				Name: "example.com",
-				Type: "MX",
-				TTL:  "1h",
-			},
-			expected:    nil,
-			expectError: true,
-		},
+		// Provider-specific stuff
 		{
 			name: "Provider-specific properties",
 			record: &DNSRecord{
@@ -230,10 +260,13 @@ func TestDNSRecordToExternalDNSEndpoint(t *testing.T) {
 			},
 			expectError: false,
 		},
+
+		// Edge Cases
 		{
 			name: "Empty Type (should default to 'A')",
 			record: &DNSRecord{
-				Name:    "example.com",
+				Name: "example.com",
+				//! Type is empty
 				Address: "192.0.2.1",
 				TTL:     "1h",
 			},
@@ -251,7 +284,7 @@ func TestDNSRecordToExternalDNSEndpoint(t *testing.T) {
 				Name:    "example.com",
 				Type:    "A",
 				Address: "192.0.2.1",
-				// TTL is empty
+				//! TTL is empty
 			},
 			expected: &endpoint.Endpoint{
 				DNSName:    "example.com",
@@ -260,6 +293,29 @@ func TestDNSRecordToExternalDNSEndpoint(t *testing.T) {
 				RecordTTL:  endpoint.TTL(0),
 			},
 			expectError: false,
+		},
+
+		// Error Cases
+		{
+			name: "Invalid TTL in DNSRecord",
+			record: &DNSRecord{
+				Name:    "example.com",
+				Type:    "A",
+				Address: "192.0.2.1",
+				TTL:     "invalid",
+			},
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name: "Unsupported record type",
+			record: &DNSRecord{
+				Name: "example.com",
+				Type: "FWD",
+				TTL:  "1h",
+			},
+			expected:    nil,
+			expectError: true,
 		},
 		{
 			name: "Invalid A record (empty address)",
@@ -273,11 +329,33 @@ func TestDNSRecordToExternalDNSEndpoint(t *testing.T) {
 			expectError: true,
 		},
 		{
+			name: "Invalid A record (malformed address)",
+			record: &DNSRecord{
+				Name:    "invalid.example.com",
+				Type:    "A",
+				Address: "2001:db8::1",
+				TTL:     "1h",
+			},
+			expected:    nil,
+			expectError: true,
+		},
+		{
 			name: "Invalid AAAA record (empty address)",
 			record: &DNSRecord{
 				Name:    "invalid.example.com",
 				Type:    "AAAA",
 				Address: "",
+				TTL:     "1h",
+			},
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name: "Invalid AAAA record (malformed address)",
+			record: &DNSRecord{
+				Name:    "invalid.example.com",
+				Type:    "AAAA",
+				Address: "1.2.3.4",
 				TTL:     "1h",
 			},
 			expected:    nil,
