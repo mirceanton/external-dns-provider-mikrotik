@@ -34,11 +34,12 @@ type DNSRecord struct {
 
 	MXExchange   string `json:"mx-exchange,omitempty"`   // MX -> provider-specific
 	MXPreference string `json:"mx-preference,omitempty"` // MX -> provider-specific
+	SrvPort      string `json:"srv-port,omitempty"`      // SRV -> provider-specific
+	SrvTarget    string `json:"srv-target,omitempty"`    // SRV -> provider-specific
+	SrvPriority  string `json:"srv-priority,omitempty"`  // SRV -> provider-specific
+	SrvWeight    string `json:"srv-weight,omitempty"`    // SRV -> provider-specific
+
 	// Additional fields for other record types that are not currently supported
-	// SrvPort      string `json:"srv-port,omitempty"`      // SRV -> provider-specific
-	// SrvTarget    string `json:"srv-target,omitempty"`    // SRV -> provider-specific
-	// SrvPriority  string `json:"srv-priority,omitempty"`  // SRV -> provider-specific
-	// SrvWeight    string `json:"srv-weight,omitempty"`    // SRV -> provider-specific
 	// NS           string `json:"ns,omitempty"`            // NS -> provider-specific
 	// ForwardTo    string `json:"forward-to,omitempty"`    // FWD
 }
@@ -109,6 +110,20 @@ func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 		log.Debugf("MX preference set to: %s", record.MXPreference)
 		record.MXExchange = exchange
 		log.Debugf("MX exchange set to: %s", record.MXExchange)
+
+	case "SRV":
+		priority, weight, port, target, err := parseSRV(endpoint.Targets[0])
+		if err != nil {
+			return nil, err
+		}
+		record.SrvPriority = priority
+		log.Debugf("SRV priority set to: %s", record.SrvPriority)
+		record.SrvWeight = weight
+		log.Debugf("SRV weight set to: %s", record.SrvWeight)
+		record.SrvPort = port
+		log.Debugf("SRV port set to: %s", record.SrvPort)
+		record.SrvTarget = target
+		log.Debugf("SRV target set to: %s", record.SrvTarget)
 
 	default:
 		return nil, fmt.Errorf("unsupported DNS type: %s", endpoint.RecordType)
@@ -206,13 +221,32 @@ func (r *DNSRecord) toExternalDNSEndpoint() (*endpoint.Endpoint, error) {
 		if err := validateDomain(r.MXExchange); err != nil {
 			return nil, err
 		}
-		if err := validateMXPreference(r.MXPreference); err != nil {
+		if err := validateUnsignedInteger(r.MXPreference); err != nil {
 			return nil, err
 		}
 		ep.Targets = endpoint.NewTargets(fmt.Sprintf("%s %s", r.MXPreference, r.MXExchange))
 		log.Debugf("MX preference set to: %s", r.MXPreference)
 		log.Debugf("MX exchange set to: %s", r.MXExchange)
 
+	case "SRV":
+		if err := validateUnsignedInteger(r.SrvPort); err != nil {
+			return nil, err
+		}
+		if err := validateUnsignedInteger(r.SrvPriority); err != nil {
+			return nil, err
+		}
+		if err := validateUnsignedInteger(r.SrvWeight); err != nil {
+			return nil, err
+		}
+		if err := validateDomain(r.SrvTarget); err != nil {
+			return nil, err
+		}
+
+		ep.Targets = endpoint.NewTargets(fmt.Sprintf("%s %s %s %s", r.SrvPriority, r.SrvWeight, r.SrvPort, r.SrvTarget))
+		log.Debugf("SRV priority set to: %s", r.SrvPriority)
+		log.Debugf("SRV weight set to: %s", r.SrvWeight)
+		log.Debugf("SRV port set to: %s", r.SrvPort)
+		log.Debugf("SRV target set to: %s", r.SrvTarget)
 	default:
 		return nil, fmt.Errorf("unsupported DNS type: %s", ep.RecordType)
 	}
@@ -417,18 +451,18 @@ func validateDomain(domain string) error {
 	return nil
 }
 
-// validateMXPreference checks if the provided MX preference is valid.
-func validateMXPreference(preference string) error {
-	if preference == "" {
-		return fmt.Errorf("MX preference cannot be empty")
+// validateUnsignedInteger checks if the provided value is a number between 0 and 65535.
+func validateUnsignedInteger(value string) error {
+	if value == "" {
+		return fmt.Errorf("value cannot be empty")
 	}
-	preferenceVal, err := strconv.Atoi(preference)
+	intVal, err := strconv.Atoi(value)
 	if err != nil {
-		return fmt.Errorf("invalid MX preference value: %s . Value cannot be converrted to int", preference)
+		return fmt.Errorf("value cannot be converrted to int: %s", value)
 	}
 
-	if preferenceVal < 0 || preferenceVal > 65535 {
-		return fmt.Errorf("invalid MX preference value: %s . Value must be between 0 and 65535", preference)
+	if intVal < 0 || intVal > 65535 {
+		return fmt.Errorf("value must be between 0 and 65535: %s", value)
 	}
 	return nil
 }
@@ -442,15 +476,48 @@ func parseMX(data string) (string, string, error) {
 
 	// Extract and Validate MX Preference
 	preference := data_split[0]
-	if err := validateMXPreference(preference); err != nil {
-		return "", "", err
+	if err := validateUnsignedInteger(preference); err != nil {
+		return "", "", fmt.Errorf("failed to validate MX preference: %v", err)
 	}
 
 	// Extract and Validate MX Exchange
 	exchange := data_split[1]
 	if err := validateDomain(exchange); err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("failed to validate MX exchange: %v", err)
 	}
 
 	return preference, exchange, nil
+}
+
+func parseSRV(data string) (string, string, string, string, error) {
+	data_split := strings.Split(data, " ")
+	if len(data_split) != 4 {
+		return "", "", "", "", fmt.Errorf("malformed SRV record %s", data)
+	}
+
+	// Extract and Validate SRV Priority
+	priority := data_split[0]
+	if err := validateUnsignedInteger(priority); err != nil {
+		return "", "", "", "", fmt.Errorf("failed to validate SRV priority: %v", err)
+	}
+
+	// Extract and Validate SRV weight
+	weight := data_split[1]
+	if err := validateUnsignedInteger(weight); err != nil {
+		return "", "", "", "", fmt.Errorf("failed to validate SRV weight: %v", err)
+	}
+
+	// Extract and Validate SRV port
+	port := data_split[2]
+	if err := validateUnsignedInteger(port); err != nil {
+		return "", "", "", "", fmt.Errorf("failed to validate SRV port: %v", err)
+	}
+
+	// Extract and Validate SRV target
+	target := data_split[3]
+	if err := validateDomain(target); err != nil {
+		return "", "", "", "", fmt.Errorf("failed to validate SRV target: %v", err)
+	}
+
+	return priority, weight, port, target, nil
 }

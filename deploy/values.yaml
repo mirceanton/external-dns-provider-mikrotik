@@ -14,7 +14,7 @@ provider:
   webhook:
     image:
       repository: ghcr.io/mirceanton/external-dns-provider-mikrotik
-      tag: pr-95
+      tag: pr-97
       pullPolicy: Always
     env:
       - name: LOG_FORMAT
@@ -65,6 +65,7 @@ extraArgs:
   - --managed-record-types=CNAME
   - --managed-record-types=TXT
   - --managed-record-types=MX
+  - --managed-record-types=SRV
 
 rbac:
   create: true

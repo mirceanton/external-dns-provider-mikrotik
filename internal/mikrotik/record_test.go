@@ -114,7 +114,7 @@ func TestValidateMXPreference(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateMXPreference(tt.preference)
+			err := validateUnsignedInteger(tt.preference)
 			if (err != nil) != tt.expectError {
 				t.Errorf("expected error: %v, got: %v for MX preference: %s", tt.expectError, err, tt.preference)
 			}
@@ -484,6 +484,137 @@ func TestDNSRecordToExternalDNSEndpoint(t *testing.T) {
 		},
 
 		// ===============================================================
+		// SRV RECORD TEST CASES
+		// ===============================================================
+		{
+			name: "Valid SRV record",
+			record: &DNSRecord{
+				Name:        "_sip._tcp.example.com",
+				Type:        "SRV",
+				SrvPriority: "10",
+				SrvWeight:   "20",
+				SrvPort:     "5060",
+				SrvTarget:   "sipserver.example.com",
+				TTL:         "1h",
+			},
+			expected: &endpoint.Endpoint{
+				DNSName:    "_sip._tcp.example.com",
+				RecordType: "SRV",
+				Targets:    endpoint.NewTargets("10 20 5060 sipserver.example.com"),
+				RecordTTL:  endpoint.TTL(3600),
+			},
+			expectError: false,
+		},
+		{
+			name: "Valid SRV record with minimum priority and weight",
+			record: &DNSRecord{
+				Name:        "_sip._tcp.example.com",
+				Type:        "SRV",
+				SrvPriority: "0",
+				SrvWeight:   "0",
+				SrvPort:     "443",
+				SrvTarget:   "example.com",
+				TTL:         "1h",
+			},
+			expected: &endpoint.Endpoint{
+				DNSName:    "_sip._tcp.example.com",
+				RecordType: "SRV",
+				Targets:    endpoint.NewTargets("0 0 443 example.com"),
+				RecordTTL:  endpoint.TTL(3600),
+			},
+			expectError: false,
+		},
+		{
+			name: "Valid SRV record with maximum priority and weight",
+			record: &DNSRecord{
+				Name:        "_sip._tcp.example.com",
+				Type:        "SRV",
+				SrvPriority: "65535",
+				SrvWeight:   "65535",
+				SrvPort:     "53",
+				SrvTarget:   "domain.com",
+				TTL:         "1h",
+			},
+			expected: &endpoint.Endpoint{
+				DNSName:    "_sip._tcp.example.com",
+				RecordType: "SRV",
+				Targets:    endpoint.NewTargets("65535 65535 53 domain.com"),
+				RecordTTL:  endpoint.TTL(3600),
+			},
+			expectError: false,
+		},
+		{
+			name: "Invalid SRV record (negative priority)",
+			record: &DNSRecord{
+				Name:        "_sip._tcp.example.com",
+				Type:        "SRV",
+				SrvPriority: "-1",
+				SrvWeight:   "20",
+				SrvPort:     "80",
+				SrvTarget:   "sipserver.example.com",
+				TTL:         "1h",
+			},
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name: "Invalid SRV record (negative weight)",
+			record: &DNSRecord{
+				Name:        "_sip._tcp.example.com",
+				Type:        "SRV",
+				SrvPriority: "10",
+				SrvWeight:   "-5",
+				SrvPort:     "80",
+				SrvTarget:   "sipserver.example.com",
+				TTL:         "1h",
+			},
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name: "Invalid SRV record (port out of range)",
+			record: &DNSRecord{
+				Name:        "_sip._tcp.example.com",
+				Type:        "SRV",
+				SrvPriority: "10",
+				SrvWeight:   "20",
+				SrvPort:     "70000",
+				SrvTarget:   "sipserver.example.com",
+				TTL:         "1h",
+			},
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name: "Invalid SRV record (empty target)",
+			record: &DNSRecord{
+				Name:        "_sip._tcp.example.com",
+				Type:        "SRV",
+				SrvPriority: "10",
+				SrvWeight:   "20",
+				SrvPort:     "80",
+				SrvTarget:   "",
+				TTL:         "1h",
+			},
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name: "Invalid SRV record (malformed target domain)",
+			record: &DNSRecord{
+				Name:        "_sip._tcp.example.com",
+				Type:        "SRV",
+				SrvPriority: "10",
+				SrvWeight:   "20",
+				SrvPort:     "80",
+				SrvTarget:   "invalid_domain..com",
+				TTL:         "1h",
+			},
+			expected:    nil,
+			expectError: true,
+		},
+
+		// ===============================================================
 		// PROVIDER-SPECIFIC DATA TEST CASES
 		// ===============================================================
 		{
@@ -836,6 +967,9 @@ func TestExternalDNSEndpointToDNSRecord(t *testing.T) {
 			expectError: true,
 		},
 
+		// ===============================================================
+		// MX RECORD TEST CASES
+		// ===============================================================
 		{
 			name: "Valid MX record",
 			endpoint: &endpoint.Endpoint{
@@ -904,6 +1038,122 @@ func TestExternalDNSEndpointToDNSRecord(t *testing.T) {
 				RecordType: "MX",
 				Targets:    endpoint.NewTargets("123 sub....domain.com"),
 				RecordTTL:  endpoint.TTL(600),
+			},
+			expected:    nil,
+			expectError: true,
+		},
+
+		// ===============================================================
+		// SRV RECORD TEST CASES
+		// ===============================================================
+		{
+			name: "Valid SRV record",
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "_sip._tcp.example.com",
+				RecordType: "SRV",
+				Targets:    endpoint.NewTargets("10 20 5060 sipserver.example.com"),
+				RecordTTL:  endpoint.TTL(3600),
+			},
+			expected: &DNSRecord{
+				Name:        "_sip._tcp.example.com",
+				Type:        "SRV",
+				SrvPriority: "10",
+				SrvWeight:   "20",
+				SrvPort:     "5060",
+				SrvTarget:   "sipserver.example.com",
+				TTL:         "1h",
+			},
+			expectError: false,
+		},
+		{
+			name: "Valid SRV record with lowest priority and weight",
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "_sip._tcp.example.com",
+				RecordType: "SRV",
+				Targets:    endpoint.NewTargets("0 0 80 example.com"),
+				RecordTTL:  endpoint.TTL(3600),
+			},
+			expected: &DNSRecord{
+				Name:        "_sip._tcp.example.com",
+				Type:        "SRV",
+				SrvPriority: "0",
+				SrvWeight:   "0",
+				SrvPort:     "80",
+				SrvTarget:   "example.com",
+				TTL:         "1h",
+			},
+			expectError: false,
+		},
+		{
+			name: "Valid SRV record with maximum values",
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "_sip._tcp.example.com",
+				RecordType: "SRV",
+				Targets:    endpoint.NewTargets("65535 65535 65535 domain.com"),
+				RecordTTL:  endpoint.TTL(3600),
+			},
+			expected: &DNSRecord{
+				Name:        "_sip._tcp.example.com",
+				Type:        "SRV",
+				SrvPriority: "65535",
+				SrvWeight:   "65535",
+				SrvPort:     "65535",
+				SrvTarget:   ".",
+				TTL:         "1h",
+			},
+			expectError: false,
+		},
+		{
+			name: "Invalid SRV record (negative priority)",
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "_sip._tcp.example.com",
+				RecordType: "SRV",
+				Targets:    endpoint.NewTargets("-1 20 80 sipserver.example.com"),
+				RecordTTL:  endpoint.TTL(3600),
+			},
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name: "Invalid SRV record (negative weight)",
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "_sip._tcp.example.com",
+				RecordType: "SRV",
+				Targets:    endpoint.NewTargets("10 -5 80 sipserver.example.com"),
+				RecordTTL:  endpoint.TTL(3600),
+			},
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name: "Invalid SRV record (port out of range)",
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "_sip._tcp.example.com",
+				RecordType: "SRV",
+				Targets:    endpoint.NewTargets("10 20 70000 sipserver.example.com"),
+				RecordTTL:  endpoint.TTL(3600),
+			},
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name: "Invalid SRV record (empty target)",
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "_sip._tcp.example.com",
+				RecordType: "SRV",
+				Targets:    endpoint.NewTargets("10 20 80"),
+				RecordTTL:  endpoint.TTL(3600),
+			},
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name: "Invalid SRV record (malformed target domain)",
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "_sip._tcp.example.com",
+				RecordType: "SRV",
+				Targets:    endpoint.NewTargets("10 20 80 invalid_domain..com"),
+				RecordTTL:  endpoint.TTL(3600),
 			},
 			expected:    nil,
 			expectError: true,
