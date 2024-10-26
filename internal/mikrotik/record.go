@@ -47,59 +47,62 @@ type DNSRecord struct {
 func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 	log.Debugf("Converting ExternalDNS endpoint to MikrotikDNS: %v", endpoint)
 
+	// Sanity checks -> Fields are not empty and if set, they are set correctly
 	if endpoint.DNSName == "" {
 		return nil, fmt.Errorf("DNS name is required")
 	}
-
 	if endpoint.RecordType == "" {
 		return nil, fmt.Errorf("record type is required")
 	}
-
 	if len(endpoint.Targets) == 0 || endpoint.Targets[0] == "" {
 		return nil, fmt.Errorf("no target provided for DNS record")
 	}
 
-	record := &DNSRecord{Name: endpoint.DNSName}
-	log.Debugf("Name set to: %s", record.Name)
-
-	record.Type = endpoint.RecordType
-	log.Debugf("Type set to: %s", record.Type)
-
-	switch record.Type {
-	case "A":
-		record.Address = endpoint.Targets[0]
-		if net.ParseIP(record.Address) == nil || strings.Contains(record.Address, ":") {
-			return nil, fmt.Errorf("invalid IPv4 address: %s", record.Address)
-		}
-		log.Debugf("Address set to: %s", record.Address)
-	case "AAAA":
-		record.Address = endpoint.Targets[0]
-		if net.ParseIP(record.Address) == nil || !strings.Contains(record.Address, ":") {
-			return nil, fmt.Errorf("invalid IPv6 address: %s", record.Address)
-		}
-		log.Debugf("Address set to: %s", record.Address)
-	case "CNAME":
-		record.CName = endpoint.Targets[0]
-		if record.CName == "" {
-			return nil, fmt.Errorf("CNAME target cannot be empty")
-		}
-		log.Debugf("CName set to: %s", record.CName)
-	case "TXT":
-		record.Text = endpoint.Targets[0]
-		if record.Text == "" {
-			return nil, fmt.Errorf("TXT record text cannot be empty")
-		}
-		log.Debugf("Text set to: %s", record.Text)
-	default:
-		return nil, fmt.Errorf("unsupported DNS type: %s", endpoint.RecordType)
-	}
-
+	// Convert ExternalDNS TTL to Mikrotik TTL
 	ttl, err := endpointTTLtoMikrotikTTL(endpoint.RecordTTL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert TTL: %v", err)
 	}
-	record.TTL = ttl
+
+	// Initialize new records
+	record := &DNSRecord{Name: endpoint.DNSName, Type: endpoint.RecordType, TTL: ttl}
+	log.Debugf("Name set to: %s", record.Name)
+	log.Debugf("Type set to: %s", record.Type)
 	log.Debugf("TTL set to: %s", record.TTL)
+
+	// Record-type specific data
+	switch record.Type {
+	case "A":
+		if err := validateIPv4(endpoint.Targets[0]); err != nil {
+			return nil, err
+		}
+		record.Address = endpoint.Targets[0]
+		log.Debugf("Address set to: %s", record.Address)
+
+	case "AAAA":
+		if err := validateIPv6(endpoint.Targets[0]); err != nil {
+			return nil, err
+		}
+		record.Address = endpoint.Targets[0]
+		log.Debugf("Address set to: %s", record.Address)
+
+	case "CNAME":
+		if err := validateDomain(endpoint.Targets[0]); err != nil {
+			return nil, err
+		}
+		record.CName = endpoint.Targets[0]
+		log.Debugf("CNAME set to: %s", record.Address)
+
+	case "TXT":
+		if err := validateTXT(endpoint.Targets[0]); err != nil {
+			return nil, err
+		}
+		record.Text = endpoint.Targets[0]
+		log.Debugf("Text set to: %s", record.Text)
+
+	default:
+		return nil, fmt.Errorf("unsupported DNS type: %s", endpoint.RecordType)
+	}
 
 	for _, providerSpecific := range endpoint.ProviderSpecific {
 		switch providerSpecific.Name {
@@ -132,36 +135,75 @@ func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 func (r *DNSRecord) toExternalDNSEndpoint() (*endpoint.Endpoint, error) {
 	log.Debugf("Converting MikrotikDNS record to ExternalDNS: %v", r)
 
+	// ============================================================================================
+	// Sanity checks
+	// ============================================================================================
+	if r.Name == "" {
+		return nil, fmt.Errorf("DNS record name cannot be empty")
+	}
+
+	//? Mikrotik assumes A-records are default and sometimes omits setting the type
 	if r.Type == "" {
 		log.Debugf("Record type not set. Using default value 'A'")
 		r.Type = "A"
-	}
-
-	ep := endpoint.Endpoint{
-		DNSName:    r.Name,
-		RecordType: r.Type,
-	}
-
-	switch ep.RecordType {
-	case "A", "AAAA":
-		ep.Targets = endpoint.NewTargets(r.Address)
-	case "CNAME":
-		ep.Targets = endpoint.NewTargets(r.CName)
-	case "TXT":
-		ep.Targets = endpoint.NewTargets(r.Text)
-	default:
-		return nil, fmt.Errorf("unsupported DNS type: %s", ep.RecordType)
-	}
-	if len(ep.Targets) == 0 || ep.Targets[0] == "" {
-		return nil, fmt.Errorf("no target provided for DNS record")
 	}
 
 	ttl, err := mikrotikTTLtoEndpointTTL(r.TTL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert MikrotikDNS record to ExternalDNS: %v", err)
 	}
-	ep.RecordTTL = ttl
 
+	// Initialize endpoint
+	ep := endpoint.Endpoint{
+		DNSName:    r.Name,
+		RecordType: r.Type,
+		RecordTTL:  ttl,
+	}
+
+	// ============================================================================================
+	// Record-specific data
+	// ============================================================================================
+	switch ep.RecordType {
+	case "A":
+		if err := validateIPv4(r.Address); err != nil {
+			return nil, err
+		}
+		ep.Targets = endpoint.NewTargets(r.Address)
+		log.Debugf("Address set to: %s", r.Address)
+
+	case "AAAA":
+		if err := validateIPv6(r.Address); err != nil {
+			return nil, err
+		}
+		ep.Targets = endpoint.NewTargets(r.Address)
+		log.Debugf("Address set to: %s", r.Address)
+
+	case "CNAME":
+		if err := validateDomain(r.CName); err != nil {
+			return nil, err
+		}
+		ep.Targets = endpoint.NewTargets(r.CName)
+		log.Debugf("CNAME set to: %s", r.CName)
+
+	case "TXT":
+		if err := validateTXT(r.Text); err != nil {
+			return nil, err
+		}
+		ep.Targets = endpoint.NewTargets(r.Text)
+		log.Debugf("Text set to: %s", r.Text)
+
+	default:
+		return nil, fmt.Errorf("unsupported DNS type: %s", ep.RecordType)
+	}
+
+	// Ensure at least one target is present and non-empty
+	if len(ep.Targets) == 0 || ep.Targets[0] == "" {
+		return nil, fmt.Errorf("no target provided for DNS record")
+	}
+
+	// ============================================================================================
+	// Provider-specific stuff
+	// ============================================================================================
 	if r.Comment != "" {
 		ep.ProviderSpecific = append(ep.ProviderSpecific, endpoint.ProviderSpecificProperty{
 			Name:  "comment",
@@ -191,6 +233,9 @@ func (r *DNSRecord) toExternalDNSEndpoint() (*endpoint.Endpoint, error) {
 	return &ep, nil
 }
 
+// ================================================================================================
+// UTILS
+// ================================================================================================
 // mikrotikTTLtoEndpointTTL converts a Mikrotik TTL to an ExternalDNS TTL
 func mikrotikTTLtoEndpointTTL(ttl string) (endpoint.TTL, error) {
 	log.Debugf("Converting Mikrotik TTL to Endpoint TTL: %s", ttl)
@@ -295,4 +340,58 @@ func endpointTTLtoMikrotikTTL(ttl endpoint.TTL) (string, error) {
 	durationStr := strings.Join(parts, "")
 	log.Debugf("Converted TTL: %v", durationStr)
 	return durationStr, nil
+}
+
+// validateIPv4 checks if the provided address is a valid IPv4 address.
+func validateIPv4(address string) error {
+	if net.ParseIP(address) == nil {
+		return fmt.Errorf("invalid IP address: %s", address)
+	}
+
+	if strings.Contains(address, ":") {
+		return fmt.Errorf("provided address looks like an IPv6 address: %s", address)
+	}
+
+	return nil
+}
+
+// validateIPv6 checks if the provided address is a valid IPv6 address.
+func validateIPv6(address string) error {
+	if net.ParseIP(address) == nil {
+		return fmt.Errorf("invalid IP address: %s", address)
+	}
+
+	if !strings.Contains(address, ":") {
+		return fmt.Errorf("provided address looks like an IPv4 address: %s", address)
+	}
+
+	return nil
+}
+
+// validateTXT checks if the provided TXT record text is valid.
+func validateTXT(text string) error {
+	if text == "" {
+		return fmt.Errorf("TXT record text cannot be empty")
+	}
+	//? TODO: add more validation here?
+	return nil
+}
+
+// validateDomain checks if the provided domain is semantically valid.
+func validateDomain(domain string) error {
+	if domain == "" {
+		return fmt.Errorf("a domain cannot be empty")
+	}
+
+	if len(domain) > 253 {
+		return fmt.Errorf("invalid domain, length exceeds 253 characters")
+	}
+
+	domainRegex := `^(?i:[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?\.)+[a-z]{2,}$`
+	matched, err := regexp.MatchString(domainRegex, domain)
+	if err != nil || !matched {
+		return fmt.Errorf("invalid domain: %s", domain)
+	}
+
+	return nil
 }
