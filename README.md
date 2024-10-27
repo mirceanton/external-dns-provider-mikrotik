@@ -24,7 +24,7 @@ Supported DNS record types:
 
 ## 🚫 Limitations
 
-- Currently, `DNSEndpoints` with multiple `target`s are **technically** not supported. Only one record will be created with the first target from the list, but eDNS will keep trying to update your DNS record in RouterOS, constantly sending `PUT` requests.
+- Currently, `DNSEndpoints` with multiple `targets` are *technically* not supported. Only one record will be created with the first target from the list, but eDNS will keep trying to update your DNS record in RouterOS, constantly sending `PUT` requests.
 - The `Disabled` option on DNS records is currently ignored
 - Support for `providerSpecific` annotations on `Ingress` objects is not **yet** supported.
 
@@ -34,7 +34,7 @@ Supported DNS record types:
 
 | Environment Variable        | Description                                                         | Default Value |
 |-----------------------------|---------------------------------------------------------------------|---------------|
-| `MIKROTIK_BASEURL`          | Username for the Unifi Controller (must be provided).               | N/A           |
+| `MIKROTIK_BASEURL`          | URL at which the RouterOS API is available. (ex. `https://192.168.88.1:443`)               | N/A           |
 | `MIKROTIK_USERNAME`         | Username for the RouterOS API authentication.                   | N/A        |
 | `MIKROTIK_PASSWORD`         |    Password for the RouterOS API authentication.         | N/A     |
 | `MIKROTIK_SKIP_TLS_VERIFY`  | Whether to skip TLS verification (true or false).               | `false           |
