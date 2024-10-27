@@ -21,7 +21,7 @@ tasks:
       - kubectl delete secret --namespace external-dns mikrotik-credentials || true
       - kubectl create secret generic --namespace external-dns --from-env-file=.env mikrotik-credentials || true
       - helm repo add external-dns https://kubernetes-sigs.github.io/external-dns && helm repo update
-      - helm upgrade --install --namespace external-dns external-dns external-dns/external-dns -f deploy/values.yaml
+      - helm upgrade --install --namespace external-dns external-dns external-dns/external-dns -f example/values.yaml
 
   kube:logs:
     desc: Fetch the logs from the external-dns-mikrotik webhook container to a local file.
@@ -31,8 +31,8 @@ tasks:
     desc: Remove the external-dns-mikrotik webhook from the test cluster.
     cmds:
       - kubectl delete ns external-dns || true
-      - kubectl delete -f deploy/records || true
-      - kubectl delete -f deploy/ingress || true
+      - kubectl delete -f example/records || true
+      - kubectl delete -f example/ingress || true
 
   go:release:
     desc: Run goreleaser in snapshot mode.
