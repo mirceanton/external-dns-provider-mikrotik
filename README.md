@@ -37,7 +37,7 @@ Supported DNS record types:
 | `MIKROTIK_BASEURL`          | URL at which the RouterOS API is available. (ex. `https://192.168.88.1:443`)               | N/A           |
 | `MIKROTIK_USERNAME`         | Username for the RouterOS API authentication.                   | N/A        |
 | `MIKROTIK_PASSWORD`         |    Password for the RouterOS API authentication.         | N/A     |
-| `MIKROTIK_SKIP_TLS_VERIFY`  | Whether to skip TLS verification (true or false).               | `false           |
+| `MIKROTIK_SKIP_TLS_VERIFY`  | Whether to skip TLS verification (true or false).               | `false`           |
 | `LOG_FORMAT` | The format in which logs will be printed. (`text` or `json`) | `json`       |
 | `LOG_LEVEL`                 | The verbosity at which logs are printed logs. (`debug`, `info`, `warn` or `error`)        | `info`        |
 
