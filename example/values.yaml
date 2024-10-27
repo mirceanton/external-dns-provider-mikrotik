@@ -14,8 +14,8 @@ provider:
   webhook:
     image:
       repository: ghcr.io/mirceanton/external-dns-provider-mikrotik
-      tag: pr-98
-      pullPolicy: Always
+      tag: v1.0.0
+      pullPolicy: IfNotPresent
     env:
       - name: LOG_FORMAT
         value: json
