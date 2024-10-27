@@ -92,9 +92,9 @@ Supported DNS record types:
 
 5. Configure your helm values. Take a look at the [example values.yaml](./example/values.yaml)
 
-    > [!TIP]
-    > By default, support for MX, NS and SRV records is disabled and needs to be enabled via the `--managed-record-types` argument.
-    > Make sure to set `--managed-record-types=SRV` if you want to enable SRV records, and so on.
+> [!TIP]
+> By default, support for MX, NS and SRV records is disabled and needs to be enabled via the `--managed-record-types` argument.
+> Make sure to set `--managed-record-types=SRV` if you want to enable SRV records, and so on.
 
 6. Install the External DNS helm chart
 
