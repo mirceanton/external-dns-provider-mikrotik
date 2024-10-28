@@ -26,11 +26,10 @@ metadata:
   name: test
   annotations:
     external-dns.alpha.kubernetes.io/hostname: nginx2.example.com
-    external-dns.alpha.kubernetes.io/ttl: "600"
-    external-dns.alpha.kubernetes.io/webhook-comment: "This is a comment"
-    external-dns.alpha.kubernetes.io/webhook-address-list: "1.2.3.4"
+    external-dns.alpha.kubernetes.io/ttl: "1800"
+    external-dns.alpha.kubernetes.io/webhook-comment: "This is a static DNS record created via service annotations!"
+    external-dns.alpha.kubernetes.io/webhook-address-list: "6.7.8.9"
     external-dns.alpha.kubernetes.io/webhook-match-subdomain: "true"
-    external-dns.alpha.kubernetes.io/webhook-regexp: "test*"
 spec:
   ports:
     - port: 80
