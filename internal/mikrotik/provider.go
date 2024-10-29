@@ -111,7 +111,13 @@ func isEndpointMatching(a *endpoint.Endpoint, b *endpoint.Endpoint) bool {
 	}
 
 	aMatchSubdomain := getProviderSpecific(a, "match-subdomain")
+	if aMatchSubdomain == "" {
+		aMatchSubdomain = "false"
+	}
 	bMatchSubdomain := getProviderSpecific(b, "match-subdomain")
+	if bMatchSubdomain == "" {
+		bMatchSubdomain = "false"
+	}
 	if aMatchSubdomain != bMatchSubdomain {
 		return false
 	}

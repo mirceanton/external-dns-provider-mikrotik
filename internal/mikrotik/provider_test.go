@@ -82,6 +82,7 @@ func TestIsEndpointMatching(t *testing.T) {
 		endpointB     *endpoint.Endpoint
 		expectedMatch bool
 	}{
+		// MATCHING CASES
 		{
 			name: "Matching basic properties",
 			endpointA: &endpoint.Endpoint{
@@ -122,6 +123,28 @@ func TestIsEndpointMatching(t *testing.T) {
 			},
 			expectedMatch: true,
 		},
+
+		// EDGE CASES
+		{
+			name: "Match-Subdomain: 'false' and unspecified should match",
+			endpointA: &endpoint.Endpoint{
+				DNSName:   "example.com",
+				Targets:   endpoint.NewTargets("192.0.2.1"),
+				RecordTTL: endpoint.TTL(3600),
+				ProviderSpecific: endpoint.ProviderSpecific{
+					{Name: "match-subdomain", Value: "false"},
+				},
+			},
+			endpointB: &endpoint.Endpoint{
+				DNSName:          "example.com",
+				Targets:          endpoint.NewTargets("192.0.2.1"),
+				RecordTTL:        endpoint.TTL(3600),
+				ProviderSpecific: endpoint.ProviderSpecific{}, // unspecified match-subdomain
+			},
+			expectedMatch: true,
+		},
+
+		// MISMATCH CASES
 		{
 			name: "Provider-specific properties do not match",
 			endpointA: &endpoint.Endpoint{
