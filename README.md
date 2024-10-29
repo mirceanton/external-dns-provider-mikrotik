@@ -9,6 +9,8 @@
 
 Supported DNS record types: `A`, `AAAA`, `CNAME`, `MX`, `NS`, `SRV`, `TXT`
 
+For examples of creating DNS records either via CRDs or via Ingress/Service annotations, check out the [`example/` directory](./example/).
+
 ## 🎯 Requirements
 
 > [!Note]
