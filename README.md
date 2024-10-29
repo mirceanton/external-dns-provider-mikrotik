@@ -7,15 +7,7 @@
 
 [ExternalDNS](https://github.com/kubernetes-sigs/external-dns) is a Kubernetes add-on for automatically managing DNS records for Kubernetes ingresses and services by using different DNS providers. This webhook provider allows you to automate DNS records from your Kubernetes clusters into your MikroTik router.
 
-Supported DNS record types:
-
-- A
-- AAAA
-- CNAME
-- MX
-- NS
-- SRV
-- TXT
+Supported DNS record types: `A`, `AAAA`, `CNAME`, `MX`, `NS`, `SRV`, `TXT`
 
 ## 🎯 Requirements
 
