@@ -26,7 +26,6 @@ Supported DNS record types:
 
 - Currently, `DNSEndpoints` with multiple `targets` are *technically* not supported. Only one record will be created with the first target from the list, but eDNS will keep trying to update your DNS record in RouterOS, constantly sending `PUT` requests.
 - The `Disabled` option on DNS records is currently ignored
-- Support for `providerSpecific` annotations on `Ingress` objects is not **yet** supported.
 
 ## ⚙️ Configuration Options
 
