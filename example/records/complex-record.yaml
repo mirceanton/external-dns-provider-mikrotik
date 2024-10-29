@@ -17,3 +17,5 @@ spec:
           value: "1.2.3.1"
         - name: match-subdomain
           value: "true"
+        - name: disabled
+          value: "false"

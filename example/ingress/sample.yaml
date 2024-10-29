@@ -44,6 +44,7 @@ metadata:
     external-dns.alpha.kubernetes.io/webhook-comment: "This is a static DNS record created via ingress annotations!"
     external-dns.alpha.kubernetes.io/webhook-address-list: "4.5.6.7"
     external-dns.alpha.kubernetes.io/webhook-match-subdomain: "false"
+    external-dns.alpha.kubernetes.io/webhook-disabled: "true"
 spec:
   rules:
     - host: example.com

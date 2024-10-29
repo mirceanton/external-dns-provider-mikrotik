@@ -30,6 +30,7 @@ metadata:
     external-dns.alpha.kubernetes.io/webhook-comment: "This is a static DNS record created via service annotations!"
     external-dns.alpha.kubernetes.io/webhook-address-list: "6.7.8.9"
     external-dns.alpha.kubernetes.io/webhook-match-subdomain: "true"
+    external-dns.alpha.kubernetes.io/webhook-disabled: "true"
 spec:
   ports:
     - port: 80
