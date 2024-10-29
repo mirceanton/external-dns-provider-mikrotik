@@ -19,7 +19,7 @@ Supported DNS record types:
 
 ## 🎯 Requirements
 
-- ExternalDNS >= v0.14.0
+- ExternalDNS >= v0.14.0 (v0.15.0 if you want `providerSpecific` Ingress/Service annotations)
 - Mikrotik RouterOS (tested on 7.14.3 stable)
 
 ## 🚫 Limitations
