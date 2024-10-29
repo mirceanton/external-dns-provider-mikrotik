@@ -24,14 +24,12 @@ type DNSRecord struct {
 	Regexp         string `json:"regexp,omitempty"`          // provider-specific
 	MatchSubdomain string `json:"match-subdomain,omitempty"` // provider-specific
 	AddressList    string `json:"address-list,omitempty"`    // provider-specific
-
-	// Disabled       string `json:"disabled,omitempty"`        // provider-specific
+	Disabled       string `json:"disabled,omitempty"`        // provider-specific
 
 	// Record specific fields
-	Address string `json:"address,omitempty"` // A, AAAA -> endpoint.Targets[0]
-	CName   string `json:"cname,omitempty"`   // CNAME -> endpoint.Targets[0]
-	Text    string `json:"text,omitempty"`    // TXT -> endpoint.Targets[0]
-
+	Address      string `json:"address,omitempty"`       // A, AAAA -> endpoint.Targets[0]
+	CName        string `json:"cname,omitempty"`         // CNAME -> endpoint.Targets[0]
+	Text         string `json:"text,omitempty"`          // TXT -> endpoint.Targets[0]
 	MXExchange   string `json:"mx-exchange,omitempty"`   // MX -> provider-specific
 	MXPreference string `json:"mx-preference,omitempty"` // MX -> provider-specific
 	SrvPort      string `json:"srv-port,omitempty"`      // SRV -> provider-specific
@@ -141,6 +139,9 @@ func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 		case "comment", "webhook/comment":
 			record.Comment = providerSpecific.Value
 			log.Debugf("Comment set to: %s", record.Comment)
+		case "disabled", "webhook/disabled":
+			record.Disabled = providerSpecific.Value
+			log.Debugf("Disabled set to: %s", record.Comment)
 		case "regexp", "webhook/regexp":
 			record.Regexp = providerSpecific.Value
 			log.Debugf("Regexp set to: %s", record.Regexp)
@@ -278,6 +279,12 @@ func (r *DNSRecord) toExternalDNSEndpoint() (*endpoint.Endpoint, error) {
 		ep.ProviderSpecific = append(ep.ProviderSpecific, endpoint.ProviderSpecificProperty{
 			Name:  "comment",
 			Value: r.Comment,
+		})
+	}
+	if r.Disabled != "" {
+		ep.ProviderSpecific = append(ep.ProviderSpecific, endpoint.ProviderSpecificProperty{
+			Name:  "disabled",
+			Value: r.Disabled,
 		})
 	}
 	if r.Regexp != "" {

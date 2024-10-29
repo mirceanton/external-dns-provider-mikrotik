@@ -122,6 +122,18 @@ func isEndpointMatching(a *endpoint.Endpoint, b *endpoint.Endpoint) bool {
 		return false
 	}
 
+	aDisabled := getProviderSpecific(a, "disabled")
+	if aDisabled == "" {
+		aDisabled = "false"
+	}
+	bDisabled := getProviderSpecific(b, "disabled")
+	if bDisabled == "" {
+		bDisabled = "false"
+	}
+	if aDisabled != bDisabled {
+		return false
+	}
+
 	aAddressList := getProviderSpecific(a, "address-list")
 	bAddressList := getProviderSpecific(b, "address-list")
 	if aAddressList != bAddressList {

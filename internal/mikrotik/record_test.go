@@ -670,6 +670,7 @@ func TestDNSRecordToExternalDNSEndpoint(t *testing.T) {
 				Regexp:         "^www\\.",
 				MatchSubdomain: "yes",
 				AddressList:    "list1",
+				Disabled:       "true",
 			},
 			expected: &endpoint.Endpoint{
 				DNSName:    "example.com",
@@ -681,11 +682,12 @@ func TestDNSRecordToExternalDNSEndpoint(t *testing.T) {
 					{Name: "regexp", Value: "^www\\."},
 					{Name: "match-subdomain", Value: "yes"},
 					{Name: "address-list", Value: "list1"},
+					{Name: "disabled", Value: "true"},
 				},
 			},
 			expectError: false,
 		},
-		// TODO: invalid provider specific
+		// TODO: invalid provider specific?
 
 		// ===============================================================
 		// DEFAULT VALUES FOR UNSET FIELDS TEST CASES
@@ -1300,6 +1302,46 @@ func TestExternalDNSEndpointToDNSRecord(t *testing.T) {
 			expectError: false,
 		},
 		{
+			name: "Setting regexp via provider-specific",
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "regexp.example.com",
+				RecordType: "A",
+				Targets:    endpoint.NewTargets("192.0.2.123"),
+				RecordTTL:  endpoint.TTL(3600),
+				ProviderSpecific: endpoint.ProviderSpecific{
+					{Name: "regexp", Value: ".*"},
+				},
+			},
+			expected: &DNSRecord{
+				Name:    "regexp.example.com",
+				Type:    "A",
+				Address: "192.0.2.123",
+				TTL:     "1h",
+				Regexp:  ".*",
+			},
+			expectError: false,
+		},
+		{
+			name: "Setting disabled via provider-specific",
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "disabled.example.com",
+				RecordType: "A",
+				Targets:    endpoint.NewTargets("192.0.2.123"),
+				RecordTTL:  endpoint.TTL(3600),
+				ProviderSpecific: endpoint.ProviderSpecific{
+					{Name: "disabled", Value: "true"},
+				},
+			},
+			expected: &DNSRecord{
+				Name:     "disabled.example.com",
+				Type:     "A",
+				Address:  "192.0.2.123",
+				TTL:      "1h",
+				Disabled: "true",
+			},
+			expectError: false,
+		},
+		{
 			name: "Multiple provider-specific properties",
 			endpoint: &endpoint.Endpoint{
 				DNSName:    "provider.example.com",
@@ -1311,6 +1353,7 @@ func TestExternalDNSEndpointToDNSRecord(t *testing.T) {
 					{Name: "regexp", Value: "^www\\."},
 					{Name: "match-subdomain", Value: "yes"},
 					{Name: "address-list", Value: "list1"},
+					{Name: "disabled", Value: "true"},
 				},
 			},
 			expected: &DNSRecord{
@@ -1322,6 +1365,7 @@ func TestExternalDNSEndpointToDNSRecord(t *testing.T) {
 				Regexp:         "^www\\.",
 				MatchSubdomain: "yes",
 				AddressList:    "list1",
+				Disabled:       "true",
 			},
 			expectError: false,
 		},
