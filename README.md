@@ -19,7 +19,11 @@ Supported DNS record types:
 
 ## 🎯 Requirements
 
-- ExternalDNS >= v0.14.0 (v0.15.0 if you want `providerSpecific` Ingress/Service annotations)
+- ExternalDNS >= v0.15.0
+
+> `v0.15.0` of ExternalDNS added support for `providerSpecific` annotations in Ingress/Service objects for webhook providers.
+> While older versions of ExternalDNS may work, but support for this feature will not be present.
+
 - Mikrotik RouterOS (tested on 7.14.3 stable)
 
 ## 🚫 Limitations
