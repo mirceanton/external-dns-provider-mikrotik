@@ -143,6 +143,24 @@ func TestIsEndpointMatching(t *testing.T) {
 			},
 			expectedMatch: true,
 		},
+		{
+			name: "Disabled: 'false' and unspecified should match",
+			endpointA: &endpoint.Endpoint{
+				DNSName:   "example.com",
+				Targets:   endpoint.NewTargets("192.0.2.1"),
+				RecordTTL: endpoint.TTL(3600),
+				ProviderSpecific: endpoint.ProviderSpecific{
+					{Name: "disabled", Value: "false"},
+				},
+			},
+			endpointB: &endpoint.Endpoint{
+				DNSName:          "example.com",
+				Targets:          endpoint.NewTargets("192.0.2.1"),
+				RecordTTL:        endpoint.TTL(3600),
+				ProviderSpecific: endpoint.ProviderSpecific{}, // unspecified disabled
+			},
+			expectedMatch: true,
+		},
 
 		// MISMATCH CASES
 		{
