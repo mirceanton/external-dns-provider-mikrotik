@@ -21,6 +21,7 @@ Supported DNS record types:
 
 > [!Note]
 > `v0.15.0` of ExternalDNS added support for `providerSpecific` annotations in Ingress/Service objects for webhook providers.
+>
 > While older versions of ExternalDNS may work, but support for this feature will not be present.
 
 - ExternalDNS >= `v0.15.0`
