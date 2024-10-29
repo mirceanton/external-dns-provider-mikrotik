@@ -138,16 +138,16 @@ func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 
 	for _, providerSpecific := range endpoint.ProviderSpecific {
 		switch providerSpecific.Name {
-		case "comment":
+		case "comment", "webhook/comment":
 			record.Comment = providerSpecific.Value
 			log.Debugf("Comment set to: %s", record.Comment)
-		case "regexp":
+		case "regexp", "webhook/regexp":
 			record.Regexp = providerSpecific.Value
 			log.Debugf("Regexp set to: %s", record.Regexp)
-		case "match-subdomain":
+		case "match-subdomain", "webhook/match-subdomain":
 			record.MatchSubdomain = providerSpecific.Value
 			log.Debugf("MatchSubdomain set to: %s", record.MatchSubdomain)
-		case "address-list":
+		case "address-list", "webhook/address-list":
 			record.AddressList = providerSpecific.Value
 			log.Debugf("AddressList set to: %s", record.AddressList)
 		default:

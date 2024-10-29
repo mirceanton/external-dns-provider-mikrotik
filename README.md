@@ -7,26 +7,24 @@
 
 [ExternalDNS](https://github.com/kubernetes-sigs/external-dns) is a Kubernetes add-on for automatically managing DNS records for Kubernetes ingresses and services by using different DNS providers. This webhook provider allows you to automate DNS records from your Kubernetes clusters into your MikroTik router.
 
-Supported DNS record types:
+Supported DNS record types: `A`, `AAAA`, `CNAME`, `MX`, `NS`, `SRV`, `TXT`
 
-- A
-- AAAA
-- CNAME
-- MX
-- NS
-- SRV
-- TXT
+For examples of creating DNS records either via CRDs or via Ingress/Service annotations, check out the [`example/` directory](./example/).
 
 ## 🎯 Requirements
 
-- ExternalDNS >= v0.14.0
-- Mikrotik RouterOS (tested on 7.14.3 stable)
+> [!Note]
+> `v0.15.0` of ExternalDNS added support for `providerSpecific` annotations in Ingress/Service objects for webhook providers.
+>
+> While older versions of ExternalDNS may work, but support for this feature will not be present.
+
+- ExternalDNS >= `v0.15.0`
+- Mikrotik RouterOS (tested on `7.16` stable)
 
 ## 🚫 Limitations
 
 - Currently, `DNSEndpoints` with multiple `targets` are *technically* not supported. Only one record will be created with the first target from the list, but eDNS will keep trying to update your DNS record in RouterOS, constantly sending `PUT` requests.
 - The `Disabled` option on DNS records is currently ignored
-- Support for `providerSpecific` annotations on `Ingress` objects is not **yet** supported.
 
 ## ⚙️ Configuration Options
 

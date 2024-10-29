@@ -66,6 +66,8 @@ func (p *MikrotikProvider) Records(ctx context.Context) ([]*endpoint.Endpoint, e
 
 // ApplyChanges applies a given set of changes in the DNS provider.
 func (p *MikrotikProvider) ApplyChanges(ctx context.Context, changes *plan.Changes) error {
+	changes = cleanupChanges(changes)
+
 	for _, endpoint := range append(changes.UpdateOld, changes.Delete...) {
 		if err := p.client.DeleteDNSRecord(endpoint); err != nil {
 			return err
@@ -84,4 +86,92 @@ func (p *MikrotikProvider) ApplyChanges(ctx context.Context, changes *plan.Chang
 // GetDomainFilter returns the domain filter for the provider.
 func (p *MikrotikProvider) GetDomainFilter() endpoint.DomainFilterInterface {
 	return p.domainFilter
+}
+
+// ================================================================================================
+// UTILS
+// ================================================================================================
+func getProviderSpecific(ep *endpoint.Endpoint, ps string) string {
+	value, valueExists := ep.GetProviderSpecificProperty(ps)
+	if !valueExists {
+		value, _ = ep.GetProviderSpecificProperty(fmt.Sprintf("webhook/%s", ps))
+	}
+	return value
+}
+
+func isEndpointMatching(a *endpoint.Endpoint, b *endpoint.Endpoint) bool {
+	if a.DNSName != b.DNSName || a.Targets[0] != b.Targets[0] || a.RecordTTL != b.RecordTTL {
+		return false
+	}
+
+	aComment := getProviderSpecific(a, "comment")
+	bComment := getProviderSpecific(b, "comment")
+	if aComment != bComment {
+		return false
+	}
+
+	aMatchSubdomain := getProviderSpecific(a, "match-subdomain")
+	if aMatchSubdomain == "" {
+		aMatchSubdomain = "false"
+	}
+	bMatchSubdomain := getProviderSpecific(b, "match-subdomain")
+	if bMatchSubdomain == "" {
+		bMatchSubdomain = "false"
+	}
+	if aMatchSubdomain != bMatchSubdomain {
+		return false
+	}
+
+	aAddressList := getProviderSpecific(a, "address-list")
+	bAddressList := getProviderSpecific(b, "address-list")
+	if aAddressList != bAddressList {
+		return false
+	}
+
+	aRegexp := getProviderSpecific(a, "regexp")
+	bRegexp := getProviderSpecific(b, "regexp")
+	return aRegexp == bRegexp
+}
+
+func contains(haystack []*endpoint.Endpoint, needle *endpoint.Endpoint) bool {
+	for _, v := range haystack {
+		if isEndpointMatching(needle, v) {
+			return true
+		}
+	}
+	return false
+}
+
+func cleanupChanges(changes *plan.Changes) *plan.Changes {
+	// Initialize new plan -> we don't really need to worry about Create or Delete changes.
+	// Only updates are sketchy
+	newChanges := &plan.Changes{
+		Create:    changes.Create,
+		Delete:    changes.Delete,
+		UpdateOld: []*endpoint.Endpoint{},
+		UpdateNew: []*endpoint.Endpoint{},
+	}
+
+	duplicates := []*endpoint.Endpoint{}
+
+	for _, old := range changes.UpdateOld {
+		for _, new := range changes.UpdateNew {
+			if isEndpointMatching(old, new) {
+				duplicates = append(duplicates, old)
+			}
+		}
+	}
+
+	for _, old := range changes.UpdateOld {
+		if !contains(duplicates, old) {
+			newChanges.UpdateOld = append(newChanges.UpdateOld, old)
+		}
+	}
+	for _, new := range changes.UpdateNew {
+		if !contains(duplicates, new) {
+			newChanges.UpdateNew = append(newChanges.UpdateNew, new)
+		}
+	}
+
+	return newChanges
 }
