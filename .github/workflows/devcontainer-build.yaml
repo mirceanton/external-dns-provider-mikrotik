@@ -12,7 +12,7 @@ on:
 
 jobs:
   release:
-    uses: mirceanton/reusable-workflows/.github/workflows/reusable-docker-build-push.yaml@240678cf33f0c0c65f0323615c925f0312b2d640 # v3.4.27
+    uses: mirceanton/reusable-workflows/.github/workflows/reusable-docker-build-push.yaml@9a14a653974ca77f577e420e565ac9214eac9cde # v3.4.28
     secrets: inherit
     with:
       image: "ghcr.io/${{ github.repository }}-devcontainer"
