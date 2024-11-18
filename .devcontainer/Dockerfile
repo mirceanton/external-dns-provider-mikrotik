@@ -3,7 +3,7 @@
 ## ================================================================================================
 ARG TASKFILE_VERSION=v3.38.0@sha256:308c4f5be86bffae3f956cbd7225c4fec69b0e7a89012120b818a10df45d7c59
 ARG GOLINT_VERSION=v1.62.0-alpine@sha256:a94c2da655a1f3e66bb7d2c9232324def349f2ba56a3d715d89e83d98f5bd933
-ARG GORELEASER_VERSION=v2.4.5@sha256:123935a56bb422aee8c7eafd9c48868d03ffc84bc599eac28251a60ee393ac57
+ARG GORELEASER_VERSION=v2.4.6@sha256:ee06a37ea5b3307f08b26ce51e60a251a0c06e9a52ef5596218a93e364a3af1d
 ARG K9S_VERSION=v0.32.7@sha256:a967991e635dc8327c25c9d20ea71089a9cad66793013c5675c81a1f6c79292b
 
 ## ================================================================================================
