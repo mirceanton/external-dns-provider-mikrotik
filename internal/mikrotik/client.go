@@ -143,7 +143,7 @@ func (c *MikrotikApiClient) GetAllDNSRecords() ([]DNSRecord, error) {
 	log.Infof("fetching all DNS records")
 
 	// Send the request
-	resp, err := c.doRequest(http.MethodGet, "ip/dns/static", nil)
+	resp, err := c.doRequest(http.MethodGet, "ip/dns/static?type=A,AAAA,CNAME,TXT,MX,SRV,NS", nil)
 	if err != nil {
 		log.Errorf("error fetching DNS records: %v", err)
 		return nil, err
