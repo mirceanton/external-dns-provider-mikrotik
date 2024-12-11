@@ -52,7 +52,11 @@ func (p *MikrotikProvider) Records(ctx context.Context) ([]*endpoint.Endpoint, e
 
 	var endpoints []*endpoint.Endpoint
 	for _, record := range records {
-		ep, _ := record.toExternalDNSEndpoint()
+		ep, err := record.toExternalDNSEndpoint()
+		if err != nil {
+			log.Warnf("Failed to convert mikrotik record to external-dns endpoint: %+v", err)
+			continue
+		}
 
 		if !p.domainFilter.Match(ep.DNSName) {
 			continue
