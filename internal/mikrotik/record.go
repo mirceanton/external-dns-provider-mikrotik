@@ -44,7 +44,7 @@ type DNSRecord struct {
 
 // NewDNSRecord converts an ExternalDNS Endpoint to a Mikrotik DNSRecord
 func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
-	log.Debugf("Converting ExternalDNS endpoint to MikrotikDNS: %v", endpoint)
+	log.Debugf("Converting ExternalDNS endpoint to MikrotikDNS: %+v", endpoint)
 
 	// Sanity checks -> Fields are not empty and if set, they are set correctly
 	if endpoint.DNSName == "" {
@@ -166,7 +166,7 @@ func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 
 // toExternalDNSEndpoint converts a Mikrotik DNSRecord to an ExternalDNS Endpoint
 func (r *DNSRecord) toExternalDNSEndpoint() (*endpoint.Endpoint, error) {
-	log.Debugf("Converting MikrotikDNS record to ExternalDNS: %v", r)
+	log.Debugf("Converting MikrotikDNS record to ExternalDNS: %+v", r)
 
 	// ============================================================================================
 	// Sanity checks
