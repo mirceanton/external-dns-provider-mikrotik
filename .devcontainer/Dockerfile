@@ -17,7 +17,7 @@ FROM docker.io/derailed/k9s:${K9S_VERSION} AS k9s
 ## ================================================================================================
 ## Main image
 ## ================================================================================================
-FROM mcr.microsoft.com/devcontainers/go:1.23-bookworm@sha256:2e00578e7c526e76ebd51597260928d8542d27c17ffe6390d79200638c51a3e6 AS workspace
+FROM mcr.microsoft.com/devcontainers/go:1.23-bookworm@sha256:a417a341a2a8648db7bf8527b86364848362a2c8dc150993c8a4cc2b53b4ec47 AS workspace
 
 # Install additional tools
 COPY --from=taskfile /task /usr/local/bin/task
