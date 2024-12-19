@@ -17,8 +17,7 @@ var (
 func main() {
 	logging.Init()
 
-	log.Infof("starting external-dns-provider-mikrotik")
-	log.Infof("version: %s (%s)", version, commit)
+	log.Infof("starting external-dns-provider-mikrotik version: %s (%s)", version, commit)
 
 	config := configuration.Init()
 	provider, err := dnsprovider.Init(config)

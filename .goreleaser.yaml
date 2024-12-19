@@ -15,7 +15,7 @@ builds:
       - linux
       - darwin
     ldflags:
-      - -s -w
+      - -s -w -X main.version={{.Version}} -X main.commit={{.ShortCommit}}
 
 archives:
   - format: tar.gz
