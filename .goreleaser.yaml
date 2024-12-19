@@ -15,7 +15,7 @@ builds:
       - linux
       - darwin
     ldflags:
-      - -s -w -X github.com/mirceanton/{{.ProjectName}}/cmd.version={{.Version}}
+      - -s -w
 
 archives:
   - format: tar.gz

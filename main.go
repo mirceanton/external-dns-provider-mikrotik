@@ -10,15 +10,15 @@ import (
 )
 
 var (
-	Version = "local"
-	Gitsha  = "?"
+	version = "dev"
+	commit  = "none"
 )
 
 func main() {
 	logging.Init()
 
 	log.Infof("starting external-dns-provider-mikrotik")
-	log.Infof("version: %s (%s)", Version, Gitsha)
+	log.Infof("version: %s (%s)", version, commit)
 
 	config := configuration.Init()
 	provider, err := dnsprovider.Init(config)
