@@ -11,7 +11,7 @@ on:
 
 jobs:
   test:
-    uses: mirceanton/reusable-workflows/.github/workflows/reusable-go-test.yaml@8c6cf153c5b381b14b33f0f8ac9bd97d8e2d5c0d # v3.4.37
+    uses: mirceanton/reusable-workflows/.github/workflows/reusable-go-test.yaml@f5d2be58302e684938588ae00c6d4006f650a739 # v3.4.38
     secrets: inherit
     with:
       go-version: stable
