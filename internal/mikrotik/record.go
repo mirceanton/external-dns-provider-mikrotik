@@ -174,6 +174,9 @@ func (r *DNSRecord) toExternalDNSEndpoint() (*endpoint.Endpoint, error) {
 	if r.Name == "" && r.Regexp == "" {
 		return nil, fmt.Errorf("a DNS record must have either a Name or a RegExp defined")
 	}
+	if r.Name != "" && r.Regexp != "" {
+		return nil, fmt.Errorf("name and regexp are mutually exclusive for a DNS record")
+	}
 
 	//? Mikrotik assumes A-records are default and sometimes omits setting the type
 	if r.Type == "" {
