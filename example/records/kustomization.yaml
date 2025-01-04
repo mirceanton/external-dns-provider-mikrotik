@@ -7,6 +7,5 @@ resources:
   - complex-record.yaml
   - mx-record.yaml
   - ns-record.yaml
-  - regexp-record.yaml
   - srv-record.yaml
   - text-record.yaml
