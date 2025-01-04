@@ -660,6 +660,26 @@ func TestDNSRecordToExternalDNSEndpoint(t *testing.T) {
 		// PROVIDER-SPECIFIC DATA TEST CASES
 		// ===============================================================
 		{
+			name: "Valid Regexp Record",
+			record: &DNSRecord{
+				Name:    "",
+				Type:    "A",
+				Address: "192.0.2.1",
+				TTL:     "1h",
+				Regexp:  "*.example.com",
+			},
+			expected: &endpoint.Endpoint{
+				DNSName:    "",
+				RecordType: "A",
+				Targets:    endpoint.NewTargets("192.0.2.1"),
+				RecordTTL:  endpoint.TTL(3600),
+				ProviderSpecific: endpoint.ProviderSpecific{
+					{Name: "regexp", Value: "*.example.com"},
+				},
+			},
+			expectError: false,
+		},
+		{
 			name: "Valid Provider-specific properties",
 			record: &DNSRecord{
 				Name:           "example.com",
@@ -667,7 +687,6 @@ func TestDNSRecordToExternalDNSEndpoint(t *testing.T) {
 				Text:           "some text",
 				TTL:            "10m",
 				Comment:        "Test comment",
-				Regexp:         "^www\\.",
 				MatchSubdomain: "yes",
 				AddressList:    "list1",
 				Disabled:       "true",
@@ -679,13 +698,36 @@ func TestDNSRecordToExternalDNSEndpoint(t *testing.T) {
 				RecordTTL:  endpoint.TTL(600),
 				ProviderSpecific: endpoint.ProviderSpecific{
 					{Name: "comment", Value: "Test comment"},
-					{Name: "regexp", Value: "^www\\."},
 					{Name: "match-subdomain", Value: "yes"},
 					{Name: "address-list", Value: "list1"},
 					{Name: "disabled", Value: "true"},
 				},
 			},
 			expectError: false,
+		},
+		{
+			name: "Invalid Provider-Specific (name and regexp are mutually exclusive)",
+			record: &DNSRecord{
+				Name:    "example.com",
+				Type:    "A",
+				Address: "192.0.2.1",
+				TTL:     "1h",
+				Regexp:  "*.example.com",
+			},
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name: "Invalid Provider-Specific (match-subdomain requires name)",
+			record: &DNSRecord{
+				Name:           "",
+				Type:           "A",
+				Address:        "192.0.2.1",
+				TTL:            "1h",
+				MatchSubdomain: "yes",
+			},
+			expected:    nil,
+			expectError: true,
 		},
 		// TODO: invalid provider specific?
 
