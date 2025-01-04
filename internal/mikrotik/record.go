@@ -47,6 +47,9 @@ func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 	log.Debugf("Converting ExternalDNS endpoint to MikrotikDNS: %+v", endpoint)
 
 	// Sanity checks -> Fields are not empty and if set, they are set correctly
+	if endpoint.DNSName == "" {
+		return nil, fmt.Errorf("DNS name is required")
+	}
 	if endpoint.RecordType == "" {
 		return nil, fmt.Errorf("record type is required")
 	}
