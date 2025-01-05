@@ -13,17 +13,18 @@ For examples of creating DNS records either via CRDs or via Ingress/Service anno
 
 ## 🎯 Requirements
 
+- ExternalDNS >= `v0.15.0`
+
 > [!Note]
 > `v0.15.0` of ExternalDNS added support for `providerSpecific` annotations in Ingress/Service objects for webhook providers.
 >
 > While older versions of ExternalDNS may work, support for this feature will not be present.
 
-- ExternalDNS >= `v0.15.0`
 - Mikrotik RouterOS (tested on `7.16` stable)
 
 > [!Note]
 > While other versions of RouterOS **might** work, they have not been officially tested. If you are using this webhook successfully with a different ROS version, feel free to post a comment in #141
-> 
+>
 > Thus far, we know for sure `7.16` works and `7.12` does not.
 
 ## 🚫 Limitations
