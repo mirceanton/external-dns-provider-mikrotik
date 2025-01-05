@@ -19,7 +19,11 @@ For examples of creating DNS records either via CRDs or via Ingress/Service anno
 > While older versions of ExternalDNS may work, support for this feature will not be present.
 
 - ExternalDNS >= `v0.15.0`
-- Mikrotik RouterOS (tested on `7.16`, `7.17` stable)
+- Mikrotik RouterOS (tested on `7.16` stable)
+
+> [!Note]
+> While other versions of RouterOS **might** work, they have not been officially tested. If you are using this webhook successfully with a different ROS version, feel free to post a comment in #141
+> Thus far, we know for sure `7.16` works and `7.12` does not.
 
 ## 🚫 Limitations
 
@@ -47,6 +51,24 @@ spec:
 ```
 
 The problem is that the External DNS controller will detect a drift on this and it will continuously attempt to update the DNS record, thus it will constantly send `PUT` requests to your RouterOS instance on every reconciliation loop.
+
+### Regexp Records
+
+While the webhook can read records with a regexp defined, external-dns itself cannot manage them. This means that they either need to be excluded via `domainFilters` or `excludeDomains` so that external-dns will not try to assume ownership over them.
+
+The problem is that from Mikrotiks perspective, a DNS record can **either** have a `name` or a `regexp`. They are mutually exclusive.
+
+This is problematic because, even though we can create an `Endpoint` with no name, external-dns will try to create a TXT record to keep track of the ownership over said record. If the main record has no name, it errors out creating the TXT record too, since the TXT record name is based on the name of the main record.
+
+See #166
+
+### Multiple provider-specific annotations
+
+In the case of multiple external-dns instances, each with a different provider (for example this one and the cloudflare one), there are problems with passing in annotations for provider-specific configuration. Due to a bug in the upstream external-dns, all annotations will be passed as provider-configuration.
+
+This will cause the webhook to complain that invalid provider-specific configuration entries have been passed and error out. While this check can be removed, it will cause external-dns to continuously detect a drift between the Endpoint and the DNS records in RouterOS, thus attempting a new reconcile at every loop. This is also not desired.
+
+See #140 and kubernetes-sigs/external-dns#4951
 
 ## ⚙️ Configuration Options
 
