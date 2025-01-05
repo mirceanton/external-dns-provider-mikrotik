@@ -23,7 +23,7 @@ For examples of creating DNS records either via CRDs or via Ingress/Service anno
 - Mikrotik RouterOS (tested on `7.16` stable)
 
 > [!Note]
-> While other versions of RouterOS **might** work, they have not been officially tested. If you are using this webhook successfully with a different ROS version, feel free to post a comment in #141
+> While other versions of RouterOS **might** work, they have not been officially tested. If you are using this webhook successfully with a different ROS version, feel free to post a comment in mirceanton/external-dns-provider-mikrotik#141
 >
 > Thus far, we know for sure `7.16` works and `7.12` does not.
 
