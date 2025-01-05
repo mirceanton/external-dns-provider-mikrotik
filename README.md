@@ -62,7 +62,7 @@ The problem is that from Mikrotiks perspective, a DNS record can **either** have
 
 This is problematic because, even though we can create an `Endpoint` with no name, external-dns will try to create a TXT record to keep track of the ownership over said record. If the main record has no name, it errors out creating the TXT record too, since the TXT record name is based on the name of the main record.
 
-See #166
+See mirceanton/external-dns-provider-mikrotik#166
 
 ### Multiple provider-specific annotations
 
@@ -70,7 +70,7 @@ In the case of multiple external-dns instances, each with a different provider (
 
 This will cause the webhook to complain that invalid provider-specific configuration entries have been passed and error out. While this check can be removed, it will cause external-dns to continuously detect a drift between the Endpoint and the DNS records in RouterOS, thus attempting a new reconcile at every loop. This is also not desired.
 
-See #140 and kubernetes-sigs/external-dns#4951
+See mirceanton/external-dns-provider-mikrotik#140 and kubernetes-sigs/external-dns#4951
 
 ## ⚙️ Configuration Options
 
