@@ -12,20 +12,13 @@ on:
         default: false
         type: boolean
 
-  # Dry Run on any PR that changes this pipeline or that should ultimately trigger a release when merged
-  pull_request:
-    paths:
-      - ".github/workflows/goreleaser.yaml"
-      - "go.mod"
-      - "go.sum"
-      - "**/**.go"
-
   # "Wet" Run on any tag push
   push:
     tags: ["*"]
 
 jobs:
   goreleaser:
+    if: github.repository_owner == 'mirceanton' #?don't run on forks
     uses: mirceanton/reusable-workflows/.github/workflows/reusable-go-release.yaml@26427fee633d4aa36010d350c1def63abe911192 # v3.4.41
     secrets: inherit
     with:
