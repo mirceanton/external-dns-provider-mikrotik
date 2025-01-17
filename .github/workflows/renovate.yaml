@@ -17,12 +17,6 @@ on:
         required: false
         type: string
 
-  # Dry Run on any PR that changes the renovate config or the renovate workflow
-  pull_request:
-    paths:
-      - .github/workflows/renovate.yaml
-      - renovate.json5
-
   # "Wet" Run hourly
   schedule:
     - cron: "0 * * * *"
