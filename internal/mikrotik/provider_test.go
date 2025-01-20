@@ -174,7 +174,8 @@ func TestCompareEndpoints(t *testing.T) {
 			expectedMatch: true,
 		},
 		{
-			name: "Disabled: 'false' and unspecified should match",
+			name:     "Disabled: 'false' and unspecified should match",
+			provider: mikrotikProvider,
 			endpointA: &endpoint.Endpoint{
 				DNSName:   "example.com",
 				Targets:   endpoint.NewTargets("192.0.2.1"),
@@ -230,7 +231,8 @@ func TestCompareEndpoints(t *testing.T) {
 			expectedMatch: false,
 		},
 		{
-			name: "Mismatch in Target",
+			name:     "Mismatch in Target",
+			provider: mikrotikProvider,
 			endpointA: &endpoint.Endpoint{
 				DNSName:   "example.com",
 				Targets:   endpoint.NewTargets("192.0.2.1"),
@@ -388,6 +390,7 @@ func TestListContains(t *testing.T) {
 
 func TestChanges(t *testing.T) {
 	defaultTTL := 1800
+	newDefaultTTL := 111111
 	mikrotikProvider := &MikrotikProvider{
 		client: &MikrotikApiClient{
 			&MikrotikDefaults{
@@ -602,11 +605,6 @@ func TestChanges(t *testing.T) {
 						DNSName:   "example.org",
 						Targets:   endpoint.NewTargets("2.2.2.2"),
 						RecordTTL: endpoint.TTL(0),
-						ProviderSpecific: endpoint.ProviderSpecific{
-							{Name: "comment", Value: "another comment"},
-							{Name: "address-list", Value: "secondary"},
-							{Name: "match-subdomain", Value: "*.example.com"},
-						},
 					},
 				},
 			},
@@ -616,17 +614,46 @@ func TestChanges(t *testing.T) {
 						DNSName:   "example.org",
 						Targets:   endpoint.NewTargets("2.2.2.2"),
 						RecordTTL: endpoint.TTL(mikrotikProvider.client.TTL),
-						ProviderSpecific: endpoint.ProviderSpecific{
-							{Name: "comment", Value: "another comment"},
-							{Name: "address-list", Value: "secondary"},
-							{Name: "match-subdomain", Value: "*.example.com"},
-						},
 					},
 				},
 			},
 		},
 		{
 			name:     "Update record with zero value in TTL",
+			provider: mikrotikProvider,
+			inputChanges: &plan.Changes{
+				UpdateOld: []*endpoint.Endpoint{
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(defaultTTL),
+					},
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(0),
+					},
+				},
+				UpdateNew: []*endpoint.Endpoint{
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(0),
+					},
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(mikrotikProvider.client.TTL),
+					},
+				},
+			},
+			expectedChanges: &plan.Changes{
+				UpdateOld: []*endpoint.Endpoint{},
+				UpdateNew: []*endpoint.Endpoint{},
+			},
+		},
+		{
+			name:     "Update 0 -> default TTL => no changes",
 			provider: mikrotikProvider,
 			inputChanges: &plan.Changes{
 				UpdateOld: []*endpoint.Endpoint{
@@ -644,10 +671,13 @@ func TestChanges(t *testing.T) {
 					},
 				},
 			},
-			expectedChanges: &plan.Changes{},
+			expectedChanges: &plan.Changes{
+				UpdateOld: []*endpoint.Endpoint{},
+				UpdateNew: []*endpoint.Endpoint{},
+			},
 		},
 		{
-			name:     "Update record with zero value in TTL",
+			name:     "Update X -> default TTL => changes",
 			provider: mikrotikProvider,
 			inputChanges: &plan.Changes{
 				UpdateOld: []*endpoint.Endpoint{
@@ -678,6 +708,50 @@ func TestChanges(t *testing.T) {
 						DNSName:   "example.org",
 						Targets:   endpoint.NewTargets("2.2.2.2"),
 						RecordTTL: endpoint.TTL(defaultTTL),
+					},
+				},
+			},
+		},
+		{
+			name: "Update default TTL -> X => changes",
+			provider: &MikrotikProvider{
+				client: &MikrotikApiClient{
+					&MikrotikDefaults{
+						TTL: int64(newDefaultTTL),
+					},
+					nil,
+					nil,
+				},
+			},
+			inputChanges: &plan.Changes{
+				UpdateOld: []*endpoint.Endpoint{
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(defaultTTL),
+					},
+				},
+				UpdateNew: []*endpoint.Endpoint{
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(newDefaultTTL),
+					},
+				},
+			},
+			expectedChanges: &plan.Changes{
+				UpdateOld: []*endpoint.Endpoint{
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(defaultTTL),
+					},
+				},
+				UpdateNew: []*endpoint.Endpoint{
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(newDefaultTTL),
 					},
 				},
 			},
