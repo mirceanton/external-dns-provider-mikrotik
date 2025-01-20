@@ -131,15 +131,10 @@ func (p *MikrotikProvider) compareEndpoints(a *endpoint.Endpoint, b *endpoint.En
 		return false
 	}
 
-	aRecordTTL, bRecordTTL := a.RecordTTL, b.RecordTTL
-	if !a.RecordTTL.IsConfigured() {
-		aRecordTTL = endpoint.TTL(p.client.TTL)
-	}
-	if !b.RecordTTL.IsConfigured() {
-		bRecordTTL = endpoint.TTL(p.client.TTL)
-	}
-	if aRecordTTL != bRecordTTL {
-		log.Debugf("RecordTTL mismatch: %v != %v", aRecordTTL, bRecordTTL)
+	aRelevantTTL := a.RecordTTL != 0 && a.RecordTTL != endpoint.TTL(p.client.TTL)
+	bRelevantTTL := b.RecordTTL != 0 && b.RecordTTL != endpoint.TTL(p.client.TTL)
+	if a.RecordTTL != b.RecordTTL && (aRelevantTTL || bRelevantTTL) {
+		log.Debugf("RecordTTL mismatch: %v != %v", a.RecordTTL, b.RecordTTL)
 		return false
 	}
 
