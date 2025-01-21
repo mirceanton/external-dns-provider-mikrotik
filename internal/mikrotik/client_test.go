@@ -24,7 +24,10 @@ func TestNewMikrotikClient(t *testing.T) {
 		SkipTLSVerify: true,
 	}
 
-	defaults := &MikrotikDefaults{}
+	defaults := &MikrotikDefaults{
+		DefaultTTL:     1900,
+		DefaultComment: "test",
+	}
 
 	client, err := NewMikrotikClient(config, defaults)
 	if err != nil {
@@ -33,6 +36,10 @@ func TestNewMikrotikClient(t *testing.T) {
 
 	if client.MikrotikConnectionConfig != config {
 		t.Errorf("Expected config to be %v, got %v", config, client.MikrotikConnectionConfig)
+	}
+
+	if client.MikrotikDefaults != defaults {
+		t.Errorf("Expected defaults to be %v, got %v", defaults, client.MikrotikDefaults)
 	}
 
 	if client.Client == nil {

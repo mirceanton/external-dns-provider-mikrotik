@@ -3,7 +3,8 @@ fullnameOverride: external-dns-mikrotik
 
 logLevel: debug
 logFormat: text
-interval: 1s
+
+interval: 5s
 sources: ["ingress", "service", "crd"]
 registry: txt
 txtOwnerId: default
@@ -17,15 +18,19 @@ provider:
   webhook:
     image:
       repository: ghcr.io/mirceanton/external-dns-provider-mikrotik
-      tag: v1.2.7@sha256:c0605f76bd88bab38c8f68e33aa917e882b4793e51d92cd8bf7879c84eda1680
+      tag: v1.3.0-SNAPSHOT-39afb81-amd64
       pullPolicy: IfNotPresent
     env:
       - name: LOG_FORMAT
         value: json
       - name: LOG_LEVEL
         value: debug
+
       - name: MIKROTIK_DEFAULT_TTL
         value: "1800"
+      - name: MIKROTIK_DEFAULT_COMMENT
+        value: Managed by ExternalDNS
+
       - name: MIKROTIK_BASEURL
         valueFrom:
           secretKeyRef:

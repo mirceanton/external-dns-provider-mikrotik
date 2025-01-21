@@ -100,14 +100,14 @@ func (p *MikrotikProvider) GetDomainFilter() endpoint.DomainFilterInterface {
 // If the property is not found, it returns the specified default value.
 func (p *MikrotikProvider) getProviderSpecificOrDefault(ep *endpoint.Endpoint, ps string, defaultValue string) string {
 	value, valueExists := ep.GetProviderSpecificProperty(ps)
-	if valueExists {
+	if valueExists && value != "" {
 		log.Debugf("Found provider-specific property '%s' with value: %s", ps, value)
 		return value
 	}
 
 	log.Debugf("Provider-specific property '%s' not found, checking for webhook/%s", ps, ps)
 	value, valueExists = ep.GetProviderSpecificProperty(fmt.Sprintf("webhook/%s", ps))
-	if valueExists {
+	if valueExists && value != "" {
 		log.Debugf("Found provider-specific property 'webhook/%s' with value: %s", ps, value)
 		return value
 	}
@@ -131,8 +131,8 @@ func (p *MikrotikProvider) compareEndpoints(a *endpoint.Endpoint, b *endpoint.En
 		return false
 	}
 
-	aRelevantTTL := a.RecordTTL != 0 && a.RecordTTL != endpoint.TTL(p.client.TTL)
-	bRelevantTTL := b.RecordTTL != 0 && b.RecordTTL != endpoint.TTL(p.client.TTL)
+	aRelevantTTL := a.RecordTTL != 0 && a.RecordTTL != endpoint.TTL(p.client.DefaultTTL)
+	bRelevantTTL := b.RecordTTL != 0 && b.RecordTTL != endpoint.TTL(p.client.DefaultTTL)
 	if a.RecordTTL != b.RecordTTL && (aRelevantTTL || bRelevantTTL) {
 		log.Debugf("RecordTTL mismatch: %v != %v", a.RecordTTL, b.RecordTTL)
 		return false
@@ -140,7 +140,9 @@ func (p *MikrotikProvider) compareEndpoints(a *endpoint.Endpoint, b *endpoint.En
 
 	aComment := p.getProviderSpecificOrDefault(a, "comment", "")
 	bComment := p.getProviderSpecificOrDefault(b, "comment", "")
-	if aComment != bComment {
+	aRelevantComment := aComment != "" && aComment != p.client.DefaultComment
+	bRelevantComment := bComment != "" && bComment != p.client.DefaultComment
+	if aComment != bComment && (aRelevantComment || bRelevantComment) {
 		log.Debugf("Comment mismatch: %v != %v", aComment, bComment)
 		return false
 	}
@@ -204,10 +206,20 @@ func (p *MikrotikProvider) changes(changes *plan.Changes) *plan.Changes {
 
 	// Process Create changes
 	for _, create := range changes.Create {
+		// Enforce Default TTL
 		if !create.RecordTTL.IsConfigured() {
 			log.Debugf("Setting default TTL for created endpoint: %v", create)
-			create.RecordTTL = endpoint.TTL(p.client.TTL)
+			create.RecordTTL = endpoint.TTL(p.client.DefaultTTL)
 		}
+
+		// Enforce Default Comment
+		if p.client.DefaultComment != "" {
+			if p.getProviderSpecificOrDefault(create, "comment", "") == "" {
+				log.Debugf("Setting default comment for created endpoint: %v", create)
+				create.SetProviderSpecificProperty("comment", p.client.DefaultComment)
+			}
+		}
+
 		newChanges.Create = append(newChanges.Create, create)
 	}
 
@@ -234,10 +246,21 @@ func (p *MikrotikProvider) changes(changes *plan.Changes) *plan.Changes {
 	for _, new := range changes.UpdateNew {
 		if !p.listContains(duplicates, new) {
 			log.Debugf("Adding non-duplicate UpdateNew endpoint: %v", new)
+
+			// Enforce Default TTL
 			if !new.RecordTTL.IsConfigured() {
 				log.Debugf("Setting default TTL for UpdateNew endpoint: %v", new)
-				new.RecordTTL = endpoint.TTL(p.client.TTL)
+				new.RecordTTL = endpoint.TTL(p.client.DefaultTTL)
 			}
+
+			// Enforce Default Comment
+			if p.client.DefaultComment != "" {
+				if p.getProviderSpecificOrDefault(new, "comment", "") == "" {
+					log.Debugf("Setting default comment for UpdateNew endpoint: %v", new)
+					new.SetProviderSpecificProperty("comment", p.client.DefaultComment)
+				}
+			}
+
 			newChanges.UpdateNew = append(newChanges.UpdateNew, new)
 		}
 	}
