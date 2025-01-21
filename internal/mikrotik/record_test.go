@@ -1295,13 +1295,19 @@ func TestExternalDNSEndpointToDNSRecord(t *testing.T) {
 			endpoint: &endpoint.Endpoint{
 				DNSName:    "example.com",
 				RecordType: "TXT",
+				RecordTTL:  endpoint.TTL(5),
 				Targets:    endpoint.NewTargets("some text"),
 				ProviderSpecific: endpoint.ProviderSpecific{
 					{Name: "unsupported", Value: "value"},
 				},
 			},
-			expected:    nil,
-			expectError: true,
+			expected: &DNSRecord{
+				Name: "example.com",
+				Type: "TXT",
+				TTL:  "5s",
+				Text: "some text",
+			},
+			expectError: false,
 		},
 		{
 			name: "Setting match-subdomain via provider-specific",
