@@ -3,7 +3,7 @@ fullnameOverride: external-dns-mikrotik
 
 logLevel: debug
 logFormat: text
-interval: 1s
+interval: 5s
 sources: ["ingress", "service", "crd"]
 registry: txt
 txtOwnerId: default
@@ -26,6 +26,8 @@ provider:
         value: debug
       - name: MIKROTIK_DEFAULT_TTL
         value: "1800"
+      - name: MIKROTIK_DEFAULT_COMMENT
+        value: "Managed by ExternalDNS"
       - name: MIKROTIK_BASEURL
         valueFrom:
           secretKeyRef:
