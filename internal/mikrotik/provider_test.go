@@ -7,15 +7,27 @@ import (
 	"sigs.k8s.io/external-dns/plan"
 )
 
-func TestGetProviderSpecific(t *testing.T) {
+func TestGetProviderSpecificOrDefault(t *testing.T) {
+	defaultTTL := 1800
+	mikrotikProvider := &MikrotikProvider{
+		client: &MikrotikApiClient{
+			&MikrotikDefaults{
+				TTL: int64(defaultTTL),
+			},
+			nil,
+			nil,
+		},
+	}
 	tests := []struct {
 		name          string
+		provider      *MikrotikProvider
 		endpoint      *endpoint.Endpoint
 		property      string
 		expectedValue string
 	}{
 		{
-			name: "Direct property exists",
+			name:     "Direct property exists",
+			provider: mikrotikProvider,
 			endpoint: &endpoint.Endpoint{
 				ProviderSpecific: endpoint.ProviderSpecific{
 					{Name: "comment", Value: "direct-comment"},
@@ -25,7 +37,8 @@ func TestGetProviderSpecific(t *testing.T) {
 			expectedValue: "direct-comment",
 		},
 		{
-			name: "Prefixed property exists",
+			name:     "Prefixed property exists",
+			provider: mikrotikProvider,
 			endpoint: &endpoint.Endpoint{
 				ProviderSpecific: endpoint.ProviderSpecific{
 					{Name: "webhook/comment", Value: "prefixed-comment"},
@@ -35,7 +48,8 @@ func TestGetProviderSpecific(t *testing.T) {
 			expectedValue: "prefixed-comment",
 		},
 		{
-			name: "Both properties exist - direct takes precedence",
+			name:     "Both properties exist - direct takes precedence",
+			provider: mikrotikProvider,
 			endpoint: &endpoint.Endpoint{
 				ProviderSpecific: endpoint.ProviderSpecific{
 					{Name: "comment", Value: "direct-comment"},
@@ -46,7 +60,8 @@ func TestGetProviderSpecific(t *testing.T) {
 			expectedValue: "direct-comment",
 		},
 		{
-			name: "Neither property exists",
+			name:     "Neither property exists",
+			provider: mikrotikProvider,
 			endpoint: &endpoint.Endpoint{
 				ProviderSpecific: endpoint.ProviderSpecific{},
 			},
@@ -54,7 +69,8 @@ func TestGetProviderSpecific(t *testing.T) {
 			expectedValue: "",
 		},
 		{
-			name: "Weong key selected",
+			name:     "Weong key selected",
+			provider: mikrotikProvider,
 			endpoint: &endpoint.Endpoint{
 				ProviderSpecific: endpoint.ProviderSpecific{
 					{Name: "comment", Value: "direct-comment"},
@@ -67,7 +83,7 @@ func TestGetProviderSpecific(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			value := getProviderSpecific(tt.endpoint, tt.property)
+			value := tt.provider.getProviderSpecificOrDefault(tt.endpoint, tt.property, "")
 			if value != tt.expectedValue {
 				t.Errorf("Expected %q, got %q", tt.expectedValue, value)
 			}
@@ -75,16 +91,28 @@ func TestGetProviderSpecific(t *testing.T) {
 	}
 }
 
-func TestIsEndpointMatching(t *testing.T) {
+func TestCompareEndpoints(t *testing.T) {
+	defaultTTL := 1800
+	mikrotikProvider := &MikrotikProvider{
+		client: &MikrotikApiClient{
+			&MikrotikDefaults{
+				TTL: int64(defaultTTL),
+			},
+			nil,
+			nil,
+		},
+	}
 	tests := []struct {
 		name          string
+		provider      *MikrotikProvider
 		endpointA     *endpoint.Endpoint
 		endpointB     *endpoint.Endpoint
 		expectedMatch bool
 	}{
 		// MATCHING CASES
 		{
-			name: "Matching basic properties",
+			name:     "Matching basic properties",
+			provider: mikrotikProvider,
 			endpointA: &endpoint.Endpoint{
 				DNSName:   "example.com",
 				Targets:   endpoint.NewTargets("192.0.2.1"),
@@ -98,7 +126,8 @@ func TestIsEndpointMatching(t *testing.T) {
 			expectedMatch: true,
 		},
 		{
-			name: "Matching provider-specific",
+			name:     "Matching provider-specific",
+			provider: mikrotikProvider,
 			endpointA: &endpoint.Endpoint{
 				DNSName:   "example.com",
 				Targets:   endpoint.NewTargets("192.0.2.1"),
@@ -126,7 +155,8 @@ func TestIsEndpointMatching(t *testing.T) {
 
 		// EDGE CASES
 		{
-			name: "Match-Subdomain: 'false' and unspecified should match",
+			name:     "Match-Subdomain: 'false' and unspecified should match",
+			provider: mikrotikProvider,
 			endpointA: &endpoint.Endpoint{
 				DNSName:   "example.com",
 				Targets:   endpoint.NewTargets("192.0.2.1"),
@@ -144,7 +174,8 @@ func TestIsEndpointMatching(t *testing.T) {
 			expectedMatch: true,
 		},
 		{
-			name: "Disabled: 'false' and unspecified should match",
+			name:     "Disabled: 'false' and unspecified should match",
+			provider: mikrotikProvider,
 			endpointA: &endpoint.Endpoint{
 				DNSName:   "example.com",
 				Targets:   endpoint.NewTargets("192.0.2.1"),
@@ -164,7 +195,8 @@ func TestIsEndpointMatching(t *testing.T) {
 
 		// MISMATCH CASES
 		{
-			name: "Provider-specific properties do not match",
+			name:     "Provider-specific properties do not match",
+			provider: mikrotikProvider,
 			endpointA: &endpoint.Endpoint{
 				DNSName:   "example.com",
 				Targets:   endpoint.NewTargets("192.0.2.1"),
@@ -184,7 +216,8 @@ func TestIsEndpointMatching(t *testing.T) {
 			expectedMatch: false,
 		},
 		{
-			name: "Mismatch in DNSName",
+			name:     "Mismatch in DNSName",
+			provider: mikrotikProvider,
 			endpointA: &endpoint.Endpoint{
 				DNSName:   "example1.com",
 				Targets:   endpoint.NewTargets("192.0.2.1"),
@@ -198,7 +231,8 @@ func TestIsEndpointMatching(t *testing.T) {
 			expectedMatch: false,
 		},
 		{
-			name: "Mismatch in Target",
+			name:     "Mismatch in Target",
+			provider: mikrotikProvider,
 			endpointA: &endpoint.Endpoint{
 				DNSName:   "example.com",
 				Targets:   endpoint.NewTargets("192.0.2.1"),
@@ -212,7 +246,8 @@ func TestIsEndpointMatching(t *testing.T) {
 			expectedMatch: false,
 		},
 		{
-			name: "Mismatch in TTL",
+			name:     "Mismatch in TTL",
+			provider: mikrotikProvider,
 			endpointA: &endpoint.Endpoint{
 				DNSName:   "example.com",
 				Targets:   endpoint.NewTargets("192.0.2.1"),
@@ -225,11 +260,26 @@ func TestIsEndpointMatching(t *testing.T) {
 			},
 			expectedMatch: false,
 		},
+		{
+			name:     "Default TTL",
+			provider: mikrotikProvider,
+			endpointA: &endpoint.Endpoint{
+				DNSName:   "example.com",
+				Targets:   endpoint.NewTargets("192.0.2.1"),
+				RecordTTL: endpoint.TTL(mikrotikProvider.client.TTL),
+			},
+			endpointB: &endpoint.Endpoint{
+				DNSName:   "example.com",
+				Targets:   endpoint.NewTargets("192.0.2.1"),
+				RecordTTL: endpoint.TTL(0),
+			},
+			expectedMatch: true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			match := isEndpointMatching(tt.endpointA, tt.endpointB)
+			match := tt.provider.compareEndpoints(tt.endpointA, tt.endpointB)
 			if match != tt.expectedMatch {
 				t.Errorf("Expected %v, got %v", tt.expectedMatch, match)
 			}
@@ -237,15 +287,27 @@ func TestIsEndpointMatching(t *testing.T) {
 	}
 }
 
-func TestContains(t *testing.T) {
+func TestListContains(t *testing.T) {
+	defaultTTL := 1800
+	mikrotikProvider := &MikrotikProvider{
+		client: &MikrotikApiClient{
+			&MikrotikDefaults{
+				TTL: int64(defaultTTL),
+			},
+			nil,
+			nil,
+		},
+	}
 	tests := []struct {
 		name          string
+		provider      *MikrotikProvider
 		haystack      []*endpoint.Endpoint
 		needle        *endpoint.Endpoint
 		expectContain bool
 	}{
 		{
-			name: "Needle exists in haystack",
+			name:     "Needle exists in haystack",
+			provider: mikrotikProvider,
 			haystack: []*endpoint.Endpoint{
 				{
 					DNSName:   "example1.com",
@@ -277,7 +339,8 @@ func TestContains(t *testing.T) {
 			expectContain: true,
 		},
 		{
-			name: "Needle does not exist in haystack",
+			name:     "Needle does not exist in haystack",
+			provider: mikrotikProvider,
 			haystack: []*endpoint.Endpoint{
 				{
 					DNSName:   "example1.com",
@@ -304,6 +367,7 @@ func TestContains(t *testing.T) {
 		},
 		{
 			name:     "Haystack is empty",
+			provider: mikrotikProvider,
 			haystack: []*endpoint.Endpoint{},
 			needle: &endpoint.Endpoint{
 				DNSName:   "example.com",
@@ -316,7 +380,7 @@ func TestContains(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			contains := contains(tt.haystack, tt.needle)
+			contains := tt.provider.listContains(tt.haystack, tt.needle)
 			if contains != tt.expectContain {
 				t.Errorf("Expected %v, got %v", tt.expectContain, contains)
 			}
@@ -324,14 +388,28 @@ func TestContains(t *testing.T) {
 	}
 }
 
-func TestCleanupChanges(t *testing.T) {
+func TestChanges(t *testing.T) {
+	defaultTTL := 1800
+	newDefaultTTL := 111111
+	mikrotikProvider := &MikrotikProvider{
+		client: &MikrotikApiClient{
+			&MikrotikDefaults{
+				TTL: int64(defaultTTL),
+			},
+			nil,
+			nil,
+		},
+	}
+
 	tests := []struct {
 		name            string
+		provider        *MikrotikProvider
 		inputChanges    *plan.Changes
 		expectedChanges *plan.Changes
 	}{
 		{
-			name: "Multiple matching records - all should be cleaned up",
+			name:     "Multiple matching records - all should be cleaned up",
+			provider: mikrotikProvider,
 			inputChanges: &plan.Changes{
 				UpdateOld: []*endpoint.Endpoint{
 					{
@@ -381,7 +459,8 @@ func TestCleanupChanges(t *testing.T) {
 			expectedChanges: &plan.Changes{},
 		},
 		{
-			name: "Some matching, some different - only partial cleanup",
+			name:     "Some matching, some different - only partial cleanup",
+			provider: mikrotikProvider,
 			inputChanges: &plan.Changes{
 				UpdateOld: []*endpoint.Endpoint{
 					{
@@ -444,7 +523,8 @@ func TestCleanupChanges(t *testing.T) {
 			},
 		},
 		{
-			name: "Different comments across multiple records - no cleanup",
+			name:     "Different comments across multiple records - no cleanup",
+			provider: mikrotikProvider,
 			inputChanges: &plan.Changes{
 				UpdateOld: []*endpoint.Endpoint{
 					{
@@ -516,11 +596,171 @@ func TestCleanupChanges(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:     "Create record with zero value in TTL",
+			provider: mikrotikProvider,
+			inputChanges: &plan.Changes{
+				Create: []*endpoint.Endpoint{
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(0),
+					},
+				},
+			},
+			expectedChanges: &plan.Changes{
+				Create: []*endpoint.Endpoint{
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(mikrotikProvider.client.TTL),
+					},
+				},
+			},
+		},
+		{
+			name:     "Update record with zero value in TTL",
+			provider: mikrotikProvider,
+			inputChanges: &plan.Changes{
+				UpdateOld: []*endpoint.Endpoint{
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(defaultTTL),
+					},
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(0),
+					},
+				},
+				UpdateNew: []*endpoint.Endpoint{
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(0),
+					},
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(mikrotikProvider.client.TTL),
+					},
+				},
+			},
+			expectedChanges: &plan.Changes{
+				UpdateOld: []*endpoint.Endpoint{},
+				UpdateNew: []*endpoint.Endpoint{},
+			},
+		},
+		{
+			name:     "Update 0 -> default TTL => no changes",
+			provider: mikrotikProvider,
+			inputChanges: &plan.Changes{
+				UpdateOld: []*endpoint.Endpoint{
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(0),
+					},
+				},
+				UpdateNew: []*endpoint.Endpoint{
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(defaultTTL),
+					},
+				},
+			},
+			expectedChanges: &plan.Changes{
+				UpdateOld: []*endpoint.Endpoint{},
+				UpdateNew: []*endpoint.Endpoint{},
+			},
+		},
+		{
+			name:     "Update X -> default TTL => changes",
+			provider: mikrotikProvider,
+			inputChanges: &plan.Changes{
+				UpdateOld: []*endpoint.Endpoint{
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(5),
+					},
+				},
+				UpdateNew: []*endpoint.Endpoint{
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(defaultTTL),
+					},
+				},
+			},
+			expectedChanges: &plan.Changes{
+				UpdateOld: []*endpoint.Endpoint{
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(5),
+					},
+				},
+				UpdateNew: []*endpoint.Endpoint{
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(defaultTTL),
+					},
+				},
+			},
+		},
+		{
+			name: "Update default TTL -> X => changes",
+			provider: &MikrotikProvider{
+				client: &MikrotikApiClient{
+					&MikrotikDefaults{
+						TTL: int64(newDefaultTTL),
+					},
+					nil,
+					nil,
+				},
+			},
+			inputChanges: &plan.Changes{
+				UpdateOld: []*endpoint.Endpoint{
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(defaultTTL),
+					},
+				},
+				UpdateNew: []*endpoint.Endpoint{
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(newDefaultTTL),
+					},
+				},
+			},
+			expectedChanges: &plan.Changes{
+				UpdateOld: []*endpoint.Endpoint{
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(defaultTTL),
+					},
+				},
+				UpdateNew: []*endpoint.Endpoint{
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(newDefaultTTL),
+					},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			outputChanges := cleanupChanges(tt.inputChanges)
+			outputChanges := tt.provider.changes(tt.inputChanges)
 
 			if len(outputChanges.UpdateOld) != len(tt.expectedChanges.UpdateOld) {
 				t.Errorf("Expected UpdateOld length %d, got %d", len(tt.expectedChanges.UpdateOld), len(outputChanges.UpdateOld))
@@ -528,16 +768,24 @@ func TestCleanupChanges(t *testing.T) {
 			if len(outputChanges.UpdateNew) != len(tt.expectedChanges.UpdateNew) {
 				t.Errorf("Expected UpdateNew length %d, got %d", len(tt.expectedChanges.UpdateNew), len(outputChanges.UpdateNew))
 			}
+			if len(outputChanges.Create) != len(tt.expectedChanges.Create) {
+				t.Errorf("Expected Create length %d, got %d", len(tt.expectedChanges.Create), len(outputChanges.Create))
+			}
 
 			for i := range tt.expectedChanges.UpdateOld {
-				if !isEndpointMatching(outputChanges.UpdateOld[i], tt.expectedChanges.UpdateOld[i]) {
+				if !mikrotikProvider.compareEndpoints(outputChanges.UpdateOld[i], tt.expectedChanges.UpdateOld[i]) {
 					t.Errorf("Expected endpoint: %v , got %v", tt.expectedChanges.UpdateOld[i], outputChanges.UpdateOld[i])
 				}
 			}
 
 			for i := range tt.expectedChanges.UpdateNew {
-				if !isEndpointMatching(outputChanges.UpdateNew[i], tt.expectedChanges.UpdateNew[i]) {
+				if !mikrotikProvider.compareEndpoints(outputChanges.UpdateNew[i], tt.expectedChanges.UpdateNew[i]) {
 					t.Errorf("Expected endpoint: %v , got %v", tt.expectedChanges.UpdateNew[i], outputChanges.UpdateNew[i])
+				}
+			}
+			for i := range outputChanges.Create {
+				if !mikrotikProvider.compareEndpoints(outputChanges.Create[i], tt.expectedChanges.Create[i]) {
+					t.Errorf("Expected Create endpoint TTL %d, got %d", 0, outputChanges.Create[i].RecordTTL)
 				}
 			}
 		})
