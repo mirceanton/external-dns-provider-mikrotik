@@ -40,11 +40,12 @@ metadata:
   name: nginx-demo
   annotations:
     external-dns.alpha.kubernetes.io/hostname: "example.com"
-    external-dns.alpha.kubernetes.io/ttl: "60"
-    external-dns.alpha.kubernetes.io/webhook-comment: "This is a static DNS record created via ingress annotations!"
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "false" #? test for unknown PS configuration
+    # external-dns.alpha.kubernetes.io/ttl: "`60" #? Test for default ttl
+    # external-dns.alpha.kubernetes.io/webhook-comment: "This is a static DNS record created via ingress annotations!" #? test for default comment
     external-dns.alpha.kubernetes.io/webhook-address-list: "4.5.6.7"
     external-dns.alpha.kubernetes.io/webhook-match-subdomain: "false"
-    external-dns.alpha.kubernetes.io/webhook-disabled: "true"
+    external-dns.alpha.kubernetes.io/webhook-disabled: "false"
 spec:
   rules:
     - host: example.com
