@@ -306,7 +306,7 @@ func TestCompareEndpoints(t *testing.T) {
 				Targets:   endpoint.NewTargets("192.0.2.1"),
 				RecordTTL: endpoint.TTL(5),
 			},
-			expectedMatch: true,
+			expectedMatch: false,
 		},
 		{
 			name:     "Mismatch in TTL (Default != X)",
@@ -321,7 +321,7 @@ func TestCompareEndpoints(t *testing.T) {
 				Targets:   endpoint.NewTargets("192.0.2.1"),
 				RecordTTL: endpoint.TTL(5),
 			},
-			expectedMatch: true,
+			expectedMatch: false,
 		},
 		{
 			name:     "Mismatch in comment (something != nothing)",
