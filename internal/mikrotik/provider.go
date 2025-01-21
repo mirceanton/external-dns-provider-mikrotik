@@ -140,7 +140,9 @@ func (p *MikrotikProvider) compareEndpoints(a *endpoint.Endpoint, b *endpoint.En
 
 	aComment := p.getProviderSpecificOrDefault(a, "comment", "")
 	bComment := p.getProviderSpecificOrDefault(b, "comment", "")
-	if aComment != bComment {
+	aRelevantComment := aComment != "" && aComment != p.client.Comment
+	bRelevantComment := bComment != "" && bComment != p.client.Comment
+	if aComment != bComment && (aRelevantComment || bRelevantComment) {
 		log.Debugf("Comment mismatch: %v != %v", aComment, bComment)
 		return false
 	}
@@ -204,10 +206,20 @@ func (p *MikrotikProvider) changes(changes *plan.Changes) *plan.Changes {
 
 	// Process Create changes
 	for _, create := range changes.Create {
+		// Enforce Default TTL
 		if !create.RecordTTL.IsConfigured() {
 			log.Debugf("Setting default TTL for created endpoint: %v", create)
 			create.RecordTTL = endpoint.TTL(p.client.TTL)
 		}
+
+		// Enforce Default Comment
+		if p.client.Comment != "" {
+			if p.getProviderSpecificOrDefault(create, "comment", "") == "" {
+				log.Debugf("Setting default comment for created endpoint: %v", create)
+				create.SetProviderSpecificProperty("comment", p.client.Comment)
+			}
+		}
+
 		newChanges.Create = append(newChanges.Create, create)
 	}
 
@@ -234,10 +246,21 @@ func (p *MikrotikProvider) changes(changes *plan.Changes) *plan.Changes {
 	for _, new := range changes.UpdateNew {
 		if !p.listContains(duplicates, new) {
 			log.Debugf("Adding non-duplicate UpdateNew endpoint: %v", new)
+
+			// Enforce Default TTL
 			if !new.RecordTTL.IsConfigured() {
 				log.Debugf("Setting default TTL for UpdateNew endpoint: %v", new)
 				new.RecordTTL = endpoint.TTL(p.client.TTL)
 			}
+
+			// Enforce Default Comment
+			if p.client.Comment != "" {
+				if p.getProviderSpecificOrDefault(new, "comment", "") == "" {
+					log.Debugf("Setting default comment for UpdateNew endpoint: %v", new)
+					new.SetProviderSpecificProperty("comment", p.client.Comment)
+				}
+			}
+
 			newChanges.UpdateNew = append(newChanges.UpdateNew, new)
 		}
 	}
