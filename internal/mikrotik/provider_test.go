@@ -93,10 +93,12 @@ func TestGetProviderSpecificOrDefault(t *testing.T) {
 
 func TestCompareEndpoints(t *testing.T) {
 	defaultTTL := 1800
+	defaultComment := "test comment"
 	mikrotikProvider := &MikrotikProvider{
 		client: &MikrotikApiClient{
 			&MikrotikDefaults{
-				TTL: int64(defaultTTL),
+				TTL:     int64(defaultTTL),
+				Comment: defaultComment,
 			},
 			nil,
 			nil,
@@ -192,6 +194,37 @@ func TestCompareEndpoints(t *testing.T) {
 			},
 			expectedMatch: true,
 		},
+		{
+			name:     "0 TTL and Default TTL should match",
+			provider: mikrotikProvider,
+			endpointA: &endpoint.Endpoint{
+				DNSName:   "example.com",
+				Targets:   endpoint.NewTargets("192.0.2.1"),
+				RecordTTL: endpoint.TTL(0),
+			},
+			endpointB: &endpoint.Endpoint{
+				DNSName:   "example.com",
+				Targets:   endpoint.NewTargets("192.0.2.1"),
+				RecordTTL: endpoint.TTL(defaultTTL),
+			},
+			expectedMatch: true,
+		},
+		{
+			name:     "No comment and Default comment should match",
+			provider: mikrotikProvider,
+			endpointA: &endpoint.Endpoint{
+				DNSName: "example.com",
+				Targets: endpoint.NewTargets("192.0.2.1"),
+				ProviderSpecific: endpoint.ProviderSpecific{
+					{Name: "comment", Value: defaultComment},
+				},
+			},
+			endpointB: &endpoint.Endpoint{
+				DNSName: "example.com",
+				Targets: endpoint.NewTargets("192.0.2.1"),
+			},
+			expectedMatch: true,
+		},
 
 		// MISMATCH CASES
 		{
@@ -246,7 +279,7 @@ func TestCompareEndpoints(t *testing.T) {
 			expectedMatch: false,
 		},
 		{
-			name:     "Mismatch in TTL",
+			name:     "Mismatch in TTL (X != Y)",
 			provider: mikrotikProvider,
 			endpointA: &endpoint.Endpoint{
 				DNSName:   "example.com",
@@ -261,19 +294,52 @@ func TestCompareEndpoints(t *testing.T) {
 			expectedMatch: false,
 		},
 		{
-			name:     "Default TTL",
+			name:     "Mismatch in TTL (0 != X)",
 			provider: mikrotikProvider,
 			endpointA: &endpoint.Endpoint{
 				DNSName:   "example.com",
 				Targets:   endpoint.NewTargets("192.0.2.1"),
-				RecordTTL: endpoint.TTL(mikrotikProvider.client.TTL),
+				RecordTTL: endpoint.TTL(0),
 			},
 			endpointB: &endpoint.Endpoint{
 				DNSName:   "example.com",
 				Targets:   endpoint.NewTargets("192.0.2.1"),
-				RecordTTL: endpoint.TTL(0),
+				RecordTTL: endpoint.TTL(5),
 			},
 			expectedMatch: true,
+		},
+		{
+			name:     "Mismatch in TTL (Default != X)",
+			provider: mikrotikProvider,
+			endpointA: &endpoint.Endpoint{
+				DNSName:   "example.com",
+				Targets:   endpoint.NewTargets("192.0.2.1"),
+				RecordTTL: endpoint.TTL(defaultTTL),
+			},
+			endpointB: &endpoint.Endpoint{
+				DNSName:   "example.com",
+				Targets:   endpoint.NewTargets("192.0.2.1"),
+				RecordTTL: endpoint.TTL(5),
+			},
+			expectedMatch: true,
+		},
+		{
+			name:     "Mismatch in comment (something != nothing)",
+			provider: mikrotikProvider,
+			endpointA: &endpoint.Endpoint{
+				DNSName:   "example.com",
+				Targets:   endpoint.NewTargets("192.0.2.1"),
+				RecordTTL: endpoint.TTL(3600),
+				ProviderSpecific: endpoint.ProviderSpecific{
+					{Name: "comment", Value: "mismatch"},
+				},
+			},
+			endpointB: &endpoint.Endpoint{
+				DNSName:   "example.com",
+				Targets:   endpoint.NewTargets("192.0.2.1"),
+				RecordTTL: endpoint.TTL(3600),
+			},
+			expectedMatch: false,
 		},
 	}
 
