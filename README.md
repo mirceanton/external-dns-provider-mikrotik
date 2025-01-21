@@ -81,13 +81,13 @@ See mirceanton/external-dns-provider-mikrotik#140 and kubernetes-sigs/external-d
 | `MIKROTIK_BASEURL`          | URL at which the RouterOS API is available. (ex. `https://192.168.88.1:443`)       | N/A           |
 | `MIKROTIK_USERNAME`         | Username for the RouterOS API authentication.                                      | N/A           |
 | `MIKROTIK_PASSWORD`         | Password for the RouterOS API authentication.                                      | N/A           |
-| `MIKROTIK_SKIP_TLS_VERIFY`  | Whether to skip TLS verification (true or false).                                  | `false`       |
+| `MIKROTIK_SKIP_TLS_VERIFY`  | Whether to skip TLS verification (`true` or `false`).                              | `false`       |
 
 ### Logging Configuration
 
 | Environment Variable  | Description                                                                        | Default Value |
 |-----------------------|------------------------------------------------------------------------------------|---------------|
-| `LOG_FORMAT`          | The format in which logs will be printed. (`text` or `json`)                       | `json`        |
+| `LOG_FORMAT`          | The format in which logs will be printed. (`text` or `json`)                       | `text`        |
 | `LOG_LEVEL`           | The verbosity at which logs are printed logs. (`debug`, `info`, `warn` or `error`) | `info`        |
 
 ### Default Values Configuration
@@ -95,7 +95,7 @@ See mirceanton/external-dns-provider-mikrotik#140 and kubernetes-sigs/external-d
 | Environment Variable        | Description                                                                        | Default Value |
 |-----------------------------|------------------------------------------------------------------------------------|---------------|
 | `MIKROTIK_DEFAULT_TTL`      | Default TTL value to be set for DNS records with no specified TTL.                 | `3600`        |
-| `MIKROTIK_DEFAULT_Comment`  | Default Comment value to be set for DNS records with no specified Comment.         | ``        |
+| `MIKROTIK_DEFAULT_Comment`  | Default Comment value to be set for DNS records with no specified Comment.         | N/A           |
 
 ### Webhook Server Configuration
 
