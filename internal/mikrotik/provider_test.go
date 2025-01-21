@@ -456,11 +456,13 @@ func TestListContains(t *testing.T) {
 
 func TestChanges(t *testing.T) {
 	defaultTTL := 1800
+	defaultComment := "test123"
 	newDefaultTTL := 111111
 	mikrotikProvider := &MikrotikProvider{
 		client: &MikrotikApiClient{
 			&MikrotikDefaults{
-				TTL: int64(defaultTTL),
+				TTL:     int64(defaultTTL),
+				Comment: defaultComment,
 			},
 			nil,
 			nil,
@@ -473,6 +475,7 @@ func TestChanges(t *testing.T) {
 		inputChanges    *plan.Changes
 		expectedChanges *plan.Changes
 	}{
+		// FULL CLEANUP
 		{
 			name:     "Multiple matching records - all should be cleaned up",
 			provider: mikrotikProvider,
@@ -524,6 +527,8 @@ func TestChanges(t *testing.T) {
 			},
 			expectedChanges: &plan.Changes{},
 		},
+
+		// PARTIAL CLEANUP
 		{
 			name:     "Some matching, some different - only partial cleanup",
 			provider: mikrotikProvider,
@@ -588,6 +593,8 @@ func TestChanges(t *testing.T) {
 				},
 			},
 		},
+
+		// NO CLEANUP
 		{
 			name:     "Different comments across multiple records - no cleanup",
 			provider: mikrotikProvider,
@@ -662,6 +669,8 @@ func TestChanges(t *testing.T) {
 				},
 			},
 		},
+
+		// DEFAULT TTL CASES
 		{
 			name:     "Create record with zero value in TTL",
 			provider: mikrotikProvider,
@@ -818,6 +827,159 @@ func TestChanges(t *testing.T) {
 						DNSName:   "example.org",
 						Targets:   endpoint.NewTargets("2.2.2.2"),
 						RecordTTL: endpoint.TTL(newDefaultTTL),
+					},
+				},
+			},
+		},
+
+		// DEFAULT COMMENT CASES
+		{
+			name:     "Create record with no comment",
+			provider: mikrotikProvider,
+			inputChanges: &plan.Changes{
+				Create: []*endpoint.Endpoint{
+					{
+						DNSName: "example.org",
+						Targets: endpoint.NewTargets("2.2.2.2"),
+					},
+				},
+			},
+			expectedChanges: &plan.Changes{
+				Create: []*endpoint.Endpoint{
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(mikrotikProvider.client.TTL),
+						ProviderSpecific: endpoint.ProviderSpecific{
+							{Name: "comment", Value: defaultComment},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:     "Update default comment -> no comment",
+			provider: mikrotikProvider,
+			inputChanges: &plan.Changes{
+				UpdateOld: []*endpoint.Endpoint{
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(5),
+						ProviderSpecific: endpoint.ProviderSpecific{
+							{Name: "comment", Value: defaultComment},
+						},
+					},
+					{
+						DNSName:   "example.com",
+						Targets:   endpoint.NewTargets("3.3.3.3"),
+						RecordTTL: endpoint.TTL(5),
+					},
+				},
+				UpdateNew: []*endpoint.Endpoint{
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(5),
+					},
+					{
+						DNSName:   "example.com",
+						Targets:   endpoint.NewTargets("3.3.3.3"),
+						RecordTTL: endpoint.TTL(5),
+						ProviderSpecific: endpoint.ProviderSpecific{
+							{Name: "comment", Value: defaultComment},
+						},
+					},
+				},
+			},
+			expectedChanges: &plan.Changes{
+				UpdateOld: []*endpoint.Endpoint{},
+				UpdateNew: []*endpoint.Endpoint{},
+			},
+		},
+		{
+			name:     "Update some comment -> no comment",
+			provider: mikrotikProvider,
+			inputChanges: &plan.Changes{
+				UpdateOld: []*endpoint.Endpoint{
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(5),
+						ProviderSpecific: endpoint.ProviderSpecific{
+							{Name: "comment", Value: "some comment"},
+						},
+					},
+				},
+				UpdateNew: []*endpoint.Endpoint{
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(5),
+					},
+				},
+			},
+			expectedChanges: &plan.Changes{
+				UpdateOld: []*endpoint.Endpoint{
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(5),
+						ProviderSpecific: endpoint.ProviderSpecific{
+							{Name: "comment", Value: "some comment"},
+						},
+					},
+				},
+				UpdateNew: []*endpoint.Endpoint{
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(5),
+						ProviderSpecific: endpoint.ProviderSpecific{
+							{Name: "comment", Value: defaultComment},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:     "Update no comment -> some comment",
+			provider: mikrotikProvider,
+			inputChanges: &plan.Changes{
+				UpdateOld: []*endpoint.Endpoint{
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(5),
+					},
+				},
+				UpdateNew: []*endpoint.Endpoint{
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(5),
+						ProviderSpecific: endpoint.ProviderSpecific{
+							{Name: "comment", Value: "some comment"},
+						},
+					},
+				},
+			},
+			expectedChanges: &plan.Changes{
+				UpdateOld: []*endpoint.Endpoint{
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(5),
+					},
+				},
+				UpdateNew: []*endpoint.Endpoint{
+					{
+						DNSName:   "example.org",
+						Targets:   endpoint.NewTargets("2.2.2.2"),
+						RecordTTL: endpoint.TTL(5),
+						ProviderSpecific: endpoint.ProviderSpecific{
+							{Name: "comment", Value: "some comment"},
+						},
 					},
 				},
 			},
