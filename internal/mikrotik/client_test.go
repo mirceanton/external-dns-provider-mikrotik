@@ -25,8 +25,8 @@ func TestNewMikrotikClient(t *testing.T) {
 	}
 
 	defaults := &MikrotikDefaults{
-		TTL:     1900,
-		Comment: "test",
+		DefaultTTL:     1900,
+		DefaultComment: "test",
 	}
 
 	client, err := NewMikrotikClient(config, defaults)

@@ -131,8 +131,8 @@ func (p *MikrotikProvider) compareEndpoints(a *endpoint.Endpoint, b *endpoint.En
 		return false
 	}
 
-	aRelevantTTL := a.RecordTTL != 0 && a.RecordTTL != endpoint.TTL(p.client.TTL)
-	bRelevantTTL := b.RecordTTL != 0 && b.RecordTTL != endpoint.TTL(p.client.TTL)
+	aRelevantTTL := a.RecordTTL != 0 && a.RecordTTL != endpoint.TTL(p.client.DefaultTTL)
+	bRelevantTTL := b.RecordTTL != 0 && b.RecordTTL != endpoint.TTL(p.client.DefaultTTL)
 	if a.RecordTTL != b.RecordTTL && (aRelevantTTL || bRelevantTTL) {
 		log.Debugf("RecordTTL mismatch: %v != %v", a.RecordTTL, b.RecordTTL)
 		return false
@@ -140,8 +140,8 @@ func (p *MikrotikProvider) compareEndpoints(a *endpoint.Endpoint, b *endpoint.En
 
 	aComment := p.getProviderSpecificOrDefault(a, "comment", "")
 	bComment := p.getProviderSpecificOrDefault(b, "comment", "")
-	aRelevantComment := aComment != "" && aComment != p.client.Comment
-	bRelevantComment := bComment != "" && bComment != p.client.Comment
+	aRelevantComment := aComment != "" && aComment != p.client.DefaultComment
+	bRelevantComment := bComment != "" && bComment != p.client.DefaultComment
 	if aComment != bComment && (aRelevantComment || bRelevantComment) {
 		log.Debugf("Comment mismatch: %v != %v", aComment, bComment)
 		return false
@@ -209,14 +209,14 @@ func (p *MikrotikProvider) changes(changes *plan.Changes) *plan.Changes {
 		// Enforce Default TTL
 		if !create.RecordTTL.IsConfigured() {
 			log.Debugf("Setting default TTL for created endpoint: %v", create)
-			create.RecordTTL = endpoint.TTL(p.client.TTL)
+			create.RecordTTL = endpoint.TTL(p.client.DefaultTTL)
 		}
 
 		// Enforce Default Comment
-		if p.client.Comment != "" {
+		if p.client.DefaultComment != "" {
 			if p.getProviderSpecificOrDefault(create, "comment", "") == "" {
 				log.Debugf("Setting default comment for created endpoint: %v", create)
-				create.SetProviderSpecificProperty("comment", p.client.Comment)
+				create.SetProviderSpecificProperty("comment", p.client.DefaultComment)
 			}
 		}
 
@@ -250,14 +250,14 @@ func (p *MikrotikProvider) changes(changes *plan.Changes) *plan.Changes {
 			// Enforce Default TTL
 			if !new.RecordTTL.IsConfigured() {
 				log.Debugf("Setting default TTL for UpdateNew endpoint: %v", new)
-				new.RecordTTL = endpoint.TTL(p.client.TTL)
+				new.RecordTTL = endpoint.TTL(p.client.DefaultTTL)
 			}
 
 			// Enforce Default Comment
-			if p.client.Comment != "" {
+			if p.client.DefaultComment != "" {
 				if p.getProviderSpecificOrDefault(new, "comment", "") == "" {
 					log.Debugf("Setting default comment for UpdateNew endpoint: %v", new)
-					new.SetProviderSpecificProperty("comment", p.client.Comment)
+					new.SetProviderSpecificProperty("comment", p.client.DefaultComment)
 				}
 			}
 

@@ -32,8 +32,8 @@ func TestGetProviderSpecificOrDefault(t *testing.T) {
 	mikrotikProvider := &MikrotikProvider{
 		client: &MikrotikApiClient{
 			&MikrotikDefaults{
-				TTL:     defaultTTL,
-				Comment: defaultComment,
+				DefaultTTL:     defaultTTL,
+				DefaultComment: defaultComment,
 			},
 			nil,
 			nil,
@@ -90,8 +90,8 @@ func TestCompareEndpoints(t *testing.T) {
 	mikrotikProvider := &MikrotikProvider{
 		client: &MikrotikApiClient{
 			&MikrotikDefaults{
-				TTL:     int64(defaultTTL),
-				Comment: defaultComment,
+				DefaultTTL:     int64(defaultTTL),
+				DefaultComment: defaultComment,
 			},
 			nil,
 			nil,
@@ -308,7 +308,7 @@ func TestListContains(t *testing.T) {
 	mikrotikProvider := &MikrotikProvider{
 		client: &MikrotikApiClient{
 			&MikrotikDefaults{
-				TTL: int64(defaultTTL),
+				DefaultTTL: int64(defaultTTL),
 			},
 			nil,
 			nil,
@@ -366,8 +366,8 @@ func TestChanges(t *testing.T) {
 	mikrotikProvider := &MikrotikProvider{
 		client: &MikrotikApiClient{
 			&MikrotikDefaults{
-				TTL:     int64(defaultTTL),
-				Comment: defaultComment,
+				DefaultTTL:     int64(defaultTTL),
+				DefaultComment: defaultComment,
 			},
 			nil,
 			nil,

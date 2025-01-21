@@ -18,8 +18,8 @@ import (
 )
 
 type MikrotikDefaults struct {
-	TTL     int64  `env:"MIKROTIK_DEFAULT_TTL" envDefault:"3600"`
-	Comment string `env:"MIKROTIK_DEFAULT_COMMENT" envDefault:"Managed by External DNS"`
+	DefaultTTL     int64  `env:"MIKROTIK_DEFAULT_TTL" envDefault:"3600"`
+	DefaultComment string `env:"MIKROTIK_DEFAULT_COMMENT" envDefault:""`
 }
 
 // MikrotikConnectionConfig holds the connection details for the API client
