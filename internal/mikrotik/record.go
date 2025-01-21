@@ -152,11 +152,7 @@ func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 			record.AddressList = providerSpecific.Value
 			log.Debugf("AddressList set to: %s", record.AddressList)
 		default:
-			return nil, fmt.Errorf(
-				"unsupported provider specific configuration '%s' for DNS Record of type %s",
-				providerSpecific.Name,
-				record.Type,
-			)
+			log.Debugf("Encountered unknown provider-specific configuration '%s: %s' for DNS Record of type %s", providerSpecific.Name, providerSpecific.Value, record.Type)
 		}
 	}
 
