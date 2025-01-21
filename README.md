@@ -64,14 +64,6 @@ This is problematic because, even though we can create an `Endpoint` with no nam
 
 See mirceanton/external-dns-provider-mikrotik#166
 
-### Multiple provider-specific annotations
-
-In the case of multiple external-dns instances, each with a different provider (for example this one and the cloudflare one), there are problems with passing in annotations for provider-specific configuration. Due to a bug in the upstream external-dns, all annotations will be passed as provider-configuration.
-
-This will cause the webhook to complain that invalid provider-specific configuration entries have been passed and error out. While this check can be removed, it will cause external-dns to continuously detect a drift between the Endpoint and the DNS records in RouterOS, thus attempting a new reconcile at every loop. This is also not desired.
-
-See mirceanton/external-dns-provider-mikrotik#140 and kubernetes-sigs/external-dns#4951
-
 ## ⚙️ Configuration Options
 
 ### MikroTik Connection Configuration
