@@ -7,12 +7,33 @@ import (
 	"sigs.k8s.io/external-dns/plan"
 )
 
+const (
+	defaultTTL     = 1800
+	defaultComment = "default comment"
+	defaultPS      = "default"
+)
+
+// Helper function to create endpoints for brevity
+func NewEndpoint(dnsName, target string, ttl int64, providerSpecificProps []map[string]string) *endpoint.Endpoint {
+	e := &endpoint.Endpoint{
+		DNSName:   dnsName,
+		Targets:   endpoint.NewTargets(target),
+		RecordTTL: endpoint.TTL(ttl),
+	}
+	for _, prop := range providerSpecificProps {
+		for key, value := range prop {
+			e.SetProviderSpecificProperty(key, value)
+		}
+	}
+	return e
+}
+
 func TestGetProviderSpecificOrDefault(t *testing.T) {
-	defaultTTL := 1800
 	mikrotikProvider := &MikrotikProvider{
 		client: &MikrotikApiClient{
 			&MikrotikDefaults{
-				TTL: int64(defaultTTL),
+				TTL:     defaultTTL,
+				Comment: defaultComment,
 			},
 			nil,
 			nil,
@@ -26,64 +47,38 @@ func TestGetProviderSpecificOrDefault(t *testing.T) {
 		expectedValue string
 	}{
 		{
-			name:     "Direct property exists",
-			provider: mikrotikProvider,
-			endpoint: &endpoint.Endpoint{
-				ProviderSpecific: endpoint.ProviderSpecific{
-					{Name: "comment", Value: "direct-comment"},
-				},
-			},
+			name:          "Direct property exists",
+			provider:      mikrotikProvider,
+			endpoint:      NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"comment": "direct-comment"}}),
 			property:      "comment",
 			expectedValue: "direct-comment",
 		},
 		{
-			name:     "Prefixed property exists",
-			provider: mikrotikProvider,
-			endpoint: &endpoint.Endpoint{
-				ProviderSpecific: endpoint.ProviderSpecific{
-					{Name: "webhook/comment", Value: "prefixed-comment"},
-				},
-			},
+			name:          "Prefixed property exists",
+			provider:      mikrotikProvider,
+			endpoint:      NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"webhook/comment": "prefixed-comment"}}),
 			property:      "comment",
 			expectedValue: "prefixed-comment",
 		},
 		{
-			name:     "Both properties exist - direct takes precedence",
-			provider: mikrotikProvider,
-			endpoint: &endpoint.Endpoint{
-				ProviderSpecific: endpoint.ProviderSpecific{
-					{Name: "comment", Value: "direct-comment"},
-					{Name: "webhook/comment", Value: "prefixed-comment"},
-				},
-			},
+			name:          "Both properties exist - direct takes precedence",
+			provider:      mikrotikProvider,
+			endpoint:      NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"comment": "direct-comment"}, {"webhook/comment": "prefixed-comment"}}),
 			property:      "comment",
 			expectedValue: "direct-comment",
 		},
 		{
-			name:     "Neither property exists",
-			provider: mikrotikProvider,
-			endpoint: &endpoint.Endpoint{
-				ProviderSpecific: endpoint.ProviderSpecific{},
-			},
+			name:          "Property does not exist",
+			provider:      mikrotikProvider,
+			endpoint:      NewEndpoint("example.com", "192.0.2.1", 3600, nil),
 			property:      "comment",
-			expectedValue: "",
-		},
-		{
-			name:     "Weong key selected",
-			provider: mikrotikProvider,
-			endpoint: &endpoint.Endpoint{
-				ProviderSpecific: endpoint.ProviderSpecific{
-					{Name: "comment", Value: "direct-comment"},
-				},
-			},
-			property:      "address-list",
-			expectedValue: "",
+			expectedValue: defaultPS,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			value := tt.provider.getProviderSpecificOrDefault(tt.endpoint, tt.property, "")
+			value := tt.provider.getProviderSpecificOrDefault(tt.endpoint, tt.property, defaultPS)
 			if value != tt.expectedValue {
 				t.Errorf("Expected %q, got %q", tt.expectedValue, value)
 			}
@@ -92,8 +87,6 @@ func TestGetProviderSpecificOrDefault(t *testing.T) {
 }
 
 func TestCompareEndpoints(t *testing.T) {
-	defaultTTL := 1800
-	defaultComment := "test comment"
 	mikrotikProvider := &MikrotikProvider{
 		client: &MikrotikApiClient{
 			&MikrotikDefaults{
@@ -113,232 +106,189 @@ func TestCompareEndpoints(t *testing.T) {
 	}{
 		// MATCHING CASES
 		{
-			name:     "Matching basic properties",
-			provider: mikrotikProvider,
-			endpointA: &endpoint.Endpoint{
-				DNSName:   "example.com",
-				Targets:   endpoint.NewTargets("192.0.2.1"),
-				RecordTTL: endpoint.TTL(3600),
-			},
-			endpointB: &endpoint.Endpoint{
-				DNSName:   "example.com",
-				Targets:   endpoint.NewTargets("192.0.2.1"),
-				RecordTTL: endpoint.TTL(3600),
-			},
+			name:          "Matching basic properties",
+			provider:      mikrotikProvider,
+			endpointA:     NewEndpoint("example.com", "192.0.2.1", 3600, nil),
+			endpointB:     NewEndpoint("example.com", "192.0.2.1", 3600, nil),
 			expectedMatch: true,
 		},
 		{
-			name:     "Matching provider-specific",
-			provider: mikrotikProvider,
-			endpointA: &endpoint.Endpoint{
-				DNSName:   "example.com",
-				Targets:   endpoint.NewTargets("192.0.2.1"),
-				RecordTTL: endpoint.TTL(3600),
-				ProviderSpecific: endpoint.ProviderSpecific{
-					{Name: "comment", Value: "match"},
-					{Name: "match-subdomain", Value: "true"},
-					{Name: "address-list", Value: "default"},
-					{Name: "regexp", Value: ".*"},
-				},
-			},
-			endpointB: &endpoint.Endpoint{
-				DNSName:   "example.com",
-				Targets:   endpoint.NewTargets("192.0.2.1"),
-				RecordTTL: endpoint.TTL(3600),
-				ProviderSpecific: endpoint.ProviderSpecific{
-					{Name: "webhook/comment", Value: "match"},
-					{Name: "webhook/match-subdomain", Value: "true"},
-					{Name: "webhook/address-list", Value: "default"},
-					{Name: "webhook/regexp", Value: ".*"},
-				},
-			},
+			name:          "Matching provider-specific",
+			provider:      mikrotikProvider,
+			endpointA:     NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"comment": "some-comment"}, {"disabled": "true"}}),
+			endpointB:     NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"comment": "some-comment"}, {"disabled": "true"}}),
 			expectedMatch: true,
 		},
 
 		// EDGE CASES
 		{
-			name:     "Match-Subdomain: 'false' and unspecified should match",
-			provider: mikrotikProvider,
-			endpointA: &endpoint.Endpoint{
-				DNSName:   "example.com",
-				Targets:   endpoint.NewTargets("192.0.2.1"),
-				RecordTTL: endpoint.TTL(3600),
-				ProviderSpecific: endpoint.ProviderSpecific{
-					{Name: "match-subdomain", Value: "false"},
-				},
-			},
-			endpointB: &endpoint.Endpoint{
-				DNSName:          "example.com",
-				Targets:          endpoint.NewTargets("192.0.2.1"),
-				RecordTTL:        endpoint.TTL(3600),
-				ProviderSpecific: endpoint.ProviderSpecific{}, // unspecified match-subdomain
-			},
+			name:          "Match-Subdomain: 'false' and unspecified should match",
+			provider:      mikrotikProvider,
+			endpointA:     NewEndpoint("example.com", "192.0.2.1", 3600, nil),
+			endpointB:     NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"match-subdomain": "false"}}),
 			expectedMatch: true,
 		},
 		{
-			name:     "Disabled: 'false' and unspecified should match",
-			provider: mikrotikProvider,
-			endpointA: &endpoint.Endpoint{
-				DNSName:   "example.com",
-				Targets:   endpoint.NewTargets("192.0.2.1"),
-				RecordTTL: endpoint.TTL(3600),
-				ProviderSpecific: endpoint.ProviderSpecific{
-					{Name: "disabled", Value: "false"},
-				},
-			},
-			endpointB: &endpoint.Endpoint{
-				DNSName:          "example.com",
-				Targets:          endpoint.NewTargets("192.0.2.1"),
-				RecordTTL:        endpoint.TTL(3600),
-				ProviderSpecific: endpoint.ProviderSpecific{}, // unspecified disabled
-			},
+			name:          "Match-Subdomain: 'false' and empty should match",
+			provider:      mikrotikProvider,
+			endpointA:     NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"match-subdomain": ""}}),
+			endpointB:     NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"match-subdomain": "false"}}),
 			expectedMatch: true,
 		},
 		{
-			name:     "0 TTL and Default TTL should match",
-			provider: mikrotikProvider,
-			endpointA: &endpoint.Endpoint{
-				DNSName:   "example.com",
-				Targets:   endpoint.NewTargets("192.0.2.1"),
-				RecordTTL: endpoint.TTL(0),
-			},
-			endpointB: &endpoint.Endpoint{
-				DNSName:   "example.com",
-				Targets:   endpoint.NewTargets("192.0.2.1"),
-				RecordTTL: endpoint.TTL(defaultTTL),
-			},
+			name:          "Disabled: 'false' and unspecified should match",
+			provider:      mikrotikProvider,
+			endpointA:     NewEndpoint("example.com", "192.0.2.1", 3600, nil),
+			endpointB:     NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"disabled": "false"}}),
 			expectedMatch: true,
 		},
 		{
-			name:     "No comment and Default comment should match",
-			provider: mikrotikProvider,
-			endpointA: &endpoint.Endpoint{
-				DNSName: "example.com",
-				Targets: endpoint.NewTargets("192.0.2.1"),
-				ProviderSpecific: endpoint.ProviderSpecific{
-					{Name: "comment", Value: defaultComment},
-				},
-			},
-			endpointB: &endpoint.Endpoint{
-				DNSName: "example.com",
-				Targets: endpoint.NewTargets("192.0.2.1"),
-			},
+			name:          "Disabled: 'false' and empty should match",
+			provider:      mikrotikProvider,
+			endpointA:     NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"disabled": ""}}),
+			endpointB:     NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"disabled": "false"}}),
+			expectedMatch: true,
+		},
+		{
+			name:          "TTL: Default and zero should match",
+			provider:      mikrotikProvider,
+			endpointA:     NewEndpoint("example.com", "192.0.2.1", 0, nil),
+			endpointB:     NewEndpoint("example.com", "192.0.2.1", defaultTTL, nil),
+			expectedMatch: true,
+		},
+		{
+			name:          "Comment: Default and empty should match",
+			provider:      mikrotikProvider,
+			endpointA:     NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"comment": ""}}),
+			endpointB:     NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"comment": defaultComment}}),
+			expectedMatch: true,
+		},
+		{
+			name:          "Comment: Default and unspecified should match",
+			provider:      mikrotikProvider,
+			endpointA:     NewEndpoint("example.com", "192.0.2.1", 3600, nil),
+			endpointB:     NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"comment": defaultComment}}),
 			expectedMatch: true,
 		},
 
 		// MISMATCH CASES
 		{
-			name:     "Provider-specific properties do not match",
-			provider: mikrotikProvider,
-			endpointA: &endpoint.Endpoint{
-				DNSName:   "example.com",
-				Targets:   endpoint.NewTargets("192.0.2.1"),
-				RecordTTL: endpoint.TTL(3600),
-				ProviderSpecific: endpoint.ProviderSpecific{
-					{Name: "comment", Value: "mismatch"},
-				},
-			},
-			endpointB: &endpoint.Endpoint{
-				DNSName:   "example.com",
-				Targets:   endpoint.NewTargets("192.0.2.1"),
-				RecordTTL: endpoint.TTL(3600),
-				ProviderSpecific: endpoint.ProviderSpecific{
-					{Name: "webhook/comment", Value: "different"},
-				},
-			},
+			name:          "Mismatch in DNSName",
+			provider:      mikrotikProvider,
+			endpointA:     NewEndpoint("example.com", "192.0.2.1", 3600, nil),
+			endpointB:     NewEndpoint("different.org", "192.0.2.1", 3600, nil),
 			expectedMatch: false,
 		},
 		{
-			name:     "Mismatch in DNSName",
-			provider: mikrotikProvider,
-			endpointA: &endpoint.Endpoint{
-				DNSName:   "example1.com",
-				Targets:   endpoint.NewTargets("192.0.2.1"),
-				RecordTTL: endpoint.TTL(3600),
-			},
-			endpointB: &endpoint.Endpoint{
-				DNSName:   "example2.com",
-				Targets:   endpoint.NewTargets("192.0.2.1"),
-				RecordTTL: endpoint.TTL(3600),
-			},
+			name:          "Mismatch in Target",
+			provider:      mikrotikProvider,
+			endpointA:     NewEndpoint("example.com", "1.2.3.4", 3600, nil),
+			endpointB:     NewEndpoint("example.com", "192.0.2.1", 3600, nil),
 			expectedMatch: false,
 		},
 		{
-			name:     "Mismatch in Target",
-			provider: mikrotikProvider,
-			endpointA: &endpoint.Endpoint{
-				DNSName:   "example.com",
-				Targets:   endpoint.NewTargets("192.0.2.1"),
-				RecordTTL: endpoint.TTL(3600),
-			},
-			endpointB: &endpoint.Endpoint{
-				DNSName:   "example.com",
-				Targets:   endpoint.NewTargets("192.0.2.2"),
-				RecordTTL: endpoint.TTL(3600),
-			},
+			name:          "Mismatch in TTL (X != Y)",
+			provider:      mikrotikProvider,
+			endpointA:     NewEndpoint("example.com", "192.0.2.1", 5, nil),
+			endpointB:     NewEndpoint("example.com", "192.0.2.1", 15, nil),
 			expectedMatch: false,
 		},
 		{
-			name:     "Mismatch in TTL (X != Y)",
-			provider: mikrotikProvider,
-			endpointA: &endpoint.Endpoint{
-				DNSName:   "example.com",
-				Targets:   endpoint.NewTargets("192.0.2.1"),
-				RecordTTL: endpoint.TTL(3600),
-			},
-			endpointB: &endpoint.Endpoint{
-				DNSName:   "example.com",
-				Targets:   endpoint.NewTargets("192.0.2.1"),
-				RecordTTL: endpoint.TTL(3601),
-			},
+			name:          "Mismatch in TTL (0 != X)",
+			provider:      mikrotikProvider,
+			endpointA:     NewEndpoint("example.com", "192.0.2.1", 0, nil),
+			endpointB:     NewEndpoint("example.com", "192.0.2.1", 15, nil),
 			expectedMatch: false,
 		},
 		{
-			name:     "Mismatch in TTL (0 != X)",
-			provider: mikrotikProvider,
-			endpointA: &endpoint.Endpoint{
-				DNSName:   "example.com",
-				Targets:   endpoint.NewTargets("192.0.2.1"),
-				RecordTTL: endpoint.TTL(0),
-			},
-			endpointB: &endpoint.Endpoint{
-				DNSName:   "example.com",
-				Targets:   endpoint.NewTargets("192.0.2.1"),
-				RecordTTL: endpoint.TTL(5),
-			},
+			name:          "Mismatch in TTL (Default != X)",
+			provider:      mikrotikProvider,
+			endpointA:     NewEndpoint("example.com", "192.0.2.1", defaultTTL, nil),
+			endpointB:     NewEndpoint("example.com", "192.0.2.1", 15, nil),
 			expectedMatch: false,
 		},
 		{
-			name:     "Mismatch in TTL (Default != X)",
-			provider: mikrotikProvider,
-			endpointA: &endpoint.Endpoint{
-				DNSName:   "example.com",
-				Targets:   endpoint.NewTargets("192.0.2.1"),
-				RecordTTL: endpoint.TTL(defaultTTL),
-			},
-			endpointB: &endpoint.Endpoint{
-				DNSName:   "example.com",
-				Targets:   endpoint.NewTargets("192.0.2.1"),
-				RecordTTL: endpoint.TTL(5),
-			},
+			name:          "Mismatch in comment (something != empty)",
+			provider:      mikrotikProvider,
+			endpointA:     NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"comment": "some-comment"}}),
+			endpointB:     NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"comment": ""}}),
 			expectedMatch: false,
 		},
 		{
-			name:     "Mismatch in comment (something != nothing)",
-			provider: mikrotikProvider,
-			endpointA: &endpoint.Endpoint{
-				DNSName:   "example.com",
-				Targets:   endpoint.NewTargets("192.0.2.1"),
-				RecordTTL: endpoint.TTL(3600),
-				ProviderSpecific: endpoint.ProviderSpecific{
-					{Name: "comment", Value: "mismatch"},
-				},
-			},
-			endpointB: &endpoint.Endpoint{
-				DNSName:   "example.com",
-				Targets:   endpoint.NewTargets("192.0.2.1"),
-				RecordTTL: endpoint.TTL(3600),
-			},
+			name:          "Mismatch in comment (something != unspecified)",
+			provider:      mikrotikProvider,
+			endpointA:     NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"comment": "some-comment"}}),
+			endpointB:     NewEndpoint("example.com", "192.0.2.1", 3600, nil),
+			expectedMatch: false,
+		},
+		{
+			name:          "Mismatch in comment (something != default)",
+			provider:      mikrotikProvider,
+			endpointA:     NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"comment": "some-comment"}}),
+			endpointB:     NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"comment": defaultComment}}),
+			expectedMatch: false,
+		},
+		{
+			name:          "Mismatch in comment (something != something else)",
+			provider:      mikrotikProvider,
+			endpointA:     NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"comment": "some-comment"}}),
+			endpointB:     NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"comment": "other-comment"}}),
+			expectedMatch: false,
+		},
+		{
+			name:          "Mismatch in match-subdomain (true != false)",
+			provider:      mikrotikProvider,
+			endpointA:     NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"match-subdomain": "true"}}),
+			endpointB:     NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"match-subdomain": "false"}}),
+			expectedMatch: false,
+		},
+		{
+			name:          "Mismatch in match-subdomain (true != empty)",
+			provider:      mikrotikProvider,
+			endpointA:     NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"match-subdomain": "true"}}),
+			endpointB:     NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"match-subdomain": ""}}),
+			expectedMatch: false,
+		},
+		{
+			name:          "Mismatch in match-subdomain (true != unspecified)",
+			provider:      mikrotikProvider,
+			endpointA:     NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"match-subdomain": "true"}}),
+			endpointB:     NewEndpoint("example.com", "192.0.2.1", 3600, nil),
+			expectedMatch: false,
+		},
+		{
+			name:          "Mismatch in disabled (true != false)",
+			provider:      mikrotikProvider,
+			endpointA:     NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"disabled": "true"}}),
+			endpointB:     NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"disabled": "false"}}),
+			expectedMatch: false,
+		},
+		{
+			name:          "Mismatch in disabled (true != empty)",
+			provider:      mikrotikProvider,
+			endpointA:     NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"disabled": "true"}}),
+			endpointB:     NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"disabled": ""}}),
+			expectedMatch: false,
+		},
+		{
+			name:          "Mismatch in disabled (true != unspecified)",
+			provider:      mikrotikProvider,
+			endpointA:     NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"disabled": "true"}}),
+			endpointB:     NewEndpoint("example.com", "192.0.2.1", 3600, nil),
+			expectedMatch: false,
+		},
+		{
+			name:          "Mismatch in address-list",
+			provider:      mikrotikProvider,
+			endpointA:     NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"address-list": "1.2.3.4"}}),
+			endpointB:     NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"address-list": "2.3.4.5"}}),
+			expectedMatch: false,
+		},
+		{
+			name:          "Mismatch in regexp",
+			provider:      mikrotikProvider,
+			endpointA:     NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"regexp": ".*"}}),
+			endpointB:     NewEndpoint("example.com", "192.0.2.1", 3600, []map[string]string{{"regexp": "diff.*"}}),
 			expectedMatch: false,
 		},
 	}
@@ -375,71 +325,29 @@ func TestListContains(t *testing.T) {
 			name:     "Needle exists in haystack",
 			provider: mikrotikProvider,
 			haystack: []*endpoint.Endpoint{
-				{
-					DNSName:   "example1.com",
-					Targets:   endpoint.NewTargets("192.2.2.1"),
-					RecordTTL: endpoint.TTL(36),
-				},
-				{
-					DNSName:   "example.com",
-					Targets:   endpoint.NewTargets("192.0.2.1"),
-					RecordTTL: endpoint.TTL(3600),
-					ProviderSpecific: endpoint.ProviderSpecific{
-						{Name: "comment", Value: "test"},
-					},
-				},
-				{
-					DNSName:   "example2.com",
-					Targets:   endpoint.NewTargets("192.1.2.1"),
-					RecordTTL: endpoint.TTL(360),
-				},
+				NewEndpoint("example1.com", "192.0.2.1", 3600, nil),
+				NewEndpoint("example2.com", "192.0.2.2", 3600, nil),
+				NewEndpoint("example3.com", "192.0.2.3", 3600, nil),
 			},
-			needle: &endpoint.Endpoint{
-				DNSName:   "example.com",
-				Targets:   endpoint.NewTargets("192.0.2.1"),
-				RecordTTL: endpoint.TTL(3600),
-				ProviderSpecific: endpoint.ProviderSpecific{
-					{Name: "webhook/comment", Value: "test"},
-				},
-			},
+			needle:        NewEndpoint("example2.com", "192.0.2.2", 3600, nil),
 			expectContain: true,
 		},
 		{
 			name:     "Needle does not exist in haystack",
 			provider: mikrotikProvider,
 			haystack: []*endpoint.Endpoint{
-				{
-					DNSName:   "example1.com",
-					Targets:   endpoint.NewTargets("192.0.2.1"),
-					RecordTTL: endpoint.TTL(3600),
-				},
-				{
-					DNSName:   "example2.com",
-					Targets:   endpoint.NewTargets("192.0.2.1"),
-					RecordTTL: endpoint.TTL(3600),
-				},
-				{
-					DNSName:   "example3.com",
-					Targets:   endpoint.NewTargets("192.0.2.1"),
-					RecordTTL: endpoint.TTL(3600),
-				},
+				NewEndpoint("example1.com", "192.0.2.1", 3600, nil),
+				NewEndpoint("example2.com", "192.0.2.2", 3600, nil),
+				NewEndpoint("example3.com", "192.0.2.3", 3600, nil),
 			},
-			needle: &endpoint.Endpoint{
-				DNSName:   "example.org",
-				Targets:   endpoint.NewTargets("192.0.2.1"),
-				RecordTTL: endpoint.TTL(3600),
-			},
+			needle:        NewEndpoint("example5.com", "192.0.2.5", 3600, nil),
 			expectContain: false,
 		},
 		{
-			name:     "Haystack is empty",
-			provider: mikrotikProvider,
-			haystack: []*endpoint.Endpoint{},
-			needle: &endpoint.Endpoint{
-				DNSName:   "example.com",
-				Targets:   endpoint.NewTargets("192.0.2.1"),
-				RecordTTL: endpoint.TTL(3600),
-			},
+			name:          "Haystack is empty",
+			provider:      mikrotikProvider,
+			haystack:      []*endpoint.Endpoint{},
+			needle:        NewEndpoint("example5.com", "192.0.2.5", 3600, nil),
 			expectContain: false,
 		},
 	}
@@ -455,9 +363,6 @@ func TestListContains(t *testing.T) {
 }
 
 func TestChanges(t *testing.T) {
-	defaultTTL := 1800
-	defaultComment := "test123"
-	newDefaultTTL := 111111
 	mikrotikProvider := &MikrotikProvider{
 		client: &MikrotikApiClient{
 			&MikrotikDefaults{
@@ -475,512 +380,228 @@ func TestChanges(t *testing.T) {
 		inputChanges    *plan.Changes
 		expectedChanges *plan.Changes
 	}{
-		// FULL CLEANUP
 		{
 			name:     "Multiple matching records - all should be cleaned up",
 			provider: mikrotikProvider,
 			inputChanges: &plan.Changes{
 				UpdateOld: []*endpoint.Endpoint{
-					{
-						DNSName:   "example.com",
-						Targets:   endpoint.NewTargets("1.1.1.1"),
-						RecordTTL: endpoint.TTL(3600),
-						ProviderSpecific: endpoint.ProviderSpecific{
-							{Name: "comment", Value: "test comment"},
-							{Name: "address-list", Value: "main"},
-							{Name: "match-subdomain", Value: ".*"},
-						},
-					},
-					{
-						DNSName:   "example.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(300),
-						ProviderSpecific: endpoint.ProviderSpecific{
-							{Name: "comment", Value: "another comment"},
-							{Name: "address-list", Value: "secondary"},
-							{Name: "match-subdomain", Value: "*.example.com"},
-						},
-					},
+					NewEndpoint("example1.com", "192.0.2.1", 3600, []map[string]string{{"comment": "test comment"}, {"disabled": "true"}}),
+					NewEndpoint("example2.com", "192.0.2.2", 3600, []map[string]string{{"match-subdomain": "*.example.com"}, {"address-list": "secondary"}}),
 				},
 				UpdateNew: []*endpoint.Endpoint{
-					{
-						DNSName:   "example.com",
-						Targets:   endpoint.NewTargets("1.1.1.1"),
-						RecordTTL: endpoint.TTL(3600),
-						ProviderSpecific: endpoint.ProviderSpecific{
-							{Name: "webhook/comment", Value: "test comment"},
-							{Name: "address-list", Value: "main"},
-							{Name: "match-subdomain", Value: ".*"},
-						},
-					},
-					{
-						DNSName:   "example.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(300),
-						ProviderSpecific: endpoint.ProviderSpecific{
-							{Name: "webhook/comment", Value: "another comment"},
-							{Name: "address-list", Value: "secondary"},
-							{Name: "match-subdomain", Value: "*.example.com"},
-						},
-					},
+					NewEndpoint("example1.com", "192.0.2.1", 3600, []map[string]string{{"comment": "test comment"}, {"disabled": "true"}}),
+					NewEndpoint("example2.com", "192.0.2.2", 3600, []map[string]string{{"match-subdomain": "*.example.com"}, {"address-list": "secondary"}}),
 				},
 			},
 			expectedChanges: &plan.Changes{},
 		},
-
-		// PARTIAL CLEANUP
 		{
 			name:     "Some matching, some different - only partial cleanup",
 			provider: mikrotikProvider,
 			inputChanges: &plan.Changes{
 				UpdateOld: []*endpoint.Endpoint{
-					{
-						DNSName:   "matching.com",
-						Targets:   endpoint.NewTargets("1.1.1.1"),
-						RecordTTL: endpoint.TTL(3600),
-						ProviderSpecific: endpoint.ProviderSpecific{
-							{Name: "comment", Value: "old comment"},
-						},
-					},
-					{
-						DNSName:   "different.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(300),
-						ProviderSpecific: endpoint.ProviderSpecific{
-							{Name: "comment", Value: "old comment"},
-						},
-					},
+					NewEndpoint("matching.com", "1.1.1.1", 3600, []map[string]string{{"comment": "some comment"}}),
+					NewEndpoint("different.org", "2.2.2.2", 3600, []map[string]string{{"match-subdomain": "*.old.com"}}),
 				},
 				UpdateNew: []*endpoint.Endpoint{
-					{
-						DNSName:   "matching.com",
-						Targets:   endpoint.NewTargets("1.1.1.1"),
-						RecordTTL: endpoint.TTL(3600),
-						ProviderSpecific: endpoint.ProviderSpecific{
-							{Name: "webhook/comment", Value: "old comment"},
-						},
-					},
-					{
-						DNSName:   "different.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(300),
-						ProviderSpecific: endpoint.ProviderSpecific{
-							{Name: "webhook/comment", Value: "new comment"},
-						},
-					},
+					NewEndpoint("matching.com", "1.1.1.1", 3600, []map[string]string{{"comment": "some comment"}}),
+					NewEndpoint("different.org", "2.2.2.2", 3600, []map[string]string{{"match-subdomain": "*.new.ro"}}),
 				},
 			},
 			expectedChanges: &plan.Changes{
 				UpdateOld: []*endpoint.Endpoint{
-					{
-						DNSName:   "different.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(300),
-						ProviderSpecific: endpoint.ProviderSpecific{
-							{Name: "comment", Value: "old comment"},
-						},
-					},
+					// NewEndpoint("matching.com", "1.1.1.1", 3600, []map[string]string{{"comment": "some comment"}}), // this gets removed because it is the same
+					NewEndpoint("different.org", "2.2.2.2", 3600, []map[string]string{{"match-subdomain": "*.old.com"}}),
 				},
 				UpdateNew: []*endpoint.Endpoint{
-					{
-						DNSName:   "different.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(300),
-						ProviderSpecific: endpoint.ProviderSpecific{
-							{Name: "comment", Value: "new comment"},
-						},
-					},
+					// NewEndpoint("matching.com", "1.1.1.1", 3600, []map[string]string{{"comment": "some comment"}}), // this gets removed because it is the same
+					NewEndpoint("different.org", "2.2.2.2", 3600, []map[string]string{{"match-subdomain": "*.new.ro"}}),
 				},
 			},
 		},
-
-		// NO CLEANUP
 		{
 			name:     "Different comments across multiple records - no cleanup",
 			provider: mikrotikProvider,
 			inputChanges: &plan.Changes{
 				UpdateOld: []*endpoint.Endpoint{
-					{
-						DNSName:   "example.com",
-						Targets:   endpoint.NewTargets("1.1.1.1"),
-						RecordTTL: endpoint.TTL(3600),
-						ProviderSpecific: endpoint.ProviderSpecific{
-							{Name: "comment", Value: "old comment"},
-						},
-					},
-					{
-						DNSName:   "example.net",
-						Targets:   endpoint.NewTargets("3.3.3.3"),
-						RecordTTL: endpoint.TTL(120),
-					},
+					NewEndpoint("different.com", "1.1.1.1", 3600, []map[string]string{{"comment": "some comment"}}),
+					NewEndpoint("different.org", "2.2.2.2", 3600, []map[string]string{{"match-subdomain": "*.old.com"}}),
 				},
 				UpdateNew: []*endpoint.Endpoint{
-					{
-						DNSName:   "example.com",
-						Targets:   endpoint.NewTargets("1.1.1.1"),
-						RecordTTL: endpoint.TTL(3600),
-						ProviderSpecific: endpoint.ProviderSpecific{
-							{Name: "webhook/comment", Value: "new comment"},
-						},
-					},
-					{
-						DNSName:   "example.net",
-						Targets:   endpoint.NewTargets("3.3.3.3"),
-						RecordTTL: endpoint.TTL(120),
-						ProviderSpecific: endpoint.ProviderSpecific{
-							{Name: "comment", Value: "new comment"},
-						},
-					},
+					NewEndpoint("different.com", "1.1.1.1", 3600, []map[string]string{{"comment": "new comment"}}),
+					NewEndpoint("different.org", "2.2.2.2", 3600, []map[string]string{{"match-subdomain": "*.new.ro"}}),
 				},
 			},
 			expectedChanges: &plan.Changes{
 				UpdateOld: []*endpoint.Endpoint{
-					{
-						DNSName:   "example.com",
-						Targets:   endpoint.NewTargets("1.1.1.1"),
-						RecordTTL: endpoint.TTL(3600),
-						ProviderSpecific: endpoint.ProviderSpecific{
-							{Name: "comment", Value: "old comment"},
-						},
-					},
-					{
-						DNSName:   "example.net",
-						Targets:   endpoint.NewTargets("3.3.3.3"),
-						RecordTTL: endpoint.TTL(120),
-					},
+					NewEndpoint("different.com", "1.1.1.1", 3600, []map[string]string{{"comment": "some comment"}}),
+					NewEndpoint("different.org", "2.2.2.2", 3600, []map[string]string{{"match-subdomain": "*.old.com"}}),
 				},
 				UpdateNew: []*endpoint.Endpoint{
-					{
-						DNSName:   "example.com",
-						Targets:   endpoint.NewTargets("1.1.1.1"),
-						RecordTTL: endpoint.TTL(3600),
-						ProviderSpecific: endpoint.ProviderSpecific{
-							{Name: "webhook/comment", Value: "new comment"},
-						},
-					},
-					{
-						DNSName:   "example.net",
-						Targets:   endpoint.NewTargets("3.3.3.3"),
-						RecordTTL: endpoint.TTL(120),
-						ProviderSpecific: endpoint.ProviderSpecific{
-							{Name: "comment", Value: "new comment"},
-						},
-					},
+					NewEndpoint("different.com", "1.1.1.1", 3600, []map[string]string{{"comment": "new comment"}}),
+					NewEndpoint("different.org", "2.2.2.2", 3600, []map[string]string{{"match-subdomain": "*.new.ro"}}),
 				},
 			},
 		},
+		{
+			name:     "Default TTL is enforced on Creation",
+			provider: mikrotikProvider,
+			inputChanges: &plan.Changes{
+				Create: []*endpoint.Endpoint{
+					NewEndpoint("zero.com", "1.1.1.1", 0, nil),
+					NewEndpoint("default.com", "1.1.1.1", defaultTTL, nil),
+					NewEndpoint("something.com", "1.1.1.1", 5, nil),
+				},
+			},
+			expectedChanges: &plan.Changes{
+				Create: []*endpoint.Endpoint{
+					NewEndpoint("zero.com", "1.1.1.1", defaultTTL, nil),
+					NewEndpoint("default.com", "1.1.1.1", defaultTTL, nil),
+					NewEndpoint("something.com", "1.1.1.1", 5, nil),
+				},
+			},
+		},
+		{
+			name:     "Default TTL is enforced on Update",
+			provider: mikrotikProvider,
+			inputChanges: &plan.Changes{
+				UpdateOld: []*endpoint.Endpoint{
+					NewEndpoint("zero-to-default.com", "1.1.1.1", 0, nil),
+					NewEndpoint("zero-to-something.com", "1.1.1.1", 0, nil),
+					NewEndpoint("default-to-zero.com", "1.1.1.1", defaultTTL, nil),
+					NewEndpoint("default-to-something.com", "1.1.1.1", defaultTTL, nil),
+					NewEndpoint("something-to-zero.com", "1.1.1.1", 5, nil),
+					NewEndpoint("something-to-default.com", "1.1.1.1", 5, nil),
+					NewEndpoint("something-to-someting-else.com", "1.1.1.1", 5, nil),
+				},
+				UpdateNew: []*endpoint.Endpoint{
+					NewEndpoint("zero-to-default.com", "1.1.1.1", defaultTTL, nil),
+					NewEndpoint("zero-to-something.com", "1.1.1.1", 5, nil),
+					NewEndpoint("default-to-zero.com", "1.1.1.1", 0, nil),
+					NewEndpoint("default-to-something.com", "1.1.1.1", 5, nil),
+					NewEndpoint("something-to-zero.com", "1.1.1.1", 0, nil),
+					NewEndpoint("something-to-default.com", "1.1.1.1", defaultTTL, nil),
+					NewEndpoint("something-to-someting-else.com", "1.1.1.1", 7, nil),
+				},
+			},
+			expectedChanges: &plan.Changes{
+				UpdateOld: []*endpoint.Endpoint{
+					// NewEndpoint("zero-to-default.com", "1.1.1.1", 0, nil), // removed by filter
+					NewEndpoint("zero-to-something.com", "1.1.1.1", 0, nil),
+					// NewEndpoint("default-to-zero.com", "1.1.1.1", defaultTTL, nil), // removed by filter
+					NewEndpoint("default-to-something.com", "1.1.1.1", defaultTTL, nil),
+					NewEndpoint("something-to-zero.com", "1.1.1.1", 5, nil),
+					NewEndpoint("something-to-default.com", "1.1.1.1", 5, nil),
+					NewEndpoint("something-to-someting-else.com", "1.1.1.1", 5, nil),
+				},
+				UpdateNew: []*endpoint.Endpoint{
+					// NewEndpoint("zero-to-default.com", "1.1.1.1", defaultTTL, nil), // removed by filter
+					NewEndpoint("zero-to-something.com", "1.1.1.1", 5, nil),
+					// NewEndpoint("default-to-zero.com", "1.1.1.1", 0, nil), // removed by filter
+					NewEndpoint("default-to-something.com", "1.1.1.1", 5, nil),
+					NewEndpoint("something-to-zero.com", "1.1.1.1", 0, nil),
+					NewEndpoint("something-to-default.com", "1.1.1.1", defaultTTL, nil),
+					NewEndpoint("something-to-someting-else.com", "1.1.1.1", 7, nil),
+				},
+			},
+		},
+		{
+			name:     "Default Comment is enforced on Creation",
+			provider: mikrotikProvider,
+			inputChanges: &plan.Changes{
+				Create: []*endpoint.Endpoint{
+					NewEndpoint("unset.com", "1.1.1.1", 5, nil),
+					NewEndpoint("empty.com", "1.1.1.1", 5, []map[string]string{{"comment": ""}}),
+					NewEndpoint("default.com", "1.1.1.1", 5, []map[string]string{{"comment": defaultComment}}),
+					NewEndpoint("something.com", "1.1.1.1", 5, []map[string]string{{"comment": "something"}}),
+				},
+			},
+			expectedChanges: &plan.Changes{
+				Create: []*endpoint.Endpoint{
+					NewEndpoint("unset.com", "1.1.1.1", 5, []map[string]string{{"comment": defaultComment}}),
+					NewEndpoint("empty.com", "1.1.1.1", 5, []map[string]string{{"comment": defaultComment}}),
+					NewEndpoint("default.com", "1.1.1.1", 5, []map[string]string{{"comment": defaultComment}}),
+					NewEndpoint("something.com", "1.1.1.1", 5, []map[string]string{{"comment": "something"}}),
+				},
+			},
+		},
+		{
+			name:     "Default Comment is enforced on Update",
+			provider: mikrotikProvider,
+			inputChanges: &plan.Changes{
+				UpdateOld: []*endpoint.Endpoint{
+					NewEndpoint("unset-to-empty.com", "1.1.1.1", 0, nil),
+					NewEndpoint("unset-to-default.com", "1.1.1.1", 0, nil),
+					NewEndpoint("unset-to-something.com", "1.1.1.1", 0, nil),
 
-		// DEFAULT TTL CASES
-		{
-			name:     "Create record with zero value in TTL",
-			provider: mikrotikProvider,
-			inputChanges: &plan.Changes{
-				Create: []*endpoint.Endpoint{
-					{
-						DNSName:   "example.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(0),
-					},
-				},
-			},
-			expectedChanges: &plan.Changes{
-				Create: []*endpoint.Endpoint{
-					{
-						DNSName:   "example.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(mikrotikProvider.client.TTL),
-					},
-				},
-			},
-		},
-		{
-			name:     "Update record with zero value in TTL",
-			provider: mikrotikProvider,
-			inputChanges: &plan.Changes{
-				UpdateOld: []*endpoint.Endpoint{
-					{
-						DNSName:   "example.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(defaultTTL),
-					},
-					{
-						DNSName:   "example.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(0),
-					},
-				},
-				UpdateNew: []*endpoint.Endpoint{
-					{
-						DNSName:   "example.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(0),
-					},
-					{
-						DNSName:   "example.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(mikrotikProvider.client.TTL),
-					},
-				},
-			},
-			expectedChanges: &plan.Changes{
-				UpdateOld: []*endpoint.Endpoint{},
-				UpdateNew: []*endpoint.Endpoint{},
-			},
-		},
-		{
-			name:     "Update 0 -> default TTL => no changes",
-			provider: mikrotikProvider,
-			inputChanges: &plan.Changes{
-				UpdateOld: []*endpoint.Endpoint{
-					{
-						DNSName:   "example.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(0),
-					},
-				},
-				UpdateNew: []*endpoint.Endpoint{
-					{
-						DNSName:   "example.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(defaultTTL),
-					},
-				},
-			},
-			expectedChanges: &plan.Changes{
-				UpdateOld: []*endpoint.Endpoint{},
-				UpdateNew: []*endpoint.Endpoint{},
-			},
-		},
-		{
-			name:     "Update X -> default TTL => changes",
-			provider: mikrotikProvider,
-			inputChanges: &plan.Changes{
-				UpdateOld: []*endpoint.Endpoint{
-					{
-						DNSName:   "example.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(5),
-					},
-				},
-				UpdateNew: []*endpoint.Endpoint{
-					{
-						DNSName:   "example.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(defaultTTL),
-					},
-				},
-			},
-			expectedChanges: &plan.Changes{
-				UpdateOld: []*endpoint.Endpoint{
-					{
-						DNSName:   "example.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(5),
-					},
-				},
-				UpdateNew: []*endpoint.Endpoint{
-					{
-						DNSName:   "example.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(defaultTTL),
-					},
-				},
-			},
-		},
-		{
-			name: "Update default TTL -> X => changes",
-			provider: &MikrotikProvider{
-				client: &MikrotikApiClient{
-					&MikrotikDefaults{
-						TTL: int64(newDefaultTTL),
-					},
-					nil,
-					nil,
-				},
-			},
-			inputChanges: &plan.Changes{
-				UpdateOld: []*endpoint.Endpoint{
-					{
-						DNSName:   "example.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(defaultTTL),
-					},
-				},
-				UpdateNew: []*endpoint.Endpoint{
-					{
-						DNSName:   "example.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(newDefaultTTL),
-					},
-				},
-			},
-			expectedChanges: &plan.Changes{
-				UpdateOld: []*endpoint.Endpoint{
-					{
-						DNSName:   "example.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(defaultTTL),
-					},
-				},
-				UpdateNew: []*endpoint.Endpoint{
-					{
-						DNSName:   "example.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(newDefaultTTL),
-					},
-				},
-			},
-		},
+					NewEndpoint("empty-to-unset.com", "1.1.1.1", 0, []map[string]string{{"comment": ""}}),
+					NewEndpoint("empty-to-default.com", "1.1.1.1", 0, []map[string]string{{"comment": ""}}),
+					NewEndpoint("empty-to-something.com", "1.1.1.1", 0, []map[string]string{{"comment": ""}}),
 
-		// DEFAULT COMMENT CASES
-		{
-			name:     "Create record with no comment",
-			provider: mikrotikProvider,
-			inputChanges: &plan.Changes{
-				Create: []*endpoint.Endpoint{
-					{
-						DNSName: "example.org",
-						Targets: endpoint.NewTargets("2.2.2.2"),
-					},
-				},
-			},
-			expectedChanges: &plan.Changes{
-				Create: []*endpoint.Endpoint{
-					{
-						DNSName:   "example.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(mikrotikProvider.client.TTL),
-						ProviderSpecific: endpoint.ProviderSpecific{
-							{Name: "comment", Value: defaultComment},
-						},
-					},
-				},
-			},
-		},
-		{
-			name:     "Update default comment -> no comment",
-			provider: mikrotikProvider,
-			inputChanges: &plan.Changes{
-				UpdateOld: []*endpoint.Endpoint{
-					{
-						DNSName:   "example.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(5),
-						ProviderSpecific: endpoint.ProviderSpecific{
-							{Name: "comment", Value: defaultComment},
-						},
-					},
-					{
-						DNSName:   "example.com",
-						Targets:   endpoint.NewTargets("3.3.3.3"),
-						RecordTTL: endpoint.TTL(5),
-					},
+					NewEndpoint("default-to-unset.com", "1.1.1.1", 0, []map[string]string{{"comment": defaultComment}}),
+					NewEndpoint("default-to-empty.com", "1.1.1.1", 0, []map[string]string{{"comment": defaultComment}}),
+					NewEndpoint("default-to-something.com", "1.1.1.1", 0, []map[string]string{{"comment": defaultComment}}),
+
+					NewEndpoint("something-to-unset.com", "1.1.1.1", 5, []map[string]string{{"comment": "something"}}),
+					NewEndpoint("something-to-empty.com", "1.1.1.1", 5, []map[string]string{{"comment": "something"}}),
+					NewEndpoint("something-to-default.com", "1.1.1.1", 5, []map[string]string{{"comment": "something"}}),
+					NewEndpoint("something-to-someting-else.com", "1.1.1.1", 5, []map[string]string{{"comment": "something"}}),
 				},
 				UpdateNew: []*endpoint.Endpoint{
-					{
-						DNSName:   "example.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(5),
-					},
-					{
-						DNSName:   "example.com",
-						Targets:   endpoint.NewTargets("3.3.3.3"),
-						RecordTTL: endpoint.TTL(5),
-						ProviderSpecific: endpoint.ProviderSpecific{
-							{Name: "comment", Value: defaultComment},
-						},
-					},
-				},
-			},
-			expectedChanges: &plan.Changes{
-				UpdateOld: []*endpoint.Endpoint{},
-				UpdateNew: []*endpoint.Endpoint{},
-			},
-		},
-		{
-			name:     "Update some comment -> no comment",
-			provider: mikrotikProvider,
-			inputChanges: &plan.Changes{
-				UpdateOld: []*endpoint.Endpoint{
-					{
-						DNSName:   "example.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(5),
-						ProviderSpecific: endpoint.ProviderSpecific{
-							{Name: "comment", Value: "some comment"},
-						},
-					},
-				},
-				UpdateNew: []*endpoint.Endpoint{
-					{
-						DNSName:   "example.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(5),
-					},
+					NewEndpoint("unset-to-empty.com", "1.1.1.1", 0, []map[string]string{{"comment": ""}}),
+					NewEndpoint("unset-to-default.com", "1.1.1.1", 0, []map[string]string{{"comment": defaultComment}}),
+					NewEndpoint("unset-to-something.com", "1.1.1.1", 0, []map[string]string{{"comment": "something"}}),
+
+					NewEndpoint("empty-to-unset.com", "1.1.1.1", 0, []map[string]string{{"comment": ""}}),
+					NewEndpoint("empty-to-default.com", "1.1.1.1", 0, []map[string]string{{"comment": defaultComment}}),
+					NewEndpoint("empty-to-something.com", "1.1.1.1", 0, []map[string]string{{"comment": "something"}}),
+
+					NewEndpoint("default-to-unset.com", "1.1.1.1", 0, []map[string]string{{"comment": defaultComment}}),
+					NewEndpoint("default-to-empty.com", "1.1.1.1", 0, []map[string]string{{"comment": ""}}),
+					NewEndpoint("default-to-something.com", "1.1.1.1", 0, []map[string]string{{"comment": "something"}}),
+
+					NewEndpoint("something-to-unset.com", "1.1.1.1", 5, nil),
+					NewEndpoint("something-to-empty.com", "1.1.1.1", 5, []map[string]string{{"comment": ""}}),
+					NewEndpoint("something-to-default.com", "1.1.1.1", 5, []map[string]string{{"comment": defaultComment}}),
+					NewEndpoint("something-to-someting-else.com", "1.1.1.1", 5, []map[string]string{{"comment": "something-else"}}),
 				},
 			},
 			expectedChanges: &plan.Changes{
 				UpdateOld: []*endpoint.Endpoint{
-					{
-						DNSName:   "example.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(5),
-						ProviderSpecific: endpoint.ProviderSpecific{
-							{Name: "comment", Value: "some comment"},
-						},
-					},
+					// NewEndpoint("unset-to-empty.com", "1.1.1.1", 0, nil),
+					// NewEndpoint("unset-to-default.com", "1.1.1.1", 0, nil),
+					NewEndpoint("unset-to-something.com", "1.1.1.1", 0, nil),
+
+					// NewEndpoint("empty-to-unset.com", "1.1.1.1", 0, []map[string]string{{"comment": ""}}),
+					// NewEndpoint("empty-to-default.com", "1.1.1.1", 0, []map[string]string{{"comment": ""}}),
+					NewEndpoint("empty-to-something.com", "1.1.1.1", 0, []map[string]string{{"comment": ""}}),
+
+					// NewEndpoint("default-to-unset.com", "1.1.1.1", 0, []map[string]string{{"comment": defaultComment}}),
+					// NewEndpoint("default-to-empty.com", "1.1.1.1", 0, []map[string]string{{"comment": defaultComment}}),
+					NewEndpoint("default-to-something.com", "1.1.1.1", 0, []map[string]string{{"comment": defaultComment}}),
+
+					NewEndpoint("something-to-unset.com", "1.1.1.1", 5, []map[string]string{{"comment": "something"}}),
+					NewEndpoint("something-to-empty.com", "1.1.1.1", 5, []map[string]string{{"comment": "something"}}),
+					NewEndpoint("something-to-default.com", "1.1.1.1", 5, []map[string]string{{"comment": "something"}}),
+					NewEndpoint("something-to-someting-else.com", "1.1.1.1", 5, []map[string]string{{"comment": "something"}}),
 				},
 				UpdateNew: []*endpoint.Endpoint{
-					{
-						DNSName:   "example.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(5),
-						ProviderSpecific: endpoint.ProviderSpecific{
-							{Name: "comment", Value: defaultComment},
-						},
-					},
-				},
-			},
-		},
-		{
-			name:     "Update no comment -> some comment",
-			provider: mikrotikProvider,
-			inputChanges: &plan.Changes{
-				UpdateOld: []*endpoint.Endpoint{
-					{
-						DNSName:   "example.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(5),
-					},
-				},
-				UpdateNew: []*endpoint.Endpoint{
-					{
-						DNSName:   "example.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(5),
-						ProviderSpecific: endpoint.ProviderSpecific{
-							{Name: "comment", Value: "some comment"},
-						},
-					},
-				},
-			},
-			expectedChanges: &plan.Changes{
-				UpdateOld: []*endpoint.Endpoint{
-					{
-						DNSName:   "example.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(5),
-					},
-				},
-				UpdateNew: []*endpoint.Endpoint{
-					{
-						DNSName:   "example.org",
-						Targets:   endpoint.NewTargets("2.2.2.2"),
-						RecordTTL: endpoint.TTL(5),
-						ProviderSpecific: endpoint.ProviderSpecific{
-							{Name: "comment", Value: "some comment"},
-						},
-					},
+					// NewEndpoint("unset-to-empty.com", "1.1.1.1", 0, []map[string]string{{"comment": ""}}),
+					// NewEndpoint("unset-to-default.com", "1.1.1.1", 0, []map[string]string{{"comment": defaultComment}}),
+					NewEndpoint("unset-to-something.com", "1.1.1.1", 0, []map[string]string{{"comment": "something"}}),
+
+					// NewEndpoint("empty-to-unset.com", "1.1.1.1", 0, []map[string]string{{"comment": ""}}),
+					// NewEndpoint("empty-to-default.com", "1.1.1.1", 0, []map[string]string{{"comment": defaultComment}}),
+					NewEndpoint("empty-to-something.com", "1.1.1.1", 0, []map[string]string{{"comment": "something"}}),
+
+					// NewEndpoint("default-to-unset.com", "1.1.1.1", 0, []map[string]string{{"comment": defaultComment}}),
+					// NewEndpoint("default-to-empty.com", "1.1.1.1", 0, []map[string]string{{"comment": ""}}),
+					NewEndpoint("default-to-something.com", "1.1.1.1", 0, []map[string]string{{"comment": "something"}}),
+
+					NewEndpoint("something-to-unset.com", "1.1.1.1", 5, []map[string]string{{"comment": defaultComment}}),
+					NewEndpoint("something-to-empty.com", "1.1.1.1", 5, []map[string]string{{"comment": defaultComment}}),
+					NewEndpoint("something-to-default.com", "1.1.1.1", 5, []map[string]string{{"comment": defaultComment}}),
+					NewEndpoint("something-to-someting-else.com", "1.1.1.1", 5, []map[string]string{{"comment": "something-else"}}),
 				},
 			},
 		},
@@ -1002,13 +623,12 @@ func TestChanges(t *testing.T) {
 
 			for i := range tt.expectedChanges.UpdateOld {
 				if !mikrotikProvider.compareEndpoints(outputChanges.UpdateOld[i], tt.expectedChanges.UpdateOld[i]) {
-					t.Errorf("Expected endpoint: %v , got %v", tt.expectedChanges.UpdateOld[i], outputChanges.UpdateOld[i])
+					t.Errorf("Expected UpdateOld endpoint: %v , got %v", tt.expectedChanges.UpdateOld[i], outputChanges.UpdateOld[i])
 				}
 			}
-
 			for i := range tt.expectedChanges.UpdateNew {
 				if !mikrotikProvider.compareEndpoints(outputChanges.UpdateNew[i], tt.expectedChanges.UpdateNew[i]) {
-					t.Errorf("Expected endpoint: %v , got %v", tt.expectedChanges.UpdateNew[i], outputChanges.UpdateNew[i])
+					t.Errorf("Expected UpdateNew endpoint: %v , got %v", tt.expectedChanges.UpdateNew[i], outputChanges.UpdateNew[i])
 				}
 			}
 			for i := range outputChanges.Create {
