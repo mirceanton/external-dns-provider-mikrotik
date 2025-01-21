@@ -100,14 +100,14 @@ func (p *MikrotikProvider) GetDomainFilter() endpoint.DomainFilterInterface {
 // If the property is not found, it returns the specified default value.
 func (p *MikrotikProvider) getProviderSpecificOrDefault(ep *endpoint.Endpoint, ps string, defaultValue string) string {
 	value, valueExists := ep.GetProviderSpecificProperty(ps)
-	if valueExists {
+	if valueExists && value != "" {
 		log.Debugf("Found provider-specific property '%s' with value: %s", ps, value)
 		return value
 	}
 
 	log.Debugf("Provider-specific property '%s' not found, checking for webhook/%s", ps, ps)
 	value, valueExists = ep.GetProviderSpecificProperty(fmt.Sprintf("webhook/%s", ps))
-	if valueExists {
+	if valueExists && value != "" {
 		log.Debugf("Found provider-specific property 'webhook/%s' with value: %s", ps, value)
 		return value
 	}
