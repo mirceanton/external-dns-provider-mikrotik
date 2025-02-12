@@ -3,35 +3,22 @@
 name: Lint
 
 on:
-  # Manual Trigger
   workflow_dispatch: {}
-
-  # Run on any PR
   pull_request: {}
 
 jobs:
   golangci-lint:
     uses: mirceanton/reusable-workflows/.github/workflows/reusable-go-lint.yaml@9ce913356128f964413b5fe99efe4858e18d7831 # v3.4.51
-    secrets: inherit
+    with:
+      golangci-version: v1.64.3
 
   yamllint:
     uses: mirceanton/reusable-workflows/.github/workflows/reusable-yamllint.yaml@9ce913356128f964413b5fe99efe4858e18d7831 # v3.4.51
-    secrets: inherit
-    with:
-      yamllint-args: "--config-file=.yamllint.yaml"
-
   actionlint:
     uses: mirceanton/reusable-workflows/.github/workflows/reusable-actionlint.yaml@9ce913356128f964413b5fe99efe4858e18d7831 # v3.4.51
-    secrets: inherit
-
   shellcheck:
     uses: mirceanton/reusable-workflows/.github/workflows/reusable-shellcheck.yaml@9ce913356128f964413b5fe99efe4858e18d7831 # v3.4.51
-    secrets: inherit
-
   markdownlint:
     uses: mirceanton/reusable-workflows/.github/workflows/reusable-markdownlint.yaml@9ce913356128f964413b5fe99efe4858e18d7831 # v3.4.51
-    secrets: inherit
-
   commitlint:
     uses: mirceanton/reusable-workflows/.github/workflows/reusable-commitlint.yaml@9ce913356128f964413b5fe99efe4858e18d7831 # v3.4.51
-    secrets: inherit
