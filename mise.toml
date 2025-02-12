@@ -1,0 +1,10 @@
+[tools]
+"aqua:go-task/task" = "latest"
+"aqua:golangci/golangci-lint" = "latest"
+"aqua:helm/helm" = "latest"
+"aqua:goreleaser/goreleaser" = "latest"
+"aqua:derailed/k9s" = "latest"
+go = "latest"
+"aqua:kubernetes/kubectl" = "latest"
+"aqua:kubernetes/minikube" = "latest"
+"aqua:cli/cli" = "latest"
