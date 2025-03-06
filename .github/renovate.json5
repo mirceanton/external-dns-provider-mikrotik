@@ -7,7 +7,7 @@
         ":disableRateLimiting",
         ":semanticCommits",
         "github>mirceanton/renovate-config//labels/all.json5",
-        "github>mirceanton/renovate-config//semantic-commits/all.json5"
+        "github>mirceanton/renovate-config//semantic-commits/all.json5",
         "github>mirceanton/renovate-config//custom-managers/all.json5"
     ]
 }
