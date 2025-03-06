@@ -3,7 +3,6 @@ area/docker:
   - changed-files:
       - any-glob-to-any-file: ".dockerignore"
       - any-glob-to-any-file: "Dockerfile"
-      - any-glob-to-any-file: ".devcontainer/devcontainer.json"
 
 area/github:
   - changed-files:

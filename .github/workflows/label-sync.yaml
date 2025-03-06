@@ -16,14 +16,14 @@ on:
   pull_request:
     paths:
       - .github/workflows/label-sync.yaml
-      - .github/labels.yaml
+      - .github/configs/labels.yaml
 
   # "Wet" Run on any push to the main branch that changes the labels config or the workflow
   push:
     branches: ["main", "master"]
     paths:
       - .github/workflows/label-sync.yaml
-      - .github/labels.yaml
+      - .github/configs/labels.yaml
 
   # "Wet" Run hourly
   schedule:
@@ -35,4 +35,4 @@ jobs:
     secrets: inherit
     with:
       dry-run: ${{ inputs.dry-run || github.event_name == 'pull_request' }}
-      config-file: .github/labels.yaml
+      config-file: .github/configs/labels.yaml
