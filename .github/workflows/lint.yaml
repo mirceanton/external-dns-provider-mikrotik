@@ -7,18 +7,24 @@ on:
   pull_request: {}
 
 jobs:
-  golangci-lint:
-    uses: mirceanton/reusable-workflows/.github/workflows/reusable-go-lint.yaml@9ce913356128f964413b5fe99efe4858e18d7831 # v3.4.51
-    with:
-      golangci-version: v1.64.3
-
-  yamllint:
-    uses: mirceanton/reusable-workflows/.github/workflows/reusable-yamllint.yaml@9ce913356128f964413b5fe99efe4858e18d7831 # v3.4.51
   actionlint:
-    uses: mirceanton/reusable-workflows/.github/workflows/reusable-actionlint.yaml@9ce913356128f964413b5fe99efe4858e18d7831 # v3.4.51
-  shellcheck:
-    uses: mirceanton/reusable-workflows/.github/workflows/reusable-shellcheck.yaml@9ce913356128f964413b5fe99efe4858e18d7831 # v3.4.51
-  markdownlint:
-    uses: mirceanton/reusable-workflows/.github/workflows/reusable-markdownlint.yaml@9ce913356128f964413b5fe99efe4858e18d7831 # v3.4.51
+    uses: mirceanton/reusable-workflows/.github/workflows/reusable-actionlint.yaml@09f31ab6340ce5651dc6c28512a82de6b2415fb9 # v3.8.2
   commitlint:
-    uses: mirceanton/reusable-workflows/.github/workflows/reusable-commitlint.yaml@9ce913356128f964413b5fe99efe4858e18d7831 # v3.4.51
+    uses: mirceanton/reusable-workflows/.github/workflows/reusable-commitlint.yaml@09f31ab6340ce5651dc6c28512a82de6b2415fb9 # v3.8.2
+    with: { config-file: ./.github/configs/commitlint.config.mjs }
+  markdownlint:
+    uses: mirceanton/reusable-workflows/.github/workflows/reusable-markdownlint.yaml@09f31ab6340ce5651dc6c28512a82de6b2415fb9 # v3.8.2
+    with: { config-file: .github/configs/.markdownlint.yaml }
+  shellcheck:
+    uses: mirceanton/reusable-workflows/.github/workflows/reusable-shellcheck.yaml@09f31ab6340ce5651dc6c28512a82de6b2415fb9 # v3.8.2
+  yamllint:
+    uses: mirceanton/reusable-workflows/.github/workflows/reusable-yamllint.yaml@09f31ab6340ce5651dc6c28512a82de6b2415fb9 # v3.8.2
+    with: { config-file: .github/configs/yamllint.yaml }
+
+  golangci-lint:
+    uses: mirceanton/reusable-workflows/.github/workflows/reusable-go-lint.yaml@09f31ab6340ce5651dc6c28512a82de6b2415fb9 # v3.8.2
+    with:
+      # renovate: depName=go datasource=golang-version
+      go-version: 1.24.0
+      # renovate: depName=golangci/golangci-lint datasource=github-tags
+      golangci-lint-version: v1.64.3
