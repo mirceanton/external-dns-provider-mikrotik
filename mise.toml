@@ -1,10 +1,79 @@
 [tools]
-"aqua:go-task/task" = "latest"
-"aqua:golangci/golangci-lint" = "latest"
-"aqua:helm/helm" = "latest"
-"aqua:goreleaser/goreleaser" = "latest"
-"aqua:derailed/k9s" = "latest"
+# Go tools
 go = "latest"
+"aqua:golangci/golangci-lint" = "latest"
+"aqua:goreleaser/goreleaser" = "2.7.0"
+"ubi:nametake/golangci-lint-langserver" = "latest"
+
+# Kube tools
 "aqua:kubernetes/kubectl" = "latest"
 "aqua:kubernetes/minikube" = "latest"
-"aqua:cli/cli" = "latest"
+"aqua:helm/helm" = "latest"
+"aqua:derailed/k9s" = "latest"
+
+# Linters
+"aqua:koalaman/shellcheck" = "latest"
+"aqua:rhysd/actionlint" = "latest"
+
+
+# =================================================================================================
+# TASKS -> Kube Cluster
+# =================================================================================================
+[tasks."kube:up"]
+description = "Create the test cluster."
+run = [
+    "minikube start",
+    "minikube addons enable metallb",
+    "minikube addons enable ingress",
+    "minikube addons enable metrics-server",
+    "minikube addons enable dashboard",
+]
+
+[tasks."kube:down"]
+description = "Tear down the minikube cluster"
+run = "minikube delete"
+
+
+# =================================================================================================
+# TASKS -> Kube Deploy
+# =================================================================================================
+[tasks."kube:deploy"]
+description = "Deploy the external-dns-mikrotik webhook to the test cluster."
+run = [
+    "kubectl create ns external-dns || true",
+    "kubectl delete secret --namespace external-dns mikrotik-credentials || true",
+    "kubectl create secret generic --namespace external-dns --from-env-file=.env mikrotik-credentials || true",
+    "helm repo add external-dns https://kubernetes-sigs.github.io/external-dns && helm repo update",
+    "helm upgrade --install --namespace external-dns external-dns external-dns/external-dns -f example/values.yaml",
+]
+
+[tasks."kube:clean"]
+description = "Remove the external-dns-mikrotik webhook from the test cluster."
+run = [
+    "kubectl delete ns external-dns || true",
+    "kubectl delete -f example/records || true",
+    "kubectl delete -f example/ingress || true",
+]
+
+
+[tasks."kube:logs"]
+description = "Fetch the logs from the external-dns-mikrotik webhook container to a local file."
+run = "kubectl -n external-dns logs deployments/external-dns-mikrotik webhook > logs.json"
+
+
+# =================================================================================================
+# TASKS -> GO
+# =================================================================================================
+[tasks."go:release"]
+description = "Run goreleaser in snapshot mode."
+run = "goreleaser release --snapshot --clean"
+
+
+[tasks."go:test"]
+description = "Run tests."
+run = "go test -v ./... -race -covermode=atomic"
+
+
+[tasks."go:lint"]
+description = "Run golangci-lint in fix mode."
+run = "golangci-lint run --fix"
