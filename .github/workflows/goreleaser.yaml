@@ -16,6 +16,12 @@ on:
   push:
     tags: ["*"]
 
+  # Dry Run on any PR that changes the goreleaser config or the workflow
+  pull_request:
+    paths:
+      - .github/workflows/goreleaser.yaml
+      - .goreleaser.yaml
+
 jobs:
   goreleaser:
     if: github.repository_owner == 'mirceanton' #?don't run on forks
@@ -23,3 +29,7 @@ jobs:
     secrets: inherit
     with:
       dry-run: ${{ inputs.dry-run || github.event_name == 'pull_request' }}
+      # renovate: depName=go datasource=golang-version
+      go-version: 1.24.0
+      # renovate: depName=goreleaser/goreleaser datasource=github-tags
+      goreleaser-version: v2.7.0
