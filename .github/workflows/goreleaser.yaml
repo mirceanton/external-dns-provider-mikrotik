@@ -25,11 +25,9 @@ on:
 jobs:
   goreleaser:
     if: github.repository_owner == 'mirceanton' #?don't run on forks
-    uses: mirceanton/reusable-workflows/.github/workflows/reusable-go-release.yaml@09f31ab6340ce5651dc6c28512a82de6b2415fb9 # v3.8.2
+    uses: mirceanton/reusable-workflows/.github/workflows/reusable-go-release.yaml@feat/custom-images
     secrets: inherit
     with:
       dry-run: ${{ inputs.dry-run || github.event_name == 'pull_request' }}
-      # renovate: depName=go datasource=golang-version
-      go-version: 1.24.2
       # renovate: depName=goreleaser/goreleaser datasource=github-tags
-      goreleaser-version: v2.8.2
+      version: v2.8.0
