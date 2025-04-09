@@ -225,7 +225,7 @@ func (c *MikrotikApiClient) lookupDNSRecord(key, recordType string) (*DNSRecord,
 
 // doRequest sends an HTTP request to the MikroTik API with credentials
 func (c *MikrotikApiClient) doRequest(method, path string, body io.Reader) (*http.Response, error) {
-	endpoint_url := fmt.Sprintf("%s/rest/%s", c.MikrotikConnectionConfig.BaseUrl, path)
+	endpoint_url := fmt.Sprintf("%s/rest/%s", c.BaseUrl, path)
 	log.Debugf("sending %s request to: %s", method, endpoint_url)
 
 	req, err := http.NewRequest(method, endpoint_url, body)
@@ -234,9 +234,9 @@ func (c *MikrotikApiClient) doRequest(method, path string, body io.Reader) (*htt
 		return nil, err
 	}
 
-	req.SetBasicAuth(c.MikrotikConnectionConfig.Username, c.MikrotikConnectionConfig.Password)
+	req.SetBasicAuth(c.Username, c.Password)
 
-	resp, err := c.Client.Do(req)
+	resp, err := c.Do(req)
 	if err != nil {
 		log.Errorf("error sending HTTP request: %v", err)
 		return nil, err
