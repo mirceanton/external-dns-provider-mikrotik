@@ -30,4 +30,4 @@ jobs:
     with:
       dry-run: ${{ inputs.dry-run || github.event_name == 'pull_request' }}
       # renovate: depName=goreleaser/goreleaser datasource=github-tags
-      version: v2.8.0
+      version: v2.8.2
