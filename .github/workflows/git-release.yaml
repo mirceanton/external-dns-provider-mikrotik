@@ -12,13 +12,19 @@ on:
         default: false
         type: boolean
 
-  # "Wet" Run on any push to the main branch that modified a go-related file
-  push:
-    branches: ["main", "master"]
+  # Dry Run on any PR that changes a relevant file
+  pull_request:
     paths:
+      - ".github/workflows/git-release.yaml"
       - "go.mod"
       - "go.sum"
       - "**/**.go"
+
+  # "Wet" Run nightly
+  # If there are multiple commits throughout a day, this would group them together
+  # If there is nothing to release, then the action would run with no consequences
+  schedule:
+    - cron: "0 0 * * *"
 
 jobs:
   git:
