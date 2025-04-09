@@ -46,7 +46,7 @@ func TestNewMikrotikClient(t *testing.T) {
 		t.Errorf("Expected HTTP client to be initialized")
 	}
 
-	transport, ok := client.Client.Transport.(*http.Transport)
+	transport, ok := client.Transport.(*http.Transport)
 	if !ok {
 		t.Errorf("Expected Transport to be *http.Transport")
 	}
