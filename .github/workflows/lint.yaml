@@ -22,9 +22,7 @@ jobs:
     with: { config-file: .github/configs/yamllint.yaml }
 
   golangci-lint:
-    uses: mirceanton/reusable-workflows/.github/workflows/reusable-go-lint.yaml@09f31ab6340ce5651dc6c28512a82de6b2415fb9 # v3.8.2
+    uses: mirceanton/reusable-workflows/.github/workflows/reusable-go-lint.yaml@feat/custom-images
     with:
-      # renovate: depName=go datasource=golang-version
-      go-version: 1.24.2
       # renovate: depName=golangci/golangci-lint datasource=github-tags
-      golangci-lint-version: v1.64.7
+      version: v2.0.2
