@@ -7,22 +7,26 @@ on:
   pull_request: {}
 
 jobs:
-  actionlint:
-    uses: mirceanton/reusable-workflows/.github/workflows/reusable-actionlint.yaml@feat/custom-images
-  commitlint:
-    uses: mirceanton/reusable-workflows/.github/workflows/reusable-commitlint.yaml@09f31ab6340ce5651dc6c28512a82de6b2415fb9 # v3.8.2
-    with: { config-file: ./.github/configs/commitlint.config.mjs }
-  markdownlint:
-    uses: mirceanton/reusable-workflows/.github/workflows/reusable-markdownlint.yaml@09f31ab6340ce5651dc6c28512a82de6b2415fb9 # v3.8.2
-    with: { config-file: .github/configs/.markdownlint.yaml }
-  shellcheck:
-    uses: mirceanton/reusable-workflows/.github/workflows/reusable-shellcheck.yaml@feat/custom-images
-  yamllint:
-    uses: mirceanton/reusable-workflows/.github/workflows/reusable-yamllint.yaml@feat/custom-images
-    with: { config-file: .github/configs/yamllint.yaml }
-
   golangci-lint:
     uses: mirceanton/reusable-workflows/.github/workflows/reusable-go-lint.yaml@feat/custom-images
     with:
       # renovate: depName=golangci/golangci-lint datasource=github-tags
       version: v2.0.2
+
+  github-actions:
+    uses: mirceanton/reusable-workflows/.github/workflows/reusable-actionlint.yaml@feat/custom-images
+
+  commits:
+    uses: mirceanton/reusable-workflows/.github/workflows/reusable-commitlint.yaml@feat/custom-images
+    with: { config-file: ./.github/configs/commitlint.config.mjs }
+
+  markdown:
+    uses: mirceanton/reusable-workflows/.github/workflows/reusable-markdownlint.yaml@feat/custom-images
+    with: { config-file: .github/configs/.markdownlint.yaml }
+
+  shell:
+    uses: mirceanton/reusable-workflows/.github/workflows/reusable-shellcheck.yaml@feat/custom-images
+
+  yaml:
+    uses: mirceanton/reusable-workflows/.github/workflows/reusable-yamllint.yaml@feat/custom-images
+    with: { config-file: .github/configs/yamllint.yaml }

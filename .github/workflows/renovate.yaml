@@ -3,7 +3,6 @@
 name: Renovate
 
 on:
-  # Manual Trigger
   workflow_dispatch:
     inputs:
       dry-run:
@@ -17,7 +16,6 @@ on:
         required: false
         type: string
 
-  # "Wet" Run hourly
   schedule:
     - cron: "0 * * * *"
 
@@ -27,7 +25,7 @@ concurrency:
 
 jobs:
   renovate:
-    uses: mirceanton/reusable-workflows/.github/workflows/reusable-renovate.yaml@09f31ab6340ce5651dc6c28512a82de6b2415fb9 # v3.8.2
+    uses: mirceanton/reusable-workflows/.github/workflows/reusable-renovate.yaml@feat/custom-images
     secrets: inherit
     with:
       dry-run: "${{ inputs.dry-run == true || github.event_name == 'pull_request' }}"
