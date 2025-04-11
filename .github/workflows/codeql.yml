@@ -20,15 +20,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - name: Setup CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@45775bd8235c68ba998cffa5171334d58593da47 # v3
         with:
           languages: go
           build-mode: autobuild
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@45775bd8235c68ba998cffa5171334d58593da47 # v3
         with:
           category: "/language:go"
