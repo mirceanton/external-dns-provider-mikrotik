@@ -25,4 +25,4 @@ jobs:
     uses: mirceanton/reusable-workflows/.github/workflows/reusable-go-lint.yaml@feat/custom-images
     with:
       # renovate: depName=golangci/golangci-lint datasource=github-tags
-      version: v2.0.2
+      version: v2.1.1
