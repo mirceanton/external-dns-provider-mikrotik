@@ -10,7 +10,7 @@ on:
         default: false
         required: false
         type: boolean
-      logLevel:
+      log-level:
         description: Log Level
         type: choice
         default: debug
