@@ -27,7 +27,7 @@ jobs:
         run: mkdir -p trivy-results
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@v.0.30.0
+        uses: aquasecurity/trivy-action@v0.30.0
         with:
           image-ref: ghcr.io/mirceanton/external-dns-provider-mikrotik:latest
           format: 'sarif'
