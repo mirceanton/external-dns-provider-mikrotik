@@ -2,7 +2,7 @@
 name: Trivy
 
 on:
-  workflow_call:
+  workflow_dispatch:
     inputs:
       dry-run:
         description: Dry Run
