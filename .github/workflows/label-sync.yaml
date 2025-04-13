@@ -52,4 +52,4 @@ jobs:
           dry-run: "${{ inputs.dry-run == true }}"
           token: "${{ steps.app-token.outputs.token }}"
           delete-other-labels: true
-          config-file: "${{ inputs.config-file }}"
+          config-file: .github/configs/labels.yaml
