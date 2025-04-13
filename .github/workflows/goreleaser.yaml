@@ -59,4 +59,4 @@ jobs:
           TAP_GITHUB_TOKEN: "${{ secrets.GHCR_RW_TOKEN }}"
         with:
           version: v2.8.2 # !TODO renovate annotation
-          args: ${{ inputs.dry-run && '--snapshot' || '--clean' }}
+          args: ${{ (inputs.dry-run || github.event_name == 'pull_request') && '--snapshot' || '--clean' }}

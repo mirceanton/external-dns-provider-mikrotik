@@ -3,14 +3,7 @@
 name: GolangCI Lint
 
 on:
-  workflow_dispatch:
-    inputs:
-      dry-run:
-        description: Dry Run
-        required: false
-        default: false
-        type: boolean
-
+  workflow_dispatch: {}
   pull_request:
     paths:
       - .github/workflows/golangci-lint.yaml
