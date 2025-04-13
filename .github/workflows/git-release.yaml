@@ -3,34 +3,23 @@
 name: Release
 
 on:
-  # Manual Trigger
-  workflow_dispatch:
-    inputs:
-      dry-run:
-        description: Dry Run
-        required: false
-        default: false
-        type: boolean
-
-  # Dry Run on any PR that changes a relevant file
-  pull_request:
-    paths:
-      - ".github/workflows/git-release.yaml"
-      - "go.mod"
-      - "go.sum"
-      - "**/**.go"
-
-  # "Wet" Run nightly
-  # If there are multiple commits throughout a day, this would group them together
-  # If there is nothing to release, then the action would run with no consequences
+  workflow_dispatch: {}
   schedule:
     - cron: "0 0 * * *"
 
 jobs:
-  git:
+  release-please:
     if: github.repository_owner == 'mirceanton' # ? don't run on forks
-    uses: mirceanton/reusable-workflows/.github/workflows/reusable-release-semver.yaml@09f31ab6340ce5651dc6c28512a82de6b2415fb9 # v3.8.2
-    secrets: inherit
-    with:
-      dry-run: ${{ inputs.dry-run || github.event_name == 'pull_request' }}
-      config-file: ./.github/configs/release.config.mjs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate Token
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1.12.0
+        id: app-token
+        with:
+          app-id: "${{ secrets.BOT_APP_ID }}"
+          private-key: "${{ secrets.BOT_APP_PRIVATE_KEY }}"
+
+      - uses: googleapis/release-please-action@v4.2.0
+        with:
+          token: "${{ steps.app-token.outputs.token }}"
+          release-type: go
