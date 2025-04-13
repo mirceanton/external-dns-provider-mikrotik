@@ -1,0 +1,20 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Lint - yamllint
+
+on:
+  workflow_dispatch: {}
+
+  pull_request:
+    paths: [ "*.yaml", "*.yml" ]
+
+jobs:
+  yamllint:
+    runs-on: ubuntu-latest
+    container: ghcr.io/mirceanton/gha-runner-yamllint:latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Run yamllint
+        run: yamllint --config-file=.github/configs/yamllint.yaml .

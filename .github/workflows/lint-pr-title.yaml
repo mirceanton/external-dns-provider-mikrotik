@@ -1,0 +1,19 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Lint - commitlint
+
+on:
+  pull_request: {}
+
+jobs:
+  commits:
+    runs-on: ubuntu-latest
+    container: ghcr.io/mirceanton/gha-runner-commitlint:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Validate PR commits with CommitLint
+        run: echo "$PR_TITLE" | npx commitlint --extends=./.github/configs/commitlint.config.mjs
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
