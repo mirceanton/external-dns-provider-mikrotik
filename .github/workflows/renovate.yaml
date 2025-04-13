@@ -10,11 +10,18 @@ on:
         default: false
         required: false
         type: boolean
-      log-level:
+      logLevel:
         description: Log Level
+        type: choice
         default: debug
-        required: false
-        type: string
+        options:
+          - debug
+          - info
+        required: true
+      version:
+        description: Renovate Version
+        default: latest
+        required: true
 
   schedule:
     - cron: "0 * * * *"
@@ -39,14 +46,15 @@ jobs:
         with:
           token: "${{ steps.app-token.outputs.token }}"
 
-      - name: Self-hosted Renovate
+      - name: Run Renovate
         uses: renovatebot/github-action@v41.0.18
         with:
           configurationFile: .github/renovate.json5
-          token: ${{ secrets.RENOVATE_TOKEN }}
+          token: "${{ steps.app-token.outputs.token }}"
+          renovate-version: "${{ inputs.version || 'latest' }}"
         env:
           # https://docs.renovatebot.com/self-hosted-configuration/
-          LOG_LEVEL: "${{ inputs.log-level }}"
+          LOG_LEVEL: "${{ inputs.log-level || 'debug' }}"
           RENOVATE_AUTODISCOVER: true
           RENOVATE_AUTODISCOVER_FILTER: "${{ github.repository }}"
           RENOVATE_DRY_RUN: "${{ inputs.dry-run == true }}"
