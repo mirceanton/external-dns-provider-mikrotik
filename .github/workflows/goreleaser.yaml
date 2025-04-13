@@ -58,5 +58,6 @@ jobs:
           GITHUB_TOKEN: "${{ steps.app-token.outputs.token }}"
           TAP_GITHUB_TOKEN: "${{ secrets.GHCR_RW_TOKEN }}"
         with:
-          version: v2.8.2 # !TODO renovate annotation
+          # renovate: datasource=github-tags packageName=goreleaser/goreleaser
+          version: v2.8.2
           args: ${{ (inputs.dry-run || github.event_name == 'pull_request') && '--snapshot' || '--clean' }}
