@@ -7,7 +7,7 @@ on:
 
   pull_request:
     paths:
-      - "*.md"
+      - "**.md"
       - .github/configs/.markdownlint.yaml
 
 jobs:

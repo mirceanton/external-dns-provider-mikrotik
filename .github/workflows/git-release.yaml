@@ -18,7 +18,7 @@ on:
       - ".github/workflows/git-release.yaml"
       - "go.mod"
       - "go.sum"
-      - "**/**.go"
+      - "**.go"
 
   # "Wet" Run nightly
   # If there are multiple commits throughout a day, this would group them together

@@ -3,7 +3,6 @@
 name: GolangCI Lint
 
 on:
-  # Manual Trigger
   workflow_dispatch:
     inputs:
       dry-run:
@@ -12,11 +11,11 @@ on:
         default: false
         type: boolean
 
-  # Dry Run on any PR that changes the config or the workflow
   pull_request:
     paths:
       - .github/workflows/golangci-lint.yaml
       - .golangci.yaml
+      - "**.go"
 
 jobs:
   golangci:
