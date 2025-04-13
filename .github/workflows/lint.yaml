@@ -100,7 +100,6 @@ jobs:
   yamllint:
     runs-on: ubuntu-latest
     container: ghcr.io/mirceanton/gha-runner-yamllint:latest
-    needs: ["prepare"]
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
