@@ -3,31 +3,12 @@
 name: Release
 
 on:
-  # Manual Trigger
-  workflow_dispatch:
-    inputs:
-      dry-run:
-        description: Dry Run
-        required: false
-        default: false
-        type: boolean
-
-  # Dry Run on any PR that changes a relevant file
-  pull_request:
-    paths:
-      - ".github/workflows/git-release.yaml"
-      - "go.mod"
-      - "go.sum"
-      - "**.go"
-
-  # "Wet" Run nightly
-  # If there are multiple commits throughout a day, this would group them together
-  # If there is nothing to release, then the action would run with no consequences
+  workflow_dispatch: {}
   schedule:
     - cron: "0 0 * * *"
 
 jobs:
-  git:
+  release-please:
     if: github.repository_owner == 'mirceanton' # ? don't run on forks
     runs-on: ubuntu-latest
     steps:
@@ -38,19 +19,7 @@ jobs:
           app-id: "${{ secrets.BOT_APP_ID }}"
           private-key: "${{ secrets.BOT_APP_PRIVATE_KEY }}"
 
-      - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: googleapis/release-please-action@v4.2.0
         with:
           token: "${{ steps.app-token.outputs.token }}"
-
-      - name: Semantic Release
-        uses: cycjimmy/semantic-release-action@v4.2.0
-        with:
-          dry_run: ${{ inputs.dry-run || github.event_name == 'pull_request' }}
-          extends: ./.github/configs/release.config.mjs
-          extra_plugins: |
-            @semantic-release/commit-analyzer
-            @semantic-release/release-notes-generator
-            @semantic-release/github
-        env:
-          GITHUB_TOKEN: "${{ steps.app-token.outputs.token }}"
+          release-type: go
