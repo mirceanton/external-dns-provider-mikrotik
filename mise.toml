@@ -1,7 +1,7 @@
 [tools]
 # Go tools
 go = "1.24.2"
-golangci-lint = "2.0.2"
+golangci-lint = "2.1.1"
 goreleaser = "2.8.0"
 
 # Kube tools
