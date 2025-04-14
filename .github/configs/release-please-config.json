@@ -1,0 +1,38 @@
+{
+  "release-type": "go",
+  "pull-request-title-pattern": "chore: release ${version}",
+  "include-v-in-tag": true,
+  "draft": false,
+  "prerelease": false,
+  "bump-minor-pre-major": true, 
+  "bump-patch-for-minor-pre-major": false,
+  "sequential-calls": true, // ?Make sequential calls to GitHub API (avoid rate limiting)
+  "release-search-depth": 500,
+  "commit-search-depth": 500,
+  "extra-files": [
+    {
+      "type": "yaml",
+      "path": "example/values.yaml",
+      "jsonpath": "$.provider.webhook.image.tag"
+    }
+  ],
+  "changelog-types": [
+    { "type": "feat", "section": "Features", "hidden": false },
+    { "type": "fix", "section": "Fixes", "hidden": false },
+    { "type": "perf", "section": "Performance Improvements", "hidden": false },
+    { "type": "revert", "section": "Reverts", "hidden": false },
+    { "type": "docs", "section": "Documentation", "hidden": false },
+    { "type": "style", "section": "Styles", "hidden": true },
+    { "type": "chore", "section": "Miscellaneous", "hidden": true },
+    { "type": "refactor", "section": "Code Refactoring", "hidden": false },
+    { "type": "test", "section": "Tests", "hidden": true },
+    { "type": "ci", "section": "Continuous Integration", "hidden": true }
+  ],
+  "changelog-sections": [
+    "Features",
+    "Fixes",
+    "Performance Improvements",
+    "Documentation",
+    "Miscellaneous"
+  ]
+}
