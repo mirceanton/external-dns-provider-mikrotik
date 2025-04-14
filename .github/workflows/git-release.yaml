@@ -22,4 +22,4 @@ jobs:
       - uses: googleapis/release-please-action@v4.2.0
         with:
           token: "${{ steps.app-token.outputs.token }}"
-          release-type: go
+          config-file: .github/configs/release-please-config.json
