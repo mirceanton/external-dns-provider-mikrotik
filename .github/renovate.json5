@@ -3,7 +3,8 @@
     "dependencyDashboardTitle": "Renovate Dashboard 🤖",
     "extends": [
         ":dependencyDashboard",
-        "config:best-practices",
+        "config:recommended",
+        "helpers:pinGitHubActionDigests",
         ":disableRateLimiting",
         ":semanticCommits",
         "github>mirceanton/renovate-config//labels/all.json5",
