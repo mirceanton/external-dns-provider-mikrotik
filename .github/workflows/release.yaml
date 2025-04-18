@@ -5,13 +5,13 @@ on:
   # Manually trigger a new release from the Actions tab
   workflow_dispatch:
     inputs:
-      version_increment:
+      version-increment:
         description: 'Version increment type'
         required: false
         default: 'auto'
         type: choice
         options: [ "auto", "major", "minor", "patch", "prerelease" ]
-      dry_run:
+      dry-run:
         description: 'Dry run mode (no actual release)'
         required: false
         default: false
@@ -52,6 +52,6 @@ jobs:
         uses: mirceanton/action-semver-release@v1.3.0
         with:
           github-token: ${{ steps.app-token.outputs.token }}
-          version-increment: ${{ inputs.version_increment || 'auto' }}
+          version-increment: ${{ inputs.version-increment || 'auto' }}
           dry-run: ${{ inputs.dry-run || github.event_name == 'pull_request' }}
           draft: ${{ inputs.draft || 'false' }}
