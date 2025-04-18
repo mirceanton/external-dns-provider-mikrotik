@@ -1,14 +1,37 @@
 ---
-# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 name: Release
 
 on:
-  workflow_dispatch: {}
+  # Manually trigger a new release from the Actions tab
+  workflow_dispatch:
+    inputs:
+      version_increment:
+        description: 'Version increment type'
+        required: false
+        default: 'auto'
+        type: choice
+        options: [ "auto", "major", "minor", "patch", "prerelease" ]
+      dry_run:
+        description: 'Dry run mode (no actual release)'
+        required: false
+        default: false
+        type: boolean
+      draft:
+        description: Mark Release as Draft
+        default: false
+        required: false
+        type: boolean
+
+  # Dry run on any PR to the main branch to make sure the workflow would run
+  # successfully before merging
+  pull_request:
+    branches: ["main"]
+
   schedule:
     - cron: "0 0 * * *"
 
 jobs:
-  release-please:
+  release:
     if: github.repository_owner == 'mirceanton' # ? don't run on forks
     runs-on: ubuntu-latest
     steps:
@@ -19,8 +42,16 @@ jobs:
           app-id: "${{ secrets.BOT_APP_ID }}"
           private-key: "${{ secrets.BOT_APP_PRIVATE_KEY }}"
 
-      - uses: googleapis/release-please-action@v4.2.0
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           token: "${{ steps.app-token.outputs.token }}"
-          config-file: .github/configs/release-please-config.json
-          manifest-file: .github/configs/release-please-manifest.json
+          fetch-depth: 0  # !important for SVU to determine the next version number
+
+      - name: Create Telease
+        uses: mirceanton/action-semver-release@v1.3.0
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          version-increment: ${{ inputs.version_increment || 'auto' }}
+          dry-run: ${{ inputs.dry-run || github.event_name == 'pull_request' }}
+          draft: ${{ inputs.draft || 'false' }}
