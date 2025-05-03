@@ -51,5 +51,4 @@ jobs:
         with:
           dry-run: "${{ (inputs.dry-run || github.event_name == 'pull_request') == true }}"
           token: "${{ steps.app-token.outputs.token }}"
-          delete-other-labels: true
           config-file: .github/configs/labels.yaml
