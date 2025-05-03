@@ -1,4 +1,5 @@
 ---
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 name: Trivy
 
 on:
@@ -16,12 +17,13 @@ on:
   schedule:
     - cron: "1 0 * * *"
 
+permissions:
+  security-events: write
+  contents: read
+
 jobs:
   scan:
     runs-on: ubuntu-latest
-    permissions:
-      security-events: write
-      contents: read
     steps:
       - name: Create directory for scan results
         run: mkdir -p trivy-results
