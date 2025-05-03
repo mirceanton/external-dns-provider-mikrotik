@@ -11,17 +11,10 @@ helm = "latest"
 k9s = "latest"
 
 # Linters
-shellcheck = "latest"
 actionlint = "latest"
 yamllint = "latest"
-"npm:markdownlint" = "latest"
+"npm:markdownlint-cli" = "latest"
 "npm:@commitlint/cli" = "latest"
-"npm:@commitlint/config-conventional" = "latest"
-"npm:release-please" = "latest"
-
-# Scanners
-trivy = "latest"
-"npm:renovate" = "latest"
 
 
 # =================================================================================================
