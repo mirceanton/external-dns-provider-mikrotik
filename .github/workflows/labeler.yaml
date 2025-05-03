@@ -41,4 +41,4 @@ jobs:
         with:
           sync-labels: true
           repo-token: "${{ steps.app-token.outputs.token }}"
-          configuration-path: .github/configs/labeler.yaml
+          configuration-path: .github/labeler.yaml
