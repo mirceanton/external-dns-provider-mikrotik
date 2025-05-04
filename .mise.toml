@@ -13,7 +13,6 @@ k9s = "latest"
 # Linters
 actionlint = "latest"
 yamllint = "latest"
-"npm:markdownlint-cli" = "latest"
 "npm:@commitlint/cli" = "latest"
 
 

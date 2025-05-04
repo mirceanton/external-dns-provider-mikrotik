@@ -1,8 +1,11 @@
 ---
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 name: Release
+permissions: { contents: read }
 
 on:
-  # Manually trigger a new release from the Actions tab
+  schedule: [{ cron: "0 0 * * *" }]
+  pull_request: { branches: ["main", "master"] }
   workflow_dispatch:
     inputs:
       version-increment:
@@ -22,13 +25,9 @@ on:
         required: false
         type: boolean
 
-  # Dry run on any PR to the main branch to make sure the workflow would run
-  # successfully before merging
-  pull_request:
-    branches: ["main"]
-
-  schedule:
-    - cron: "0 0 * * *"
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   release:

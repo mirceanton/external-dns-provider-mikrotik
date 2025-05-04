@@ -1,13 +1,15 @@
 ---
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 name: YAML Lint
+permissions: { contents: read }
 
 on:
   workflow_dispatch: {}
-  pull_request: {}
-
-permissions:
-  contents: read
+  pull_request:
+    paths:
+      - .github/workflows/yamllint.yaml
+      - mise.toml
+      - "**.yaml"
 
 jobs:
   yamllint:
