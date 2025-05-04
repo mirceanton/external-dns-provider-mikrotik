@@ -3,6 +3,8 @@
 name: Trivy
 
 on:
+  schedule: [{cron: "1 0 * * *"}]
+  pull_request: {}
   workflow_dispatch:
     inputs:
       dry-run:
@@ -11,15 +13,13 @@ on:
         default: false
         type: boolean
 
-  pull_request:
-    paths: [ ".github/workflows/trivy-scan.yaml" ]
-
-  schedule:
-    - cron: "1 0 * * *"
-
 permissions:
   security-events: write
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   scan:

@@ -1,8 +1,10 @@
 ---
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 name: Goreleaser
+permissions: { contents: read }
 
 on:
+  push: { tags: ["*"] }
   workflow_dispatch:
     inputs:
       dry-run:
@@ -10,14 +12,11 @@ on:
         required: false
         default: false
         type: boolean
-
-  push:
-    tags: ["*"]
-
   pull_request:
     paths:
       - .github/workflows/goreleaser.yaml
       - .goreleaser.yaml
+      - mise.toml
 
 jobs:
   goreleaser:
@@ -34,9 +33,7 @@ jobs:
       - name: Run goreleaser (dry-run)
         if: github.event_name == 'pull_request'
         run: goreleaser --snapshot
-        env:
-          TAP_GITHUB_TOKEN: "${{ secrets.GHCR_RW_TOKEN }}"
-
+        env: { TAP_GITHUB_TOKEN: "${{ secrets.GHCR_RW_TOKEN }}" }
 
       - name: Generate Token
         uses: actions/create-github-app-token@3ff1caaa28b64c9cc276ce0a02e2ff584f3900c5 # v2.0.2
