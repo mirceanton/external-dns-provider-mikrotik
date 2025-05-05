@@ -9,6 +9,14 @@ on:
     paths:
       - .github/workflows/test.yaml
       - "**.go"
+      - "go.mod"
+      - "go.sum"
+  push:
+    paths:
+      - .github/workflows/test.yaml
+      - "**.go"
+      - "go.mod"
+      - "go.sum"
 
 jobs:
   test:
