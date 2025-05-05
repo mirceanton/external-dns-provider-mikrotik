@@ -1,25 +1,4 @@
 {
     "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-    "dependencyDashboardTitle": "Renovate Dashboard 🤖",
-    "extends": [
-        ":dependencyDashboard",
-        "config:recommended",
-        "helpers:pinGitHubActionDigests",
-        ":disableRateLimiting",
-        ":semanticCommits",
-        ":timezone(Europe/Bucharest)",
-        "github>mirceanton/renovate-config//auto-merge/all.json5",
-        "github>mirceanton/renovate-config//labels/all.json5",
-        "github>mirceanton/renovate-config//semantic-commits/all.json5"
-    ],
-    "packageRules": [
-        {
-            "description": "Auto-merge Helm Values",
-            "matchManagers": ["helm-values"],
-            "matchPackageNames": ["/ghcr.io/mirceanton/external-dns-provider-mikrotik/"],
-            "automerge": true,
-            "automergeType": "branch",
-            "matchUpdateTypes": ["major", "minor", "patch", "digest"]
-        }
-    ]
+    "extends": [ "github>mirceanton/renovate-config//default.json5" ]
 }
