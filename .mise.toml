@@ -2,7 +2,7 @@
 # Go tools
 go = "1.24.2"
 "aqua:golangci/golangci-lint" = "2.1.6"
-"aqua:goreleaser/goreleaser" = "2.8.0"
+"aqua:goreleaser/goreleaser" = "2.9.0"
 
 # Kube tools
 "aqua:kubernetes/kubectl" = "latest"
