@@ -1,7 +1,7 @@
 [tools]
 # Go tools
 go = "1.24.2"
-"aqua:golangci/golangci-lint" = "2.1.5"
+"aqua:golangci/golangci-lint" = "2.1.6"
 "aqua:goreleaser/goreleaser" = "2.8.0"
 
 # Kube tools
@@ -12,7 +12,7 @@ go = "1.24.2"
 
 # Linters
 "aqua:rhysd/actionlint" = "1.7.7"
-"pipx:yamllint" = "1.37.0"
+"pipx:yamllint" = "1.37.1"
 node = "22"
 "npm:@commitlint/cli" = "19.8.0"
 "npm:renovate" = "40.3.4"
