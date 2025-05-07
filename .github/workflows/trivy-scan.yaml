@@ -31,7 +31,7 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@6c175e9c4083a92bbca2f9724c8a5e33bc2d97a5 # 0.30.0
         with:
-          image-ref: ghcr.io/mirceanton/external-dns-provider-mikrotik:latest
+          image-ref: ghcr.io/${{ github.repository }}:latest
           format: 'sarif'
           output: 'trivy-results/results.sarif'
           severity: 'CRITICAL,HIGH,MEDIUM'
