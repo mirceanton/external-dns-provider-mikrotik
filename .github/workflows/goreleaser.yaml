@@ -4,7 +4,15 @@ name: Goreleaser
 permissions: { contents: read }
 
 on:
-  push: { tags: ["*"] }
+  release: { types: [published] } # wet run
+  push: # dry run
+    paths:
+      - .github/workflows/goreleaser.yaml
+      - .goreleaser.yaml
+      - ".mise.toml"
+      - "**.go"
+      - "go.mod"
+      - "go.sum"
   workflow_dispatch:
     inputs:
       dry-run:
@@ -12,15 +20,10 @@ on:
         required: false
         default: false
         type: boolean
-  pull_request:
-    paths:
-      - .github/workflows/goreleaser.yaml
-      - .goreleaser.yaml
-      - mise.toml
 
 jobs:
   goreleaser:
-    if: github.repository_owner == 'mirceanton' # ? don't run on forks
+    if: github.repository_owner == 'mirceanton' # ? don't run on forks -> missing repo secrets
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -31,20 +34,20 @@ jobs:
         uses: jdx/mise-action@7a111ead46986ccad89a74ad013ba2a7c08c9e67 # v2.2.1
 
       - name: Run goreleaser (dry-run)
-        if: github.event_name == 'pull_request'
+        if: github.event_name != 'release' || inputs.dry-run == 'true'
         run: goreleaser --snapshot
         env: { TAP_GITHUB_TOKEN: "${{ secrets.GHCR_RW_TOKEN }}" }
 
       - name: Generate Token
+        if: github.event_name == 'release' || inputs.dry-run == 'false'
         uses: actions/create-github-app-token@df432ceedc7162793a195dd1713ff69aefc7379e # v2.0.6
-        if: github.event_name != 'pull_request'
         id: app-token
         with:
           app-id: "${{ secrets.BOT_APP_ID }}"
           private-key: "${{ secrets.BOT_APP_PRIVATE_KEY }}"
 
       - name: Login to Container Registry
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'release' || inputs.dry-run == 'false'
         uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
         with:
           registry: "ghcr.io"
@@ -52,8 +55,8 @@ jobs:
           password: "${{ secrets.GHCR_RW_TOKEN }}"
 
       - name: Run goreleaser
-        if: github.event_name != 'pull_request'
-        run: goreleaser --clean
+        if: github.event_name == 'release' || inputs.dry-run == 'false'
+        run: mise exec -- goreleaser --clean
         env:
           GITHUB_TOKEN: "${{ steps.app-token.outputs.token }}"
           TAP_GITHUB_TOKEN: "${{ secrets.GHCR_RW_TOKEN }}"
