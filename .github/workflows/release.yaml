@@ -4,8 +4,8 @@ name: Release
 permissions: { contents: read }
 
 on:
-  schedule: [{ cron: "0 0 * * *" }]
-  pull_request: { branches: ["main", "master"] }
+  schedule: [{cron: '0 0 * * *'}] # wet run
+  push: {} # dry run
   workflow_dispatch:
     inputs:
       version-increment:
@@ -52,5 +52,5 @@ jobs:
         with:
           github-token: ${{ steps.app-token.outputs.token }}
           version-increment: ${{ inputs.version-increment || 'auto' }}
-          dry-run: ${{ inputs.dry-run || github.event_name == 'pull_request' }}
+          dry-run: ${{ inputs.dry-run || github.event_name != 'schedule' }}
           draft: ${{ inputs.draft || 'false' }}

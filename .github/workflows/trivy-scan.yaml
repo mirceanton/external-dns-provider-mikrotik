@@ -2,6 +2,10 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 name: Trivy
 
+permissions:
+  security-events: write
+  contents: read
+
 on:
   schedule: [{cron: "1 0 * * *"}]
   pull_request: {}
@@ -12,10 +16,6 @@ on:
         required: false
         default: false
         type: boolean
-
-permissions:
-  security-events: write
-  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number || github.ref }}

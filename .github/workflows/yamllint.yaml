@@ -5,10 +5,6 @@ permissions: { contents: read }
 
 on:
   workflow_dispatch: {}
-  pull_request:
-    paths:
-      - mise.toml
-      - "**.yaml"
   push:
     paths:
       - mise.toml
