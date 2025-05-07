@@ -52,5 +52,5 @@ jobs:
         with:
           github-token: ${{ steps.app-token.outputs.token }}
           version-increment: ${{ inputs.version-increment || 'auto' }}
-          dry-run: ${{ inputs.dry-run || github.event_name != 'schedule' }}
+          dry-run: ${{ (github.event_name == 'workflow_dispatch' && inputs.dry-run) || github.event_name == 'push' }}
           draft: ${{ inputs.draft || 'false' }}
