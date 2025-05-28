@@ -47,10 +47,17 @@ jobs:
           token: "${{ steps.app-token.outputs.token }}"
           fetch-depth: 0  # !important for SVU to determine the next version number
 
-      - name: Create Release
-        uses: mirceanton/action-semver-release@c48aeafa1300c3f2867ee27250f5ed076c7cb2a0 # v1.3.0
+      - name: Generate Release Metadata
+        id: release-metadata
+        uses: mirceanton/action-semver-metadata@v1.0.0
         with:
           github-token: ${{ steps.app-token.outputs.token }}
-          version-increment: ${{ inputs.version-increment || 'auto' }}
-          dry-run: ${{ (github.event_name == 'workflow_dispatch' && inputs.dry-run) || github.event_name == 'push' }}
-          draft: ${{ inputs.draft || 'false' }}
+
+      - name: Create Release
+        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.dry-run == 'false' ) || (github.event_name == 'schedule') }}
+        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # v2.2.2
+        with:
+          name: 'v${{ steps.release-metadata.outputs.next-version }}'
+          tag_name: 'v${{ steps.release-metadata.outputs.next-version }}'
+          body: ${{ steps.release-metadata.outputs.release-notes }}
+          token: ${{ steps.app-token.outputs.token }}
