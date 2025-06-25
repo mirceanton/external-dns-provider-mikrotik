@@ -20,7 +20,7 @@ go = "1.24.4"
 # CI Tools -> major versions
 # =================================================================================================
 node = "22"
-"npm:renovate" = "40"
+"npm:renovate" = "41"
 "npm:@commitlint/cli" = "19"
 "aqua:rhysd/actionlint" = "1"
 "pipx:yamllint" = "1"
