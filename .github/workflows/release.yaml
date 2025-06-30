@@ -45,19 +45,11 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           token: "${{ steps.app-token.outputs.token }}"
-          fetch-depth: 0  # !important for SVU to determine the next version number
+          fetch-depth: 0
 
       - name: Generate Release Metadata
         id: release-metadata
-        uses: mirceanton/action-semver-metadata@830294a0f6ab7d2fd11067085a8732ce6066f466 # v1.0.3
+        uses: mirceanton/action-semver-release@v2.0.0
         with:
           github-token: ${{ steps.app-token.outputs.token }}
-
-      - name: Create Release
-        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.dry-run == 'false' ) || (github.event_name == 'schedule') }}
-        uses: softprops/action-gh-release@72f2c25fcb47643c292f7107632f7a47c1df5cd8 # v2.3.2
-        with:
-          name: 'v${{ steps.release-metadata.outputs.next-version }}'
-          tag_name: 'v${{ steps.release-metadata.outputs.next-version }}'
-          body: ${{ steps.release-metadata.outputs.release-notes }}
-          token: ${{ steps.app-token.outputs.token }}
+          dry-run: ${{ inputs.dry-run == 'true' || github.event_name == 'push' }}
