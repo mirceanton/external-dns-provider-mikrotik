@@ -111,7 +111,7 @@ func (c *MikrotikApiClient) GetSystemInfo() (*MikrotikSystemInfo, error) {
 
 // CreateDNSRecord sends a request to create a new DNS record
 func (c *MikrotikApiClient) CreateDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
-	log.Debugf("creating DNS record: %+v", endpoint)
+	log.Infof("creating DNS record: %+v", endpoint)
 
 	// Convert ExternalDNS to Mikrotik DNS
 	record, err := NewDNSRecord(endpoint)
@@ -140,7 +140,7 @@ func (c *MikrotikApiClient) CreateDNSRecord(endpoint *endpoint.Endpoint) (*DNSRe
 		log.Errorf("Error decoding response body: %v", err)
 		return nil, err
 	}
-	log.Debugf("created record: %+v", record)
+	log.Infof("created record: %+v", record)
 
 	return record, nil
 }
@@ -170,7 +170,7 @@ func (c *MikrotikApiClient) GetAllDNSRecords() ([]DNSRecord, error) {
 
 // DeleteDNSRecord sends a request to delete a DNS record
 func (c *MikrotikApiClient) DeleteDNSRecord(endpoint *endpoint.Endpoint) error {
-	log.Debugf("deleting DNS record: %+v", endpoint)
+	log.Infof("deleting DNS record: %+v", endpoint)
 
 	// Send the request
 	record, err := c.lookupDNSRecord(endpoint.DNSName, endpoint.RecordType)
@@ -186,7 +186,7 @@ func (c *MikrotikApiClient) DeleteDNSRecord(endpoint *endpoint.Endpoint) error {
 		return err
 	}
 	defer resp.Body.Close()
-	log.Debugf("record deleted: %s", record.ID)
+	log.Infof("record deleted: %s", record.ID)
 
 	return nil
 }
@@ -218,7 +218,7 @@ func (c *MikrotikApiClient) lookupDNSRecord(key, recordType string) (*DNSRecord,
 		return nil, errors.New("record list is empty")
 	}
 
-	log.Infof("Found record: %+v", record)
+	log.Debugf("Found record: %+v", record)
 
 	return &record[0], nil
 }
