@@ -111,7 +111,7 @@ func (c *MikrotikApiClient) GetSystemInfo() (*MikrotikSystemInfo, error) {
 
 // CreateDNSRecord sends a request to create a new DNS record
 func (c *MikrotikApiClient) CreateDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
-	log.Infof("creating DNS record: %+v", endpoint)
+	log.Debugf("creating DNS record: %+v", endpoint)
 
 	// Convert ExternalDNS to Mikrotik DNS
 	record, err := NewDNSRecord(endpoint)
@@ -140,14 +140,14 @@ func (c *MikrotikApiClient) CreateDNSRecord(endpoint *endpoint.Endpoint) (*DNSRe
 		log.Errorf("Error decoding response body: %v", err)
 		return nil, err
 	}
-	log.Infof("Created record: %+v", record)
+	log.Debugf("created record: %+v", record)
 
 	return record, nil
 }
 
 // GetAllDNSRecords fetches all DNS records from the MikroTik API
 func (c *MikrotikApiClient) GetAllDNSRecords() ([]DNSRecord, error) {
-	log.Infof("fetching all DNS records")
+	log.Debugf("fetching all DNS records")
 
 	// Send the request
 	resp, err := c.doRequest(http.MethodGet, "ip/dns/static?type=A,AAAA,CNAME,TXT,MX,SRV,NS", nil)
@@ -170,7 +170,7 @@ func (c *MikrotikApiClient) GetAllDNSRecords() ([]DNSRecord, error) {
 
 // DeleteDNSRecord sends a request to delete a DNS record
 func (c *MikrotikApiClient) DeleteDNSRecord(endpoint *endpoint.Endpoint) error {
-	log.Infof("deleting DNS record: %+v", endpoint)
+	log.Debugf("deleting DNS record: %+v", endpoint)
 
 	// Send the request
 	record, err := c.lookupDNSRecord(endpoint.DNSName, endpoint.RecordType)
@@ -186,14 +186,14 @@ func (c *MikrotikApiClient) DeleteDNSRecord(endpoint *endpoint.Endpoint) error {
 		return err
 	}
 	defer resp.Body.Close()
-	log.Infof("record deleted")
+	log.Debugf("record deleted: %s", record.ID)
 
 	return nil
 }
 
 // lookupDNSRecord searches for a DNS record by key and type
 func (c *MikrotikApiClient) lookupDNSRecord(key, recordType string) (*DNSRecord, error) {
-	log.Infof("Searching for DNS record: Key: %s, RecordType: %s", key, recordType)
+	log.Debugf("Searching for DNS record: Key: %s, RecordType: %s", key, recordType)
 
 	searchParams := fmt.Sprintf("name=%s", key)
 	if recordType != "A" {
