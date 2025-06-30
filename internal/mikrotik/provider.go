@@ -15,11 +15,11 @@ type MikrotikProvider struct {
 	provider.BaseProvider
 
 	client       *MikrotikApiClient
-	domainFilter endpoint.DomainFilter
+	domainFilter *endpoint.DomainFilter
 }
 
 // NewMikrotikProvider initializes a new DNSProvider, of the Mikrotik variety
-func NewMikrotikProvider(domainFilter endpoint.DomainFilter, defaults *MikrotikDefaults, config *MikrotikConnectionConfig) (provider.Provider, error) {
+func NewMikrotikProvider(domainFilter *endpoint.DomainFilter, defaults *MikrotikDefaults, config *MikrotikConnectionConfig) (provider.Provider, error) {
 	// Create the Mikrotik API Client
 	client, err := NewMikrotikClient(config, defaults)
 	if err != nil {
