@@ -37,7 +37,7 @@ jobs:
           token: '${{ steps.app-token.outputs.token }}'
 
       - name: Release
-        uses: mirceanton/action-semver-release@v2.0.0
+        uses: mirceanton/action-semver-release@be5a9413659737e968dffd82b6a0a47805ffd026 # v2.0.0
         with:
           github-token: ${{ steps.app-token.outputs.token }}
           dry-run: |
