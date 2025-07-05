@@ -4,25 +4,14 @@ name: Release
 permissions: { contents: read }
 
 on:
-  schedule: [{cron: '0 0 * * *'}] # wet run
-  push: {} # dry run
+  schedule: [{ cron: '0 0 * * *' }]
+  push: {}
   workflow_dispatch:
     inputs:
-      version-increment:
-        description: 'Version increment type'
-        required: false
-        default: 'auto'
-        type: choice
-        options: [ "auto", "major", "minor", "patch", "prerelease" ]
       dry-run:
         description: 'Dry run mode (no actual release)'
         required: false
-        default: false
-        type: boolean
-      draft:
-        description: Mark Release as Draft
-        default: false
-        required: false
+        default: true
         type: boolean
 
 concurrency:
@@ -38,18 +27,21 @@ jobs:
         uses: actions/create-github-app-token@df432ceedc7162793a195dd1713ff69aefc7379e # v2.0.6
         id: app-token
         with:
-          app-id: "${{ secrets.BOT_APP_ID }}"
-          private-key: "${{ secrets.BOT_APP_PRIVATE_KEY }}"
+          app-id: '${{ secrets.BOT_APP_ID }}'
+          private-key: '${{ secrets.BOT_APP_PRIVATE_KEY }}'
 
       - name: Checkout code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          token: "${{ steps.app-token.outputs.token }}"
           fetch-depth: 0
+          token: '${{ steps.app-token.outputs.token }}'
 
-      - name: Generate Release Metadata
-        id: release-metadata
-        uses: mirceanton/action-semver-release@be5a9413659737e968dffd82b6a0a47805ffd026 # v2.0.0
+      - name: Release
+        uses: mirceanton/action-semver-release@v2.0.0
         with:
           github-token: ${{ steps.app-token.outputs.token }}
-          dry-run: ${{ inputs.dry-run == 'true' || github.event_name == 'push' }}
+          dry-run: |
+            ${{ 
+              ( github.event.inputs.dry-run == 'true' && github.event_name == 'workflow_dispatch' ) ||
+              github.event_name == 'push'
+            }}
