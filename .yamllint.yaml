@@ -2,10 +2,6 @@
 # yaml-language-server: $schema=https://json.schemastore.org/yamllint.json
 extends: default
 
-# Ignore truthy issues in GitHub workflows due to 'on:' clause syntax
-ignore: |
-  .github/workflows/
-
 rules:
   comments:
     min-spaces-from-content: 1

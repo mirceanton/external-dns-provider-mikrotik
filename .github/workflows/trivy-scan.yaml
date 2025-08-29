@@ -6,7 +6,7 @@ permissions:
   security-events: write
   contents: read
 
-on:
+on:  # yamllint disable-line rule:truthy
   schedule: [{cron: "1 0 * * *"}]
   pull_request: {}
   workflow_dispatch:

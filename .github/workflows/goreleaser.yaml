@@ -3,7 +3,7 @@
 name: Goreleaser
 permissions: { contents: read }
 
-on:
+on:  # yamllint disable-line rule:truthy
   release: { types: [published] }
   push:
     paths:
