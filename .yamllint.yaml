@@ -16,9 +16,3 @@ rules:
   brackets:
     level: warning
     max-spaces-inside: 1
-
-  # Ignore truthy for github workflows due to dummy trigger on the
-  # 'on:' clause
-  truthy:
-    ignore:
-      - .github/workflows
