@@ -24,4 +24,4 @@ jobs:
         with: { go-version-file: go.mod }
 
       - name: Run tests
-        run: go test -v ./... -race -covermode=atomic
+        run: go test -v ./... -race
