@@ -177,7 +177,7 @@ func TestEndpointTTLtoMikrotikTTL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ttlStr, err := endpointTTLtoMikrotikTTL(tt.inputTTL)
+			ttlStr, err := EndpointTTLtoMikrotikTTL(tt.inputTTL)
 			if tt.expectError {
 				assert.Error(t, err)
 				assert.Equal(t, "", ttlStr)
@@ -837,10 +837,11 @@ func TestDNSRecordToExternalDNSEndpoint(t *testing.T) {
 
 func TestExternalDNSEndpointToDNSRecord(t *testing.T) {
 	tests := []struct {
-		name        string
-		endpoint    *endpoint.Endpoint
-		expected    *DNSRecord
-		expectError bool
+		name            string
+		endpoint        *endpoint.Endpoint
+		expected        *DNSRecord
+		expectedRecords []*DNSRecord
+		expectError     bool
 	}{
 		// ===============================================================
 		// A RECORD TEST CASES
@@ -869,11 +870,19 @@ func TestExternalDNSEndpointToDNSRecord(t *testing.T) {
 				Targets:    endpoint.NewTargets("192.0.2.1", "192.0.2.2"),
 				RecordTTL:  endpoint.TTL(3600),
 			},
-			expected: &DNSRecord{
-				Name:    "multi.example.com",
-				Type:    "A",
-				Address: "192.0.2.1", // Should use the first target
-				TTL:     "1h",
+			expectedRecords: []*DNSRecord{
+				{
+					Name:    "multi.example.com",
+					Type:    "A",
+					Address: "192.0.2.1",
+					TTL:     "1h",
+				},
+				{
+					Name:    "multi.example.com",
+					Type:    "A",
+					Address: "192.0.2.2",
+					TTL:     "1h",
+				},
 			},
 			expectError: false,
 		},
@@ -938,11 +947,19 @@ func TestExternalDNSEndpointToDNSRecord(t *testing.T) {
 				Targets:    endpoint.NewTargets("2001:db8::1", "2001:db8::2"),
 				RecordTTL:  endpoint.TTL(3600),
 			},
-			expected: &DNSRecord{
-				Name:    "multi.example.com",
-				Type:    "AAAA",
-				Address: "2001:db8::1", // Should use the first target
-				TTL:     "1h",
+			expectedRecords: []*DNSRecord{
+				{
+					Name:    "multi.example.com",
+					Type:    "AAAA",
+					Address: "2001:db8::1",
+					TTL:     "1h",
+				},
+				{
+					Name:    "multi.example.com",
+					Type:    "AAAA",
+					Address: "2001:db8::2",
+					TTL:     "1h",
+				},
 			},
 			expectError: false,
 		},
@@ -1184,7 +1201,7 @@ func TestExternalDNSEndpointToDNSRecord(t *testing.T) {
 				SrvPriority: "65535",
 				SrvWeight:   "65535",
 				SrvPort:     "65535",
-				SrvTarget:   ".",
+				SrvTarget:   "domain.com",
 				TTL:         "1h",
 			},
 			expectError: false,
@@ -1500,32 +1517,56 @@ func TestExternalDNSEndpointToDNSRecord(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			record, err := NewDNSRecord(tt.endpoint)
+			records, recordsErr := NewDNSRecords(tt.endpoint)
+
 			if tt.expectError {
-				assert.Error(t, err)
-				assert.Nil(t, record)
-			} else {
-				assert.NoError(t, err)
-				assert.NotNil(t, record)
-				assert.Equal(t, tt.expected.Name, record.Name)
-				assert.Equal(t, tt.expected.Type, record.Type)
-				assert.Equal(t, tt.expected.TTL, record.TTL)
+				assert.Error(t, recordsErr)
+				assert.Nil(t, records)
+				return
+			}
 
-				// Verify the record content based on type
-				switch record.Type {
-				case "A", "AAAA":
-					assert.Equal(t, tt.expected.Address, record.Address)
-				case "CNAME":
-					assert.Equal(t, tt.expected.CName, record.CName)
-				case "TXT":
-					assert.Equal(t, tt.expected.Text, record.Text)
+			assert.NoError(t, recordsErr)
+			assert.NotNil(t, records)
+
+			expectedRecords := tt.expectedRecords
+			if expectedRecords == nil && tt.expected != nil {
+				expectedRecords = []*DNSRecord{tt.expected}
+			}
+
+			if assert.NotNil(t, expectedRecords, "expected records must be provided for successful cases") {
+				assert.Equal(t, len(expectedRecords), len(records))
+
+				for idx, expectedRecord := range expectedRecords {
+					actualRecord := records[idx]
+
+					assert.Equal(t, expectedRecord.Name, actualRecord.Name)
+					assert.Equal(t, expectedRecord.Type, actualRecord.Type)
+					assert.Equal(t, expectedRecord.TTL, actualRecord.TTL)
+					assert.Equal(t, expectedRecord.Comment, actualRecord.Comment)
+					assert.Equal(t, expectedRecord.Regexp, actualRecord.Regexp)
+					assert.Equal(t, expectedRecord.MatchSubdomain, actualRecord.MatchSubdomain)
+					assert.Equal(t, expectedRecord.AddressList, actualRecord.AddressList)
+					assert.Equal(t, expectedRecord.Disabled, actualRecord.Disabled)
+
+					switch actualRecord.Type {
+					case "A", "AAAA":
+						assert.Equal(t, expectedRecord.Address, actualRecord.Address)
+					case "CNAME":
+						assert.Equal(t, expectedRecord.CName, actualRecord.CName)
+					case "TXT":
+						assert.Equal(t, expectedRecord.Text, actualRecord.Text)
+					case "MX":
+						assert.Equal(t, expectedRecord.MXPreference, actualRecord.MXPreference)
+						assert.Equal(t, expectedRecord.MXExchange, actualRecord.MXExchange)
+					case "SRV":
+						assert.Equal(t, expectedRecord.SrvPriority, actualRecord.SrvPriority)
+						assert.Equal(t, expectedRecord.SrvWeight, actualRecord.SrvWeight)
+						assert.Equal(t, expectedRecord.SrvPort, actualRecord.SrvPort)
+						assert.Equal(t, expectedRecord.SrvTarget, actualRecord.SrvTarget)
+					case "NS":
+						assert.Equal(t, expectedRecord.NS, actualRecord.NS)
+					}
 				}
-
-				// Check provider-specific properties
-				assert.Equal(t, tt.expected.Comment, record.Comment)
-				assert.Equal(t, tt.expected.Regexp, record.Regexp)
-				assert.Equal(t, tt.expected.MatchSubdomain, record.MatchSubdomain)
-				assert.Equal(t, tt.expected.AddressList, record.AddressList)
 			}
 		})
 	}
