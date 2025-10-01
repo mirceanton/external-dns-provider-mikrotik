@@ -3,6 +3,7 @@ package mikrotik
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/external-dns/endpoint"
@@ -45,42 +46,188 @@ func NewMikrotikProvider(domainFilter *endpoint.DomainFilter, defaults *Mikrotik
 
 // Records returns the list of all DNS records.
 func (p *MikrotikProvider) Records(ctx context.Context) ([]*endpoint.Endpoint, error) {
-	records, err := p.client.GetAllDNSRecords()
+	// Get all managed records (no name filter)
+	records, err := p.client.GetDNSRecordsByNameAndType("", "")
 	if err != nil {
 		return nil, err
 	}
 
-	var endpoints []*endpoint.Endpoint
-	for _, record := range records {
-		ep, err := record.toExternalDNSEndpoint()
-		if err != nil {
-			log.Warnf("Failed to convert mikrotik record to external-dns endpoint: %+v", err)
-			continue
-		}
+	// Use the new aggregation logic to combine multiple records into endpoints
+	endpoints, err := AggregateRecordsToEndpoints(records, p.client.DefaultComment)
+	if err != nil {
+		log.Errorf("Failed to aggregate DNS records to endpoints: %v", err)
+		return nil, err
+	}
 
+	// Filter endpoints by domain filter
+	var filteredEndpoints []*endpoint.Endpoint
+	for _, ep := range endpoints {
 		if !p.domainFilter.Match(ep.DNSName) {
 			continue
 		}
 
-		endpoints = append(endpoints, ep)
+		filteredEndpoints = append(filteredEndpoints, ep)
 	}
 
-	return endpoints, nil
+	log.Debugf("Returned %d endpoints after domain filtering", len(filteredEndpoints))
+	return filteredEndpoints, nil
 }
 
 // ApplyChanges applies a given set of changes in the DNS provider.
 func (p *MikrotikProvider) ApplyChanges(ctx context.Context, changes *plan.Changes) error {
 	changes = p.changes(changes)
 
-	for _, endpoint := range append(changes.UpdateOld, changes.Delete...) {
-		if err := p.client.DeleteDNSRecord(endpoint); err != nil {
+	// SECURITY: Verify all endpoints are within allowed domain scope before making any changes
+	allEndpoints := append(changes.UpdateOld, changes.Delete...)
+	allEndpoints = append(allEndpoints, changes.Create...)
+	allEndpoints = append(allEndpoints, changes.UpdateNew...)
+
+	for _, endpoint := range allEndpoints {
+		if !p.domainFilter.Match(endpoint.DNSName) {
+			log.Errorf("SECURITY: Attempted to manage DNS record outside allowed domain scope: %s", endpoint.DNSName)
+			return fmt.Errorf("security violation: DNS name '%s' is not within allowed domain filter", endpoint.DNSName)
+		}
+	}
+
+	// Delete endpoints (Delete only - handle Updates separately) - now safe after domain verification
+	for _, endpoint := range changes.Delete {
+		if err := p.client.DeleteDNSRecords(endpoint); err != nil {
+			log.Errorf("Failed to delete DNS records for endpoint %s: %v", endpoint.DNSName, err)
 			return err
 		}
 	}
 
-	for _, endpoint := range append(changes.Create, changes.UpdateNew...) {
-		if _, err := p.client.CreateDNSRecord(endpoint); err != nil {
+	// Handle Updates with smart differential updates
+	if len(changes.UpdateOld) > 0 || len(changes.UpdateNew) > 0 {
+		// Create maps for matching old and new endpoints by DNS name and record type
+		oldEndpoints := make(map[string]*endpoint.Endpoint)
+		newEndpoints := make(map[string]*endpoint.Endpoint)
+
+		// Build map of old endpoints
+		for _, oldEndpoint := range changes.UpdateOld {
+			key := fmt.Sprintf("%s:%s", oldEndpoint.DNSName, oldEndpoint.RecordType)
+			oldEndpoints[key] = oldEndpoint
+		}
+
+		// Build map of new endpoints
+		for _, newEndpoint := range changes.UpdateNew {
+			key := fmt.Sprintf("%s:%s", newEndpoint.DNSName, newEndpoint.RecordType)
+			newEndpoints[key] = newEndpoint
+		}
+
+		// Find matched pairs for smart updates
+		processedKeys := make(map[string]bool)
+
+		// Process matched pairs with smart updates
+		for key, oldEndpoint := range oldEndpoints {
+			if newEndpoint, exists := newEndpoints[key]; exists {
+				if err := p.smartUpdateEndpoint(oldEndpoint, newEndpoint); err != nil {
+					log.Errorf("Failed to update DNS records for endpoint %s: %v", newEndpoint.DNSName, err)
+					return err
+				}
+				processedKeys[key] = true
+			}
+		}
+
+		// Delete unmatched old endpoints
+		for key, oldEndpoint := range oldEndpoints {
+			if !processedKeys[key] {
+				if err := p.client.DeleteDNSRecords(oldEndpoint); err != nil {
+					log.Errorf("Failed to delete unmatched old DNS records for endpoint %s: %v", oldEndpoint.DNSName, err)
+					return err
+				}
+			}
+		}
+
+		// Create unmatched new endpoints
+		for key, newEndpoint := range newEndpoints {
+			if !processedKeys[key] {
+				_, err := p.client.CreateDNSRecords(newEndpoint)
+				if err != nil {
+					log.Errorf("Failed to create unmatched new DNS records for endpoint %s: %v", newEndpoint.DNSName, err)
+					return err
+				}
+			}
+		}
+	}
+
+	// Create new endpoints - now safe after domain verification
+	for _, endpoint := range changes.Create {
+		_, err := p.client.CreateDNSRecords(endpoint)
+		if err != nil {
+			log.Errorf("Failed to create DNS records for endpoint %s: %v", endpoint.DNSName, err)
 			return err
+		}
+	}
+
+	return nil
+}
+
+// smartUpdateEndpoint performs differential updates, only modifying changed targets
+func (p *MikrotikProvider) smartUpdateEndpoint(oldEndpoint, newEndpoint *endpoint.Endpoint) error {
+	log.Debugf("Smart update: comparing old endpoint %s with new endpoint", oldEndpoint.DNSName)
+
+	// Build maps of old and new targets
+	oldTargets := make(map[string]bool) // target -> exists
+	for _, target := range oldEndpoint.Targets {
+		oldTargets[target] = true
+	}
+
+	newTargets := make(map[string]bool) // target -> exists
+	for _, target := range newEndpoint.Targets {
+		newTargets[target] = true
+	}
+
+	log.Debugf("Old targets: %v, New targets: %v", oldEndpoint.Targets, newEndpoint.Targets)
+
+	// Find targets to delete (in old but not in new)
+	var toDelete []string
+	for target := range oldTargets {
+		if !newTargets[target] {
+			toDelete = append(toDelete, target)
+		}
+	}
+
+	// Find targets to add (in new but not in old)
+	var toAdd []string
+	for target := range newTargets {
+		if !oldTargets[target] {
+			toAdd = append(toAdd, target)
+		}
+	}
+
+	log.Infof("Smart update for %s: %d targets to delete, %d targets to add", newEndpoint.DNSName, len(toDelete), len(toAdd))
+
+	// Delete obsolete targets using batch deletion
+	if len(toDelete) > 0 {
+		// Create a temporary endpoint for batch deletion of obsolete targets
+		deleteEndpoint := &endpoint.Endpoint{
+			DNSName:    newEndpoint.DNSName,
+			RecordType: newEndpoint.RecordType,
+			Targets:    toDelete,
+		}
+
+		log.Debugf("Batch deleting %d obsolete targets for %s", len(toDelete), newEndpoint.DNSName)
+		err := p.client.DeleteDNSRecords(deleteEndpoint)
+		if err != nil {
+			return fmt.Errorf("failed to batch delete obsolete targets for %s: %w", newEndpoint.DNSName, err)
+		}
+	}
+
+	// Add new targets
+	if len(toAdd) > 0 {
+		// Create a new endpoint with only the new targets
+		addEndpoint := &endpoint.Endpoint{
+			DNSName:          newEndpoint.DNSName,
+			RecordType:       newEndpoint.RecordType,
+			RecordTTL:        newEndpoint.RecordTTL,
+			Targets:          toAdd,
+			ProviderSpecific: newEndpoint.ProviderSpecific,
+		}
+
+		_, err := p.client.CreateDNSRecords(addEndpoint)
+		if err != nil {
+			return fmt.Errorf("failed to create new targets: %w", err)
 		}
 	}
 
@@ -126,9 +273,33 @@ func (p *MikrotikProvider) compareEndpoints(a *endpoint.Endpoint, b *endpoint.En
 		return false
 	}
 
-	if a.Targets[0] != b.Targets[0] {
-		log.Debugf("Targets[0] mismatch: %v != %v", a.Targets[0], b.Targets[0])
+	if a.RecordType != b.RecordType {
+		log.Debugf("RecordType mismatch: %v != %v", a.RecordType, b.RecordType)
 		return false
+	}
+
+	// Compare all targets, not just the first one
+	if len(a.Targets) != len(b.Targets) {
+		log.Debugf("Targets length mismatch: %d != %d", len(a.Targets), len(b.Targets))
+		return false
+	}
+
+	// Create sorted copies of targets for comparison
+	aTargets := make([]string, len(a.Targets))
+	bTargets := make([]string, len(b.Targets))
+	copy(aTargets, a.Targets)
+	copy(bTargets, b.Targets)
+
+	// Sort targets to ensure consistent comparison
+	sort.Strings(aTargets)
+	sort.Strings(bTargets)
+
+	// Compare sorted targets
+	for i := 0; i < len(aTargets); i++ {
+		if aTargets[i] != bTargets[i] {
+			log.Debugf("Target[%d] mismatch: %v != %v", i, aTargets[i], bTargets[i])
+			return false
+		}
 	}
 
 	aRelevantTTL := a.RecordTTL != 0 && a.RecordTTL != endpoint.TTL(p.client.DefaultTTL)
