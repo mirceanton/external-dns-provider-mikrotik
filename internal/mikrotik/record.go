@@ -42,8 +42,58 @@ type DNSRecord struct {
 	// ForwardTo    string `json:"forward-to,omitempty"`    // FWD
 }
 
-// NewDNSRecord converts an ExternalDNS Endpoint to a Mikrotik DNSRecord
-func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
+// NewDNSRecords converts an ExternalDNS Endpoint to multiple Mikrotik DNSRecords (one per target)
+func NewDNSRecords(ep *endpoint.Endpoint) ([]*DNSRecord, error) {
+	log.Debugf("Converting ExternalDNS endpoint to MikrotikDNS records: %+v", ep)
+
+	// Sanity checks
+	if ep.DNSName == "" {
+		return nil, fmt.Errorf("DNS name is required")
+	}
+	if ep.RecordType == "" {
+		return nil, fmt.Errorf("record type is required")
+	}
+	if len(ep.Targets) == 0 {
+		return nil, fmt.Errorf("no targets provided for DNS record")
+	}
+
+	// Create one record per target
+	var records []*DNSRecord
+	for i, target := range ep.Targets {
+		if target == "" {
+			log.Warnf("Skipping empty target at index %d for endpoint %s", i, ep.DNSName)
+			continue
+		}
+
+		// Create individual endpoint for this target
+		singleTargetEndpoint := endpoint.Endpoint{
+			DNSName:          ep.DNSName,
+			RecordType:       ep.RecordType,
+			RecordTTL:        ep.RecordTTL,
+			Targets:          []string{target},
+			ProviderSpecific: ep.ProviderSpecific,
+		}
+
+		// Convert to single DNS record using the original function
+		record, err := newSingleDNSRecord(&singleTargetEndpoint)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert target %d (%s): %w", i, target, err)
+		}
+
+		records = append(records, record)
+	}
+
+	if len(records) == 0 {
+		return nil, fmt.Errorf("no valid targets found for DNS record")
+	}
+
+	log.Debugf("Created %d DNS records from endpoint %s", len(records), ep.DNSName)
+	return records, nil
+}
+
+// newSingleDNSRecord converts a single-target ExternalDNS Endpoint to a Mikrotik DNSRecord
+// This is the original NewDNSRecord function, now renamed for internal use
+func newSingleDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 	log.Debugf("Converting ExternalDNS endpoint to MikrotikDNS: %+v", endpoint)
 
 	// Sanity checks -> Fields are not empty and if set, they are set correctly
@@ -58,7 +108,7 @@ func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 	}
 
 	// Convert ExternalDNS TTL to Mikrotik TTL
-	ttl, err := endpointTTLtoMikrotikTTL(endpoint.RecordTTL)
+	ttl, err := EndpointTTLtoMikrotikTTL(endpoint.RecordTTL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert TTL: %v", err)
 	}
@@ -90,7 +140,7 @@ func NewDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
 			return nil, err
 		}
 		record.CName = endpoint.Targets[0]
-		log.Debugf("CNAME set to: %s", record.Address)
+		log.Debugf("CNAME set to: %s", record.CName)
 
 	case "TXT":
 		if err := validateTXT(endpoint.Targets[0]); err != nil {
@@ -379,9 +429,9 @@ func mikrotikTTLtoEndpointTTL(ttl string) (endpoint.TTL, error) {
 	return endpoint.TTL(duration.Seconds()), nil
 }
 
-// endpointTTLtoMikrotikTTL converts an ExternalDNS TTL to a Mikrotik TTL.
+// EndpointTTLtoMikrotikTTL converts an ExternalDNS TTL to a Mikrotik TTL.
 // If no TTL is configured in the ExternalDNS endpoint, the default TTL is used.
-func endpointTTLtoMikrotikTTL(ttl endpoint.TTL) (string, error) {
+func EndpointTTLtoMikrotikTTL(ttl endpoint.TTL) (string, error) {
 	log.Debugf("Converting Endpoint TTL to Mikrotik TTL: %v", ttl)
 
 	if ttl < 0 {
@@ -541,4 +591,84 @@ func parseSRV(data string) (string, string, string, string, error) {
 	}
 
 	return priority, weight, port, target, nil
+}
+
+// AggregateRecordsToEndpoints groups DNS records by name+type and converts them to ExternalDNS endpoints
+func AggregateRecordsToEndpoints(records []DNSRecord, defaultComment string) ([]*endpoint.Endpoint, error) {
+	log.Debugf("Aggregating %d DNS records to endpoints", len(records))
+
+	// Group records by their name+type combination
+	recordGroups := make(map[string][]*DNSRecord)
+	for i := range records {
+		record := &records[i]
+
+		// Group by name+type
+		groupKey := fmt.Sprintf("%s:%s", record.Name, record.Type)
+		recordGroups[groupKey] = append(recordGroups[groupKey], record)
+		log.Debugf("Added record %s (ID: %s) to group %s", record.Name, record.ID, groupKey)
+	}
+
+	var endpoints []*endpoint.Endpoint
+	for groupKey, groupRecords := range recordGroups {
+		if len(groupRecords) == 0 {
+			continue
+		}
+
+		endpoint, err := aggregateRecordGroupToEndpoint(groupRecords)
+		if err != nil {
+			log.Warnf("Failed to aggregate record group %s: %v", groupKey, err)
+			continue
+		}
+
+		endpoints = append(endpoints, endpoint)
+	}
+
+	log.Debugf("Aggregated %d record groups to %d endpoints", len(recordGroups), len(endpoints))
+	return endpoints, nil
+}
+
+// aggregateRecordGroupToEndpoint converts a group of records with the same GroupKey to a single endpoint
+func aggregateRecordGroupToEndpoint(records []*DNSRecord) (*endpoint.Endpoint, error) {
+	if len(records) == 0 {
+		return nil, fmt.Errorf("no records provided for aggregation")
+	}
+
+	// Use the first record as the template
+	template := records[0]
+
+	// Convert the template record to get the base endpoint
+	baseEndpoint, err := template.toExternalDNSEndpoint()
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert template record: %w", err)
+	}
+
+	// Aggregate all targets
+	var targets []string
+	for _, record := range records {
+		// Convert each record to get its target
+		ep, err := record.toExternalDNSEndpoint()
+		if err != nil {
+			log.Warnf("Failed to convert record %s to endpoint: %v", record.ID, err)
+			continue
+		}
+
+		if len(ep.Targets) > 0 {
+			targets = append(targets, ep.Targets[0])
+		}
+	}
+
+	if len(targets) == 0 {
+		return nil, fmt.Errorf("no valid targets found in record group")
+	}
+
+	// Create the aggregated endpoint
+	aggregatedEndpoint := &endpoint.Endpoint{
+		DNSName:          baseEndpoint.DNSName,
+		RecordType:       baseEndpoint.RecordType,
+		RecordTTL:        baseEndpoint.RecordTTL,
+		Targets:          targets,
+		ProviderSpecific: baseEndpoint.ProviderSpecific,
+	}
+
+	return aggregatedEndpoint, nil
 }
