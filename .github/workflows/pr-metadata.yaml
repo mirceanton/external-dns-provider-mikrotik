@@ -1,12 +1,27 @@
 ---
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
-name: Labeler
+name: PR Metadata
 permissions: { contents: read }
 
-on:  # yamllint disable-line rule:truthy
+on: # yamllint disable-line rule:truthy
   pull_request_target: {}
 
 jobs:
+  title-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Setup mise
+        uses: jdx/mise-action@5ac50f778e26fac95da98d50503682459e86d566 # v3.2.0
+
+      - name: Validate PR Title
+        if: github.event_name == 'pull_request_target'
+        run: echo "$PR_TITLE" | mise exec -- commitlint --verbose
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+
   size-label:
     runs-on: ubuntu-latest
     steps:
@@ -22,7 +37,7 @@ jobs:
         env:
           GITHUB_TOKEN: "${{ steps.app-token.outputs.token }}"
 
-  labeler:
+  scope-label:
     runs-on: ubuntu-latest
     steps:
       - name: Generate Token
