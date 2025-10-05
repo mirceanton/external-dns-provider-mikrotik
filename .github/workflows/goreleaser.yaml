@@ -5,6 +5,7 @@ permissions: { contents: read }
 
 on:  # yamllint disable-line rule:truthy
   release: { types: [published] }
+  pull_request: { branches: ["main"] }
   push:
     paths:
       - .github/workflows/goreleaser.yaml
