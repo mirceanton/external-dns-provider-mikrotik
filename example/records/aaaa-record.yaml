@@ -10,3 +10,16 @@ spec:
       recordType: AAAA
       targets:
         - 2001:db8::1
+---
+apiVersion: externaldns.k8s.io/v1alpha1
+kind: DNSEndpoint
+metadata:
+  name: aaaa-record
+spec:
+  endpoints:
+    - dnsName: aaaa.example.com
+      recordTTL: 180
+      recordType: AAAA
+      targets:
+        - 2001:db8::1
+        - 2001:db8::2
