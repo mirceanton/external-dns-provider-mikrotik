@@ -242,19 +242,18 @@ func (c *MikrotikApiClient) createSingleDNSRecord(record *DNSRecord) (*DNSRecord
 	log.Debugf("creating single DNS record: %+v", record)
 
 	// Enforce Default TTL
-	unconfiguredTTL, _ := EndpointTTLtoMikrotikTTL(0)
-	if record.TTL == unconfiguredTTL && c.DefaultTTL > 0 {
+	if record.TTL == "0s" && c.DefaultTTL > 0 {
 		log.Debugf("Setting default TTL for created record: %+v", record)
 		record.TTL, _ = EndpointTTLtoMikrotikTTL(endpoint.TTL(c.DefaultTTL))
 	}
 
 	// Enforce Default Comment
 	if c.DefaultComment != "" {
-		log.Debugf("Setting default comment for created record: %+v", record)
+		log.Debugf("Default comment configured. Checking records comment...")
 		if record.Comment != "" {
-			// Skip if comment already exists
 			log.Debugf("Record already has a comment, skipping default comment: %+v", record)
 		} else {
+			log.Debugf("Setting default comment for created record: %+v", record)
 			record.Comment = c.DefaultComment
 		}
 	}
