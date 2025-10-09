@@ -134,41 +134,47 @@ func (c *MikrotikApiClient) GetDNSRecords(filter DNSRecordFilter) ([]DNSRecord, 
 }
 
 // DeleteDNSRecords deletes all DNS records associated with an endpoint
-func (c *MikrotikApiClient) DeleteDNSRecords(endpoint *endpoint.Endpoint) error {
-	log.Infof("deleting DNS records for endpoint: %+v", endpoint)
+func (c *MikrotikApiClient) DeleteDNSRecords(ep *endpoint.Endpoint) error {
+	log.Infof("deleting DNS records for endpoint: %+v", ep)
 
 	// Find records that match this endpoint using server-side filtering for better performance
 	allRecords, err := c.GetDNSRecords(DNSRecordFilter{
-		Name: endpoint.DNSName,
-		Type: endpoint.RecordType,
+		Name: ep.DNSName,
+		Type: ep.RecordType,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to get DNS records for %s::%s: %w", endpoint.RecordType, endpoint.DNSName, err)
+		return fmt.Errorf("failed to get DNS records for %s::%s: %w", ep.RecordType, ep.DNSName, err)
 	}
 
 	// Find matching records based on targets
 	var recordsToDelete []DNSRecord
 	for _, record := range allRecords {
-		log.Debugf("Checking record: Name='%s', Type='%s', Target='%s'", record.Name, record.Type, getRecordTarget(&record))
+		recordTarget, err := record.toExternalDNSTarget()
+		if err != nil {
+			log.Warnf("Skipping record with unsupported type '%s': %+v", record.Type, record)
+			continue
+		}
+		if recordTarget == "" {
+			log.Warnf("Skipping record with empty target: %+v", record)
+			continue
+		}
+		log.Debugf("Checking record: Name='%s', Type='%s', Target='%s'", record.Name, record.Type, recordTarget)
 
 		// If specific targets are provided, only delete records with matching targets
-		if len(endpoint.Targets) > 0 {
-			recordTarget := getRecordTarget(&record)
-			if recordTarget != "" {
-				// Check if this record's target is in the list of targets to delete
-				for _, targetToDelete := range endpoint.Targets {
-					if recordTarget == targetToDelete {
-						log.Debugf("Target matches: '%s', adding to delete list", recordTarget)
-						recordsToDelete = append(recordsToDelete, record)
-						break
-					}
+		if len(ep.Targets) > 0 {
+			// Check if this record's target is in the list of targets to delete
+			for _, targetToDelete := range ep.Targets {
+				if recordTarget == targetToDelete {
+					// TODO: Consider also matching by TTL and providerSpecific if provided in the endpoint
+					log.Debugf("Target matches: '%s', adding to delete list", recordTarget)
+					recordsToDelete = append(recordsToDelete, record)
 				}
 			}
 		}
 	}
 
 	if len(recordsToDelete) == 0 {
-		log.Warnf("No DNS records found to delete for endpoint %s", endpoint.DNSName)
+		log.Warnf("No DNS records found to delete for endpoint %s", ep.DNSName)
 		return nil
 	}
 
@@ -262,26 +268,6 @@ func (c *MikrotikApiClient) CreateDNSRecords(ep *endpoint.Endpoint) ([]*DNSRecor
 	}
 
 	return createdRecords, nil
-}
-
-// getRecordTarget extracts the target value from a DNS record based on its type
-func getRecordTarget(record *DNSRecord) string {
-	switch record.Type {
-	case "A", "AAAA":
-		return record.Address
-	case "CNAME":
-		return record.CName
-	case "TXT":
-		return record.Text
-	case "MX":
-		return record.MXExchange
-	case "SRV":
-		return record.SrvTarget
-	case "NS":
-		return record.NS
-	default:
-		return ""
-	}
 }
 
 type DNSRecordFilter struct {
