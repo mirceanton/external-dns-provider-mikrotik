@@ -543,13 +543,16 @@ func parseSRV(data string) (string, string, string, string, error) {
 func AggregateRecordsToEndpoints(records []DNSRecord, defaultComment string) ([]*endpoint.Endpoint, error) {
 	log.Debugf("Aggregating %d DNS records to endpoints", len(records))
 
-	// Group records by their name+type combination
+	// Group records by all fields except the target
 	recordGroups := make(map[string][]*DNSRecord)
 	for i := range records {
 		record := &records[i]
 
-		// Group by name+type
-		groupKey := fmt.Sprintf("%s:%s", record.Name, record.Type)
+		// Group by all fields that should be identical for aggregation
+		groupKey := fmt.Sprintf("%s:%s:%s:%s:%s:%s:%s:%s",
+			record.Name, record.Type, record.TTL, record.Comment,
+			record.Regexp, record.MatchSubdomain, record.AddressList, record.Disabled)
+
 		recordGroups[groupKey] = append(recordGroups[groupKey], record)
 		log.Debugf("Added record %s (ID: %s) to group %s", record.Name, record.ID, groupKey)
 	}
