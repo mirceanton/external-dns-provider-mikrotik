@@ -46,7 +46,7 @@ type DNSRecord struct {
 func NewDNSRecords(ep *endpoint.Endpoint) ([]*DNSRecord, error) {
 	log.Debugf("Converting ExternalDNS endpoint to MikrotikDNS records: %+v", ep)
 
-	// Sanity checks
+	// Sanity checks for common fields
 	if ep.DNSName == "" {
 		return nil, fmt.Errorf("DNS name is required")
 	}
@@ -57,7 +57,37 @@ func NewDNSRecords(ep *endpoint.Endpoint) ([]*DNSRecord, error) {
 		return nil, fmt.Errorf("no targets provided for DNS record")
 	}
 
-	// Create one record per target
+	// Convert ExternalDNS TTL to Mikrotik TTL once
+	ttl, err := EndpointTTLtoMikrotikTTL(ep.RecordTTL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert TTL: %w", err)
+	}
+
+	// Initialize a base record with common properties
+	baseRecord := DNSRecord{
+		Name: ep.DNSName,
+		Type: ep.RecordType,
+		TTL:  ttl,
+	}
+
+	// Process provider-specific properties once
+	for _, providerSpecific := range ep.ProviderSpecific {
+		switch providerSpecific.Name {
+		case "comment", "webhook/comment":
+			baseRecord.Comment = providerSpecific.Value
+		case "disabled", "webhook/disabled":
+			baseRecord.Disabled = providerSpecific.Value
+		case "regexp", "webhook/regexp":
+			baseRecord.Regexp = providerSpecific.Value
+		case "match-subdomain", "webhook/match-subdomain":
+			baseRecord.MatchSubdomain = providerSpecific.Value
+		case "address-list", "webhook/address-list":
+			baseRecord.AddressList = providerSpecific.Value
+		default:
+			log.Debugf("Encountered unknown provider-specific configuration '%s: %s' for DNS Record of type %s", providerSpecific.Name, providerSpecific.Value, baseRecord.Type)
+		}
+	}
+
 	var records []*DNSRecord
 	for i, target := range ep.Targets {
 		if target == "" {
@@ -65,22 +95,57 @@ func NewDNSRecords(ep *endpoint.Endpoint) ([]*DNSRecord, error) {
 			continue
 		}
 
-		// Create individual endpoint for this target
-		singleTargetEndpoint := endpoint.Endpoint{
-			DNSName:          ep.DNSName,
-			RecordType:       ep.RecordType,
-			RecordTTL:        ep.RecordTTL,
-			Targets:          []string{target},
-			ProviderSpecific: ep.ProviderSpecific,
+		// Create a new record by copying the base record
+		record := baseRecord
+
+		// Set target-specific fields based on record type
+		switch record.Type {
+		case "A":
+			if err := validateIPv4(target); err != nil {
+				return nil, fmt.Errorf("invalid A record target %s: %w", target, err)
+			}
+			record.Address = target
+		case "AAAA":
+			if err := validateIPv6(target); err != nil {
+				return nil, fmt.Errorf("invalid AAAA record target %s: %w", target, err)
+			}
+			record.Address = target
+		case "CNAME":
+			if err := validateDomain(target); err != nil {
+				return nil, fmt.Errorf("invalid CNAME record target %s: %w", target, err)
+			}
+			record.CName = target
+		case "TXT":
+			if err := validateTXT(target); err != nil {
+				return nil, fmt.Errorf("invalid TXT record target %s: %w", target, err)
+			}
+			record.Text = target
+		case "MX":
+			preference, exchange, err := parseMX(target)
+			if err != nil {
+				return nil, fmt.Errorf("invalid MX record target %s: %w", target, err)
+			}
+			record.MXPreference = preference
+			record.MXExchange = exchange
+		case "SRV":
+			priority, weight, port, srvTarget, err := parseSRV(target)
+			if err != nil {
+				return nil, fmt.Errorf("invalid SRV record target %s: %w", target, err)
+			}
+			record.SrvPriority = priority
+			record.SrvWeight = weight
+			record.SrvPort = port
+			record.SrvTarget = srvTarget
+		case "NS":
+			if err := validateDomain(target); err != nil {
+				return nil, fmt.Errorf("invalid NS record target %s: %w", target, err)
+			}
+			record.NS = target
+		default:
+			return nil, fmt.Errorf("unsupported DNS type: %s", ep.RecordType)
 		}
 
-		// Convert to single DNS record using the original function
-		record, err := newSingleDNSRecord(&singleTargetEndpoint)
-		if err != nil {
-			return nil, fmt.Errorf("failed to convert target %d (%s): %w", i, target, err)
-		}
-
-		records = append(records, record)
+		records = append(records, &record)
 	}
 
 	if len(records) == 0 {
@@ -89,125 +154,6 @@ func NewDNSRecords(ep *endpoint.Endpoint) ([]*DNSRecord, error) {
 
 	log.Debugf("Created %d DNS records from endpoint %s", len(records), ep.DNSName)
 	return records, nil
-}
-
-// newSingleDNSRecord converts a single-target ExternalDNS Endpoint to a Mikrotik DNSRecord
-// This is the original NewDNSRecord function, now renamed for internal use
-func newSingleDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
-	log.Debugf("Converting ExternalDNS endpoint to MikrotikDNS: %+v", endpoint)
-
-	// Sanity checks -> Fields are not empty and if set, they are set correctly
-	if endpoint.DNSName == "" {
-		return nil, fmt.Errorf("DNS name is required")
-	}
-	if endpoint.RecordType == "" {
-		return nil, fmt.Errorf("record type is required")
-	}
-	if len(endpoint.Targets) == 0 || endpoint.Targets[0] == "" {
-		return nil, fmt.Errorf("no target provided for DNS record")
-	}
-
-	// Convert ExternalDNS TTL to Mikrotik TTL
-	ttl, err := EndpointTTLtoMikrotikTTL(endpoint.RecordTTL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to convert TTL: %v", err)
-	}
-
-	// Initialize new records
-	record := &DNSRecord{Name: endpoint.DNSName, Type: endpoint.RecordType, TTL: ttl}
-	log.Debugf("Name set to: %s", record.Name)
-	log.Debugf("Type set to: %s", record.Type)
-	log.Debugf("TTL set to: %s", record.TTL)
-
-	// Record-type specific data
-	switch record.Type {
-	case "A":
-		if err := validateIPv4(endpoint.Targets[0]); err != nil {
-			return nil, err
-		}
-		record.Address = endpoint.Targets[0]
-		log.Debugf("Address set to: %s", record.Address)
-
-	case "AAAA":
-		if err := validateIPv6(endpoint.Targets[0]); err != nil {
-			return nil, err
-		}
-		record.Address = endpoint.Targets[0]
-		log.Debugf("Address set to: %s", record.Address)
-
-	case "CNAME":
-		if err := validateDomain(endpoint.Targets[0]); err != nil {
-			return nil, err
-		}
-		record.CName = endpoint.Targets[0]
-		log.Debugf("CNAME set to: %s", record.CName)
-
-	case "TXT":
-		if err := validateTXT(endpoint.Targets[0]); err != nil {
-			return nil, err
-		}
-		record.Text = endpoint.Targets[0]
-		log.Debugf("Text set to: %s", record.Text)
-
-	case "MX":
-		preference, exchange, err := parseMX(endpoint.Targets[0])
-		if err != nil {
-			return nil, err
-		}
-		record.MXPreference = fmt.Sprintf("%v", preference)
-		log.Debugf("MX preference set to: %s", record.MXPreference)
-		record.MXExchange = exchange
-		log.Debugf("MX exchange set to: %s", record.MXExchange)
-
-	case "SRV":
-		priority, weight, port, target, err := parseSRV(endpoint.Targets[0])
-		if err != nil {
-			return nil, err
-		}
-		record.SrvPriority = priority
-		log.Debugf("SRV priority set to: %s", record.SrvPriority)
-		record.SrvWeight = weight
-		log.Debugf("SRV weight set to: %s", record.SrvWeight)
-		record.SrvPort = port
-		log.Debugf("SRV port set to: %s", record.SrvPort)
-		record.SrvTarget = target
-		log.Debugf("SRV target set to: %s", record.SrvTarget)
-
-	case "NS":
-		if err := validateDomain(endpoint.Targets[0]); err != nil {
-			return nil, err
-		}
-		record.NS = endpoint.Targets[0]
-		log.Debugf("NS set to: %s", record.NS)
-
-	default:
-		return nil, fmt.Errorf("unsupported DNS type: %s", endpoint.RecordType)
-	}
-
-	for _, providerSpecific := range endpoint.ProviderSpecific {
-		switch providerSpecific.Name {
-		case "comment", "webhook/comment":
-			record.Comment = providerSpecific.Value
-			log.Debugf("Comment set to: %s", record.Comment)
-		case "disabled", "webhook/disabled":
-			record.Disabled = providerSpecific.Value
-			log.Debugf("Disabled set to: %s", record.Comment)
-		case "regexp", "webhook/regexp":
-			record.Regexp = providerSpecific.Value
-			log.Debugf("Regexp set to: %s", record.Regexp)
-		case "match-subdomain", "webhook/match-subdomain":
-			record.MatchSubdomain = providerSpecific.Value
-			log.Debugf("MatchSubdomain set to: %s", record.MatchSubdomain)
-		case "address-list", "webhook/address-list":
-			record.AddressList = providerSpecific.Value
-			log.Debugf("AddressList set to: %s", record.AddressList)
-		default:
-			log.Debugf("Encountered unknown provider-specific configuration '%s: %s' for DNS Record of type %s", providerSpecific.Name, providerSpecific.Value, record.Type)
-		}
-	}
-
-	log.Debugf("Converted ExternalDNS endpoint to MikrotikDNS: %v", record)
-	return record, nil
 }
 
 // toExternalDNSEndpoint converts a Mikrotik DNSRecord to an ExternalDNS Endpoint
