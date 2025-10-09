@@ -111,23 +111,11 @@ func (c *MikrotikApiClient) GetSystemInfo() (*MikrotikSystemInfo, error) {
 }
 
 // GetDNSRecordsByName fetches DNS records filtered by name and type from the MikroTik API
-func (c *MikrotikApiClient) GetDNSRecordsByNameAndType(name string, recordType string) ([]DNSRecord, error) {
+func (c *MikrotikApiClient) GetDNSRecords(filter DNSRecordFilter) ([]DNSRecord, error) {
 	log.Debugf("fetching DNS records")
 
-	queryParams := url.Values{}
-	if name != "" {
-		queryParams.Set("name", name)
-		log.Debugf("fetching DNS records with name filter: %s", name)
-	}
-	if recordType != "" {
-		queryParams.Set("type", recordType)
-		log.Debugf("fetching DNS records with type filter: %s", recordType)
-	} else {
-		queryParams.Set("type", "A,AAAA,CNAME,TXT,MX,SRV,NS")
-	}
-
 	// Send the request
-	resp, err := c.doRequest(http.MethodGet, "ip/dns/static", queryParams, nil)
+	resp, err := c.doRequest(http.MethodGet, "ip/dns/static", filter.toQueryParams(), nil)
 	if err != nil {
 		log.Errorf("error fetching DNS records: %v", err)
 		return nil, err
@@ -150,7 +138,10 @@ func (c *MikrotikApiClient) DeleteDNSRecords(endpoint *endpoint.Endpoint) error 
 	log.Infof("deleting DNS records for endpoint: %+v", endpoint)
 
 	// Find records that match this endpoint using server-side filtering for better performance
-	allRecords, err := c.GetDNSRecordsByNameAndType(endpoint.DNSName, endpoint.RecordType)
+	allRecords, err := c.GetDNSRecords(DNSRecordFilter{
+		Name: endpoint.DNSName,
+		Type: endpoint.RecordType,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to get DNS records for %s::%s: %w", endpoint.RecordType, endpoint.DNSName, err)
 	}
@@ -304,6 +295,51 @@ func getRecordTarget(record *DNSRecord) string {
 	}
 }
 
+type DNSRecordFilter struct {
+	Name string
+	Type string
+}
+
+// Convert a DNSRecordFilter to URL Query Parameters for the RouterOS API
+func (f DNSRecordFilter) toQueryParams() url.Values {
+	queryParams := url.Values{}
+
+	if f.Name != "" {
+		queryParams.Set("name", f.Name)
+	}
+
+	if f.Type != "" {
+		queryParams.Set("type", f.Type)
+	} else {
+		// Default to common record types if no type specified
+		queryParams.Set("type", "A,AAAA,CNAME,TXT,MX,SRV,NS")
+	}
+
+	return queryParams
+}
+
+// encodeQueryParams custom encodes query parameters for MikroTik API
+// Special handling: type parameter commas should not be URL-encoded and spaces should be %20
+func (c *MikrotikApiClient) encodeQueryParams(params url.Values) string {
+	if len(params) == 0 {
+		return ""
+	}
+
+	var parts []string
+	for key, values := range params {
+		for _, value := range values {
+			if key == "type" {
+				// For type parameter, don't encode commas
+				parts = append(parts, fmt.Sprintf("type=%s", value))
+			} else {
+				// For other parameters, replace '+' with '%20' for spaces
+				parts = append(parts, fmt.Sprintf("%s=%s", url.QueryEscape(key), strings.ReplaceAll(url.QueryEscape(value), "+", "%20")))
+			}
+		}
+	}
+	return strings.Join(parts, "&")
+}
+
 // doRequest sends an HTTP request to the MikroTik API with credentials
 // queryParams will be URL-encoded and appended to the path
 func (c *MikrotikApiClient) doRequest(method, path string, queryParams url.Values, body io.Reader) (*http.Response, error) {
@@ -339,26 +375,4 @@ func (c *MikrotikApiClient) doRequest(method, path string, queryParams url.Value
 	log.Debugf("request succeeded with status %s", resp.Status)
 
 	return resp, nil
-}
-
-// encodeQueryParams custom encodes query parameters for MikroTik API
-// Special handling: type parameter commas should not be URL-encoded
-func (c *MikrotikApiClient) encodeQueryParams(params url.Values) string {
-	if len(params) == 0 {
-		return ""
-	}
-
-	var parts []string
-	for key, values := range params {
-		for _, value := range values {
-			if key == "type" {
-				// For type parameter, don't encode commas
-				parts = append(parts, fmt.Sprintf("%s=%s", url.QueryEscape(key), value))
-			} else {
-				// For other parameters, use standard encoding
-				parts = append(parts, fmt.Sprintf("%s=%s", url.QueryEscape(key), strings.ReplaceAll(url.QueryEscape(value), "+", "%20")))
-			}
-		}
-	}
-	return strings.Join(parts, "&")
 }
