@@ -604,18 +604,6 @@ func TestMikrotikProvider_ApplyChanges(t *testing.T) {
 			expectedDeleteCalls: 1, // Smart update might delete old targets
 		},
 		{
-			name: "Domain filter security violation",
-			changes: &plan.Changes{
-				Create: []*endpoint.Endpoint{
-					NewEndpoint("malicious.attacker.com", []string{"1.1.1.1"}, 3600, nil),
-				},
-			},
-			expectError:         true,
-			simulateAPIError:    false,
-			expectedPutCalls:    0,
-			expectedDeleteCalls: 0,
-		},
-		{
 			name: "Update with overlapping records - should skip identical ones",
 			changes: &plan.Changes{
 				UpdateOld: []*endpoint.Endpoint{

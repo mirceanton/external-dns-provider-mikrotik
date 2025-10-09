@@ -51,14 +51,12 @@ func (p *MikrotikProvider) Records(ctx context.Context) ([]*endpoint.Endpoint, e
 		return nil, err
 	}
 
-	// Use the new aggregation logic to combine multiple records into endpoints
 	endpoints, err := AggregateRecordsToEndpoints(records, p.client.DefaultComment)
 	if err != nil {
 		log.Errorf("Failed to aggregate DNS records to endpoints: %v", err)
 		return nil, err
 	}
 
-	// Filter endpoints by domain filter
 	var filteredEndpoints []*endpoint.Endpoint
 	for _, ep := range endpoints {
 		if !p.domainFilter.Match(ep.DNSName) {
@@ -74,22 +72,6 @@ func (p *MikrotikProvider) Records(ctx context.Context) ([]*endpoint.Endpoint, e
 
 // ApplyChanges applies a given set of changes in the DNS provider.
 func (p *MikrotikProvider) ApplyChanges(ctx context.Context, changes *plan.Changes) error {
-
-	// Due to the support of multiple targets per endpoint, we no longer need to filter out duplicates.
-	// changes = p.changes(changes)
-
-	// SECURITY: Verify all endpoints are within allowed domain scope before making any changes
-	allEndpoints := append(changes.UpdateOld, changes.Delete...)
-	allEndpoints = append(allEndpoints, changes.Create...)
-	allEndpoints = append(allEndpoints, changes.UpdateNew...)
-
-	for _, endpoint := range allEndpoints {
-		if !p.domainFilter.Match(endpoint.DNSName) {
-			log.Errorf("SECURITY: Attempted to manage DNS record outside allowed domain scope: %s", endpoint.DNSName)
-			return fmt.Errorf("security violation: DNS name '%s' is not within allowed domain filter", endpoint.DNSName)
-		}
-	}
-
 	// Create new endpoints
 	for _, endpoint := range changes.Create {
 		_, err := p.client.CreateDNSRecords(endpoint)
