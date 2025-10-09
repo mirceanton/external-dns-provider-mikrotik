@@ -156,160 +156,69 @@ func NewDNSRecords(ep *endpoint.Endpoint) ([]*DNSRecord, error) {
 	return records, nil
 }
 
-// toExternalDNSEndpoint converts a Mikrotik DNSRecord to an ExternalDNS Endpoint
-func (r *DNSRecord) toExternalDNSEndpoint() (*endpoint.Endpoint, error) {
-	log.Debugf("Converting MikrotikDNS record to ExternalDNS: %+v", r)
+// toExternalDNSTarget converts a Mikrotik DNSRecord to an ExternalDNS target string
+func (r *DNSRecord) toExternalDNSTarget() (string, error) {
+	log.Debugf("Converting MikrotikDNS record to ExternalDNS target: %+v", r)
 
-	// ============================================================================================
-	// Sanity checks
-	// ============================================================================================
-	if r.Name == "" && r.Regexp == "" {
-		return nil, fmt.Errorf("a DNS record must have either a Name or a RegExp defined")
-	}
-	if r.Name != "" && r.Regexp != "" {
-		return nil, fmt.Errorf("name and regexp are mutually exclusive for a DNS record")
-	}
-
-	//? Mikrotik assumes A-records are default and sometimes omits setting the type
-	if r.Type == "" {
-		log.Debugf("Record type not set. Using default value 'A'")
-		r.Type = "A"
-	}
-
-	ttl, err := mikrotikTTLtoEndpointTTL(r.TTL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to convert MikrotikDNS record to ExternalDNS: %v", err)
-	}
-
-	// Initialize endpoint
-	ep := endpoint.Endpoint{
-		DNSName:    r.Name,
-		RecordType: r.Type,
-		RecordTTL:  ttl,
-	}
-
-	// ============================================================================================
-	// Record-specific data
-	// ============================================================================================
-	switch ep.RecordType {
+	// Record-specific data to target string
+	switch r.Type {
 	case "A":
 		if err := validateIPv4(r.Address); err != nil {
-			return nil, err
+			return "", err
 		}
-		ep.Targets = endpoint.NewTargets(r.Address)
-		log.Debugf("Address set to: %s", r.Address)
-
+		return r.Address, nil
 	case "AAAA":
 		if err := validateIPv6(r.Address); err != nil {
-			return nil, err
+			return "", err
 		}
-		ep.Targets = endpoint.NewTargets(r.Address)
-		log.Debugf("Address set to: %s", r.Address)
-
+		return r.Address, nil
 	case "CNAME":
 		if err := validateDomain(r.CName); err != nil {
-			return nil, err
+			return "", err
 		}
-		ep.Targets = endpoint.NewTargets(r.CName)
-		log.Debugf("CNAME set to: %s", r.CName)
-
+		return r.CName, nil
 	case "TXT":
 		if err := validateTXT(r.Text); err != nil {
-			return nil, err
+			return "", err
 		}
-		ep.Targets = endpoint.NewTargets(r.Text)
-		log.Debugf("Text set to: %s", r.Text)
-
+		return r.Text, nil
 	case "MX":
 		if err := validateDomain(r.MXExchange); err != nil {
-			return nil, err
+			return "", err
 		}
 		if err := validateUnsignedInteger(r.MXPreference); err != nil {
-			return nil, err
+			return "", err
 		}
-		ep.Targets = endpoint.NewTargets(fmt.Sprintf("%s %s", r.MXPreference, r.MXExchange))
-		log.Debugf("MX preference set to: %s", r.MXPreference)
-		log.Debugf("MX exchange set to: %s", r.MXExchange)
-
+		return fmt.Sprintf("%s %s", r.MXPreference, r.MXExchange), nil
 	case "SRV":
 		if err := validateUnsignedInteger(r.SrvPort); err != nil {
-			return nil, err
+			return "", err
 		}
 		if err := validateUnsignedInteger(r.SrvPriority); err != nil {
-			return nil, err
+			return "", err
 		}
 		if err := validateUnsignedInteger(r.SrvWeight); err != nil {
-			return nil, err
+			return "", err
 		}
 		if err := validateDomain(r.SrvTarget); err != nil {
-			return nil, err
+			return "", err
 		}
-
-		ep.Targets = endpoint.NewTargets(fmt.Sprintf("%s %s %s %s", r.SrvPriority, r.SrvWeight, r.SrvPort, r.SrvTarget))
-		log.Debugf("SRV priority set to: %s", r.SrvPriority)
-		log.Debugf("SRV weight set to: %s", r.SrvWeight)
-		log.Debugf("SRV port set to: %s", r.SrvPort)
-		log.Debugf("SRV target set to: %s", r.SrvTarget)
-
+		return fmt.Sprintf("%s %s %s %s", r.SrvPriority, r.SrvWeight, r.SrvPort, r.SrvTarget), nil
 	case "NS":
 		if err := validateDomain(r.NS); err != nil {
-			return nil, err
+			return "", err
 		}
-		ep.Targets = endpoint.NewTargets(r.NS)
-		log.Debugf("NS set to: %s", r.NS)
-
+		return r.NS, nil
 	default:
-		return nil, fmt.Errorf("unsupported DNS type: %s", ep.RecordType)
+		return "", fmt.Errorf("unsupported DNS type: %s", r.Type)
 	}
-
-	// Ensure at least one target is present and non-empty
-	if len(ep.Targets) == 0 || ep.Targets[0] == "" {
-		return nil, fmt.Errorf("no target provided for DNS record")
-	}
-
-	// ============================================================================================
-	// Provider-specific stuff
-	// ============================================================================================
-	if r.Comment != "" {
-		ep.ProviderSpecific = append(ep.ProviderSpecific, endpoint.ProviderSpecificProperty{
-			Name:  "comment",
-			Value: r.Comment,
-		})
-	}
-	if r.Disabled != "" {
-		ep.ProviderSpecific = append(ep.ProviderSpecific, endpoint.ProviderSpecificProperty{
-			Name:  "disabled",
-			Value: r.Disabled,
-		})
-	}
-	if r.Regexp != "" {
-		ep.ProviderSpecific = append(ep.ProviderSpecific, endpoint.ProviderSpecificProperty{
-			Name:  "regexp",
-			Value: r.Regexp,
-		})
-	}
-	if r.MatchSubdomain != "" {
-		ep.ProviderSpecific = append(ep.ProviderSpecific, endpoint.ProviderSpecificProperty{
-			Name:  "match-subdomain",
-			Value: r.MatchSubdomain,
-		})
-	}
-	if r.AddressList != "" {
-		ep.ProviderSpecific = append(ep.ProviderSpecific, endpoint.ProviderSpecificProperty{
-			Name:  "address-list",
-			Value: r.AddressList,
-		})
-	}
-
-	log.Debugf("Converted MikrotikDNS record to ExternalDNS: %v", ep)
-	return &ep, nil
 }
 
 // ================================================================================================
 // UTILS
 // ================================================================================================
-// mikrotikTTLtoEndpointTTL converts a Mikrotik TTL to an ExternalDNS TTL
-func mikrotikTTLtoEndpointTTL(ttl string) (endpoint.TTL, error) {
+// MikrotikTTLtoEndpointTTL converts a Mikrotik TTL to an ExternalDNS TTL
+func MikrotikTTLtoEndpointTTL(ttl string) (endpoint.TTL, error) {
 	log.Debugf("Converting Mikrotik TTL to Endpoint TTL: %s", ttl)
 
 	if ttl == "" {
@@ -537,78 +446,4 @@ func parseSRV(data string) (string, string, string, string, error) {
 	}
 
 	return priority, weight, port, target, nil
-}
-
-// AggregateRecordsToEndpoints groups DNS records by name+type and converts them to ExternalDNS endpoints
-func AggregateRecordsToEndpoints(records []DNSRecord, defaultComment string) ([]*endpoint.Endpoint, error) {
-	log.Debugf("Aggregating %d DNS records to endpoints", len(records))
-
-	// Group records by all fields except the target
-	recordGroups := make(map[string][]*DNSRecord)
-	for i := range records {
-		record := &records[i]
-
-		// Group by all fields that should be identical for aggregation
-		groupKey := fmt.Sprintf("%s:%s:%s:%s:%s:%s:%s:%s",
-			record.Name, record.Type, record.TTL, record.Comment,
-			record.Regexp, record.MatchSubdomain, record.AddressList, record.Disabled)
-
-		recordGroups[groupKey] = append(recordGroups[groupKey], record)
-		log.Debugf("Added record %s (ID: %s) to group %s", record.Name, record.ID, groupKey)
-	}
-
-	var endpoints []*endpoint.Endpoint
-	for groupKey, groupRecords := range recordGroups {
-		endpoint, err := aggregateRecordGroupToEndpoint(groupRecords)
-		if err != nil {
-			log.Warnf("Failed to aggregate record group %s: %v", groupKey, err)
-			continue
-		}
-		endpoints = append(endpoints, endpoint)
-	}
-
-	log.Debugf("Aggregated %d record groups to %d endpoints", len(recordGroups), len(endpoints))
-	return endpoints, nil
-}
-
-// aggregateRecordGroupToEndpoint converts a group of records with the same GroupKey to a single endpoint
-func aggregateRecordGroupToEndpoint(records []*DNSRecord) (*endpoint.Endpoint, error) {
-	// Use the first record as the template
-	template := records[0]
-
-	// Convert the template record to get the base endpoint
-	baseEndpoint, err := template.toExternalDNSEndpoint()
-	if err != nil {
-		return nil, fmt.Errorf("failed to convert template record: %w", err)
-	}
-
-	// Aggregate all targets
-	var targets []string
-	for _, record := range records {
-		// Convert each record to get its target
-		ep, err := record.toExternalDNSEndpoint()
-		if err != nil {
-			log.Warnf("Failed to convert record %s to endpoint: %v", record.ID, err)
-			continue
-		}
-
-		if len(ep.Targets) > 0 {
-			targets = append(targets, ep.Targets[0])
-		}
-	}
-
-	if len(targets) == 0 {
-		return nil, fmt.Errorf("no valid targets found in record group")
-	}
-
-	// Create the aggregated endpoint
-	aggregatedEndpoint := &endpoint.Endpoint{
-		DNSName:          baseEndpoint.DNSName,
-		RecordType:       baseEndpoint.RecordType,
-		RecordTTL:        baseEndpoint.RecordTTL,
-		Targets:          targets,
-		ProviderSpecific: baseEndpoint.ProviderSpecific,
-	}
-
-	return aggregatedEndpoint, nil
 }

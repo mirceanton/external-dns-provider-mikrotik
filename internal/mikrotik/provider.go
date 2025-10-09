@@ -51,23 +51,19 @@ func (p *MikrotikProvider) Records(ctx context.Context) ([]*endpoint.Endpoint, e
 		return nil, err
 	}
 
-	endpoints, err := AggregateRecordsToEndpoints(records, p.client.DefaultComment)
+	// Filter managed records
+	filteredRecords := p.filterManagedRecords(records)
+	log.Debugf("Filtered down to %d managed DNS records", len(filteredRecords))
+
+	// Aggregate records to endpoints
+	endpoints, err := p.aggregateRecordsToEndpoints(filteredRecords)
 	if err != nil {
 		log.Errorf("Failed to aggregate DNS records to endpoints: %v", err)
 		return nil, err
 	}
 
-	var filteredEndpoints []*endpoint.Endpoint
-	for _, ep := range endpoints {
-		if !p.domainFilter.Match(ep.DNSName) {
-			continue
-		}
-
-		filteredEndpoints = append(filteredEndpoints, ep)
-	}
-
-	log.Debugf("Returned %d endpoints after domain filtering", len(filteredEndpoints))
-	return filteredEndpoints, nil
+	log.Debugf("Returned %d endpoints after domain filtering", len(endpoints))
+	return endpoints, nil
 }
 
 // ApplyChanges applies a given set of changes in the DNS provider.
@@ -292,4 +288,98 @@ func (p *MikrotikProvider) compareEndpointsBesidesTargets(a *endpoint.Endpoint, 
 
 	log.Debugf("Endpoints match successfully.")
 	return true
+}
+
+// filterManagedRecords filters DNS records based on the provider's domain filter.
+// TODO: filter by other criteria if needed (e.g., comment prefix)
+func (p *MikrotikProvider) filterManagedRecords(records []DNSRecord) []DNSRecord {
+	var filtered []DNSRecord
+	for _, record := range records {
+		if p.domainFilter != nil && !p.domainFilter.Match(record.Name) {
+			log.Debugf("Skipping record %s as it does not match domain filter", record.Name)
+			continue
+		}
+		filtered = append(filtered, record)
+	}
+	return filtered
+}
+
+// aggregateRecordsToEndpoints groups DNS records by common properties and converts them to ExternalDNS endpoints
+func (p *MikrotikProvider) aggregateRecordsToEndpoints(records []DNSRecord) ([]*endpoint.Endpoint, error) {
+	log.Debugf("Aggregating %d DNS records to endpoints", len(records))
+
+	// Group records by all fields that should be identical for aggregation
+	recordGroups := make(map[string][]*DNSRecord)
+	for i := range records {
+		record := &records[i]
+
+		// Group by all fields that should be identical for aggregation
+		groupKey := fmt.Sprintf("%s:%s:%s:%s:%s:%s:%s:%s",
+			record.Name, record.Type, record.TTL, record.Comment,
+			record.Regexp, record.MatchSubdomain, record.AddressList, record.Disabled)
+
+		recordGroups[groupKey] = append(recordGroups[groupKey], record)
+		log.Debugf("Added record %s (ID: %s) to group %s", record.Name, record.ID, groupKey)
+	}
+
+	var endpoints []*endpoint.Endpoint
+	for groupKey, groupRecords := range recordGroups {
+		if len(groupRecords) == 0 {
+			continue
+		}
+
+		// Use the first record as the template for the base endpoint
+		template := groupRecords[0]
+		ttl, err := MikrotikTTLtoEndpointTTL(template.TTL)
+		if err != nil {
+			log.Warnf("Failed to convert TTL for group %s: %v", groupKey, err)
+			continue
+		}
+
+		baseEndpoint := &endpoint.Endpoint{
+			DNSName:    template.Name,
+			RecordType: template.Type,
+			RecordTTL:  ttl,
+		}
+
+		// Add provider-specific properties from the template
+		// Do not pass default values to avoid unnecessary updates
+		if template.Comment != "" && template.Comment != p.client.DefaultComment {
+			baseEndpoint.ProviderSpecific = append(baseEndpoint.ProviderSpecific, endpoint.ProviderSpecificProperty{Name: "comment", Value: template.Comment})
+		}
+		if template.Disabled != "" && template.Disabled != "false" {
+			baseEndpoint.ProviderSpecific = append(baseEndpoint.ProviderSpecific, endpoint.ProviderSpecificProperty{Name: "disabled", Value: template.Disabled})
+		}
+		if template.Regexp != "" {
+			baseEndpoint.ProviderSpecific = append(baseEndpoint.ProviderSpecific, endpoint.ProviderSpecificProperty{Name: "regexp", Value: template.Regexp})
+		}
+		if template.MatchSubdomain != "" && template.MatchSubdomain != "false" {
+			baseEndpoint.ProviderSpecific = append(baseEndpoint.ProviderSpecific, endpoint.ProviderSpecificProperty{Name: "match-subdomain", Value: template.MatchSubdomain})
+		}
+		if template.AddressList != "" {
+			baseEndpoint.ProviderSpecific = append(baseEndpoint.ProviderSpecific, endpoint.ProviderSpecificProperty{Name: "address-list", Value: template.AddressList})
+		}
+
+		// Aggregate all targets from the records in the group
+		var targets []string
+		for _, record := range groupRecords {
+			target, err := record.toExternalDNSTarget()
+			if err != nil {
+				log.Warnf("Failed to convert record %s to target for group %s: %v", record.ID, groupKey, err)
+				continue
+			}
+			targets = append(targets, target)
+		}
+
+		if len(targets) == 0 {
+			log.Warnf("No valid targets found for group %s", groupKey)
+			continue
+		}
+
+		baseEndpoint.Targets = targets
+		endpoints = append(endpoints, baseEndpoint)
+	}
+
+	log.Debugf("Aggregated %d record groups to %d endpoints", len(recordGroups), len(endpoints))
+	return endpoints, nil
 }
