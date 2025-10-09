@@ -46,7 +46,7 @@ func NewMikrotikProvider(domainFilter *endpoint.DomainFilter, defaults *Mikrotik
 // Records returns the list of all DNS records.
 func (p *MikrotikProvider) Records(ctx context.Context) ([]*endpoint.Endpoint, error) {
 	// Get all managed records (no name filter)
-	records, err := p.client.GetDNSRecordsByNameAndType("", "")
+	records, err := p.client.GetDNSRecords(DNSRecordFilter{})
 	if err != nil {
 		return nil, err
 	}

@@ -323,7 +323,9 @@ func TestGetDNSRecordsByName(t *testing.T) {
 				t.Fatalf("Failed to create client: %v", err)
 			}
 
-			records, err := client.GetDNSRecordsByNameAndType(tc.targetName, "")
+			records, err := client.GetDNSRecords(DNSRecordFilter{
+				Name: tc.targetName,
+			})
 
 			if tc.expectError {
 				if err == nil {
