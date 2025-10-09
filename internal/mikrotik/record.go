@@ -610,16 +610,11 @@ func AggregateRecordsToEndpoints(records []DNSRecord, defaultComment string) ([]
 
 	var endpoints []*endpoint.Endpoint
 	for groupKey, groupRecords := range recordGroups {
-		if len(groupRecords) == 0 {
-			continue
-		}
-
 		endpoint, err := aggregateRecordGroupToEndpoint(groupRecords)
 		if err != nil {
 			log.Warnf("Failed to aggregate record group %s: %v", groupKey, err)
 			continue
 		}
-
 		endpoints = append(endpoints, endpoint)
 	}
 
@@ -629,10 +624,6 @@ func AggregateRecordsToEndpoints(records []DNSRecord, defaultComment string) ([]
 
 // aggregateRecordGroupToEndpoint converts a group of records with the same GroupKey to a single endpoint
 func aggregateRecordGroupToEndpoint(records []*DNSRecord) (*endpoint.Endpoint, error) {
-	if len(records) == 0 {
-		return nil, fmt.Errorf("no records provided for aggregation")
-	}
-
 	// Use the first record as the template
 	template := records[0]
 
