@@ -29,31 +29,6 @@ For examples of creating DNS records either via CRDs or via Ingress/Service anno
 
 ## 🚫 Limitations
 
-### Multiple `Targets`
-
-Currently, `DNSEndpoints` with multiple `targets` are **not** supported. No error will be thrown, but only one record will be created with the first target from the list.
-
-This means that when creating a `DNSEndpoint` like this, only the first of the two targets will be taken into account (i.e. `192.192.192.192`).
-
-```yaml
----
-apiVersion: externaldns.k8s.io/v1alpha1
-kind: DNSEndpoint
-metadata:
-  name: a-record
-spec:
-  endpoints:
-    - dnsName: a.example.com
-      recordTTL: 3605
-      recordType: A
-      targets:
-        - 192.192.192.192
-        - 193.193.193.193
-
-```
-
-The problem is that the External DNS controller will detect a drift on this and it will continuously attempt to update the DNS record, thus it will constantly send `PUT` requests to your RouterOS instance on every reconciliation loop.
-
 ### Regexp Records
 
 While the webhook can read records with a regexp defined, external-dns itself cannot manage them. This means that they either need to be excluded via `domainFilters` or `excludeDomains` so that external-dns will not try to assume ownership over them.

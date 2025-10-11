@@ -6,11 +6,12 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
+	"net/url"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/publicsuffix"
@@ -91,7 +92,7 @@ func (c *MikrotikApiClient) GetSystemInfo() (*MikrotikSystemInfo, error) {
 	log.Debugf("fetching system information.")
 
 	// Send the request
-	resp, err := c.doRequest(http.MethodGet, "system/resource", nil)
+	resp, err := c.doRequest(http.MethodGet, "system/resource", nil, nil)
 	if err != nil {
 		log.Errorf("error fetching system info: %v", err)
 		return nil, err
@@ -109,48 +110,12 @@ func (c *MikrotikApiClient) GetSystemInfo() (*MikrotikSystemInfo, error) {
 	return &info, nil
 }
 
-// CreateDNSRecord sends a request to create a new DNS record
-func (c *MikrotikApiClient) CreateDNSRecord(endpoint *endpoint.Endpoint) (*DNSRecord, error) {
-	log.Infof("creating DNS record: %+v", endpoint)
-
-	// Convert ExternalDNS to Mikrotik DNS
-	record, err := NewDNSRecord(endpoint)
-	if err != nil {
-		log.Errorf("error converting ExternalDNS endpoint to Mikrotik DNS Record: %v", err)
-		return nil, err
-	}
-
-	// Serialize the data to JSON to be sent to the API
-	jsonBody, err := json.Marshal(record)
-	if err != nil {
-		log.Errorf("error marshalling DNS record: %v", err)
-		return nil, err
-	}
+// GetDNSRecordsByName fetches DNS records filtered by name and type from the MikroTik API
+func (c *MikrotikApiClient) GetDNSRecords(filter DNSRecordFilter) ([]DNSRecord, error) {
+	log.Debugf("fetching DNS records")
 
 	// Send the request
-	resp, err := c.doRequest(http.MethodPut, "ip/dns/static", bytes.NewReader(jsonBody))
-	if err != nil {
-		log.Errorf("error creating DNS record: %v", err)
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	// Parse the response
-	if err = json.NewDecoder(resp.Body).Decode(&record); err != nil {
-		log.Errorf("Error decoding response body: %v", err)
-		return nil, err
-	}
-	log.Infof("created record: %+v", record)
-
-	return record, nil
-}
-
-// GetAllDNSRecords fetches all DNS records from the MikroTik API
-func (c *MikrotikApiClient) GetAllDNSRecords() ([]DNSRecord, error) {
-	log.Debugf("fetching all DNS records")
-
-	// Send the request
-	resp, err := c.doRequest(http.MethodGet, "ip/dns/static?type=A,AAAA,CNAME,TXT,MX,SRV,NS", nil)
+	resp, err := c.doRequest(http.MethodGet, "ip/dns/static", filter.toQueryParams(), nil)
 	if err != nil {
 		log.Errorf("error fetching DNS records: %v", err)
 		return nil, err
@@ -163,72 +128,207 @@ func (c *MikrotikApiClient) GetAllDNSRecords() ([]DNSRecord, error) {
 		log.Errorf("error decoding response body: %v", err)
 		return nil, err
 	}
-	log.Debugf("fetched %d DNS records: %v", len(records), records)
 
+	log.Debugf("fetched %d DNS records using server-side filtering", len(records))
 	return records, nil
 }
 
-// DeleteDNSRecord sends a request to delete a DNS record
-func (c *MikrotikApiClient) DeleteDNSRecord(endpoint *endpoint.Endpoint) error {
-	log.Infof("deleting DNS record: %+v", endpoint)
+// DeleteDNSRecords deletes all DNS records associated with an endpoint
+func (c *MikrotikApiClient) DeleteDNSRecords(ep *endpoint.Endpoint) error {
+	log.Infof("deleting DNS records for endpoint: %+v", ep)
 
-	// Send the request
-	record, err := c.lookupDNSRecord(endpoint.DNSName, endpoint.RecordType)
+	// Find records that match this endpoint using server-side filtering for better performance
+	allRecords, err := c.GetDNSRecords(DNSRecordFilter{
+		Name: ep.DNSName,
+		Type: ep.RecordType,
+	})
 	if err != nil {
-		log.Errorf("failed lookup for DNS record: %+v", err)
-		return err
+		return fmt.Errorf("failed to get DNS records for %s::%s: %w", ep.RecordType, ep.DNSName, err)
 	}
 
-	// Parse the response
-	resp, err := c.doRequest(http.MethodDelete, fmt.Sprintf("ip/dns/static/%s", record.ID), nil)
-	if err != nil {
-		log.Errorf("error deleting DNS record: %+v", err)
-		return err
-	}
-	defer resp.Body.Close()
-	log.Infof("record deleted: %s", record.ID)
+	// Find matching records based on targets
+	var recordsToDelete []DNSRecord
+	for _, record := range allRecords {
+		recordTarget, err := record.toExternalDNSTarget()
+		if err != nil {
+			log.Warnf("Skipping record with unsupported type '%s': %+v", record.Type, record)
+			continue
+		}
+		if recordTarget == "" {
+			log.Warnf("Skipping record with empty target: %+v", record)
+			continue
+		}
+		log.Debugf("Checking record: Name='%s', Type='%s', Target='%s'", record.Name, record.Type, recordTarget)
 
+		// If specific targets are provided, only delete records with matching targets
+		if len(ep.Targets) > 0 {
+			// Check if this record's target is in the list of targets to delete
+			for _, targetToDelete := range ep.Targets {
+				if recordTarget == targetToDelete {
+					// TODO: Consider also matching by TTL and providerSpecific if provided in the endpoint
+					log.Debugf("Target matches: '%s', adding to delete list", recordTarget)
+					recordsToDelete = append(recordsToDelete, record)
+				}
+			}
+		}
+	}
+
+	if len(recordsToDelete) == 0 {
+		log.Warnf("No DNS records found to delete for endpoint %s", ep.DNSName)
+		return nil
+	}
+
+	// Delete records directly using their fixed IDs from the initial query
+	for i, record := range recordsToDelete {
+		log.Debugf("deleting DNS record %d/%d: %s (ID: %s)", i+1, len(recordsToDelete), record.Name, record.ID)
+
+		// Perform the actual deletion using the original record ID
+		resp, err := c.doRequest(http.MethodDelete, fmt.Sprintf("ip/dns/static/%s", record.ID), nil, nil)
+		if err != nil {
+			log.Errorf("error deleting DNS record %s: %v", record.ID, err)
+			return err
+		}
+		resp.Body.Close()
+		log.Debugf("record deleted successfully: %s", record.ID)
+	}
+
+	log.Infof("successfully deleted %d DNS records", len(recordsToDelete))
 	return nil
 }
 
-// lookupDNSRecord searches for a DNS record by key and type
-func (c *MikrotikApiClient) lookupDNSRecord(key, recordType string) (*DNSRecord, error) {
-	log.Debugf("Searching for DNS record: Key: %s, RecordType: %s", key, recordType)
+// CreateDNSRecords creates multiple DNS records in batch
+func (c *MikrotikApiClient) CreateDNSRecords(ep *endpoint.Endpoint) ([]*DNSRecord, error) {
+	log.Infof("creating DNS records for endpoint: %+v", ep)
 
-	searchParams := fmt.Sprintf("name=%s", key)
-	if recordType != "A" {
-		searchParams = fmt.Sprintf("%s&type=%s", searchParams, recordType)
-	}
-	log.Debugf("Search params: %s", searchParams)
-
-	// Send the request
-	resp, err := c.doRequest(http.MethodGet, fmt.Sprintf("ip/dns/static?%s", searchParams), nil)
+	// Convert endpoint to multiple DNS records
+	records, err := NewDNSRecords(ep)
 	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	// Parse the response
-	var record []DNSRecord
-	if err = json.NewDecoder(resp.Body).Decode(&record); err != nil {
-		log.Errorf("Error decoding response body: %v", err)
-		return nil, err
-	}
-	if len(record) == 0 {
-		return nil, errors.New("record list is empty")
+		return nil, fmt.Errorf("failed to convert endpoint to DNS records: %w", err)
 	}
 
-	log.Debugf("Found record: %+v", record)
+	var createdRecords []*DNSRecord
+	var lastError error
 
-	return &record[0], nil
+	for i, record := range records {
+		log.Debugf("creating DNS record %d/%d: %+v", i+1, len(records), record)
+
+		// Enforce Default TTL
+		if record.TTL == "0s" && c.DefaultTTL > 0 {
+			log.Debugf("Setting default TTL for created record: %+v", record)
+			record.TTL, _ = EndpointTTLtoMikrotikTTL(endpoint.TTL(c.DefaultTTL))
+		}
+
+		// Enforce Default Comment
+		if c.DefaultComment != "" {
+			log.Debugf("Default comment configured. Checking records comment...")
+			if record.Comment != "" {
+				log.Debugf("Record already has a comment, skipping default comment: %+v", record)
+			} else {
+				log.Debugf("Setting default comment for created record: %+v", record)
+				record.Comment = c.DefaultComment
+			}
+		}
+
+		// Serialize the data to JSON to be sent to the API
+		jsonBody, err := json.Marshal(record)
+		if err != nil {
+			log.Errorf("error marshalling DNS record: %v, continuing with next record", err)
+			lastError = err
+			continue
+		}
+
+		// Send the request
+		resp, err := c.doRequest(http.MethodPut, "ip/dns/static", nil, bytes.NewReader(jsonBody))
+		if err != nil {
+			// Keep track of the last error but continue with the next record
+			// This will be handled in the next webhook synchronization
+			log.Errorf("error creating DNS record %d: %v, continuing with next record", i+1, err)
+			lastError = err
+			continue
+		}
+		defer resp.Body.Close()
+
+		// Parse the response
+		var createdRecord DNSRecord
+		if err = json.NewDecoder(resp.Body).Decode(&createdRecord); err != nil {
+			log.Errorf("Error decoding response body: %v, continuing with next record", err)
+			lastError = err
+			continue
+		}
+		log.Debugf("created record: %+v", createdRecord)
+
+		createdRecords = append(createdRecords, &createdRecord)
+	}
+
+	log.Infof("successfully created %d DNS records", len(createdRecords))
+
+	// If no records were successfully created and we have errors, return the last error
+	if len(createdRecords) == 0 && lastError != nil {
+		return nil, lastError
+	}
+
+	return createdRecords, nil
+}
+
+type DNSRecordFilter struct {
+	Name string
+	Type string
+}
+
+// Convert a DNSRecordFilter to URL Query Parameters for the RouterOS API
+func (f DNSRecordFilter) toQueryParams() url.Values {
+	queryParams := url.Values{}
+
+	if f.Name != "" {
+		queryParams.Set("name", f.Name)
+	}
+
+	if f.Type != "" {
+		queryParams.Set("type", f.Type)
+	} else {
+		// Default to common record types if no type specified
+		queryParams.Set("type", "A,AAAA,CNAME,TXT,MX,SRV,NS")
+	}
+
+	return queryParams
+}
+
+// encodeQueryParams custom encodes query parameters for MikroTik API
+// Special handling: type parameter commas should not be URL-encoded and spaces should be %20
+func (c *MikrotikApiClient) encodeQueryParams(params url.Values) string {
+	if len(params) == 0 {
+		return ""
+	}
+
+	var parts []string
+	for key, values := range params {
+		for _, value := range values {
+			if key == "type" {
+				// For type parameter, don't encode commas
+				parts = append(parts, fmt.Sprintf("type=%s", value))
+			} else {
+				// For other parameters, replace '+' with '%20' for spaces
+				parts = append(parts, fmt.Sprintf("%s=%s", url.QueryEscape(key), strings.ReplaceAll(url.QueryEscape(value), "+", "%20")))
+			}
+		}
+	}
+	return strings.Join(parts, "&")
 }
 
 // doRequest sends an HTTP request to the MikroTik API with credentials
-func (c *MikrotikApiClient) doRequest(method, path string, body io.Reader) (*http.Response, error) {
-	endpoint_url := fmt.Sprintf("%s/rest/%s", c.BaseUrl, path)
-	log.Debugf("sending %s request to: %s", method, endpoint_url)
+// queryParams will be URL-encoded and appended to the path
+func (c *MikrotikApiClient) doRequest(method, path string, queryParams url.Values, body io.Reader) (*http.Response, error) {
+	// Build URL with query parameters
+	baseURL := fmt.Sprintf("%s/rest/%s", c.BaseUrl, path)
 
-	req, err := http.NewRequest(method, endpoint_url, body)
+	// Add query parameters if provided
+	if len(queryParams) > 0 {
+		baseURL += "?" + c.encodeQueryParams(queryParams)
+	}
+
+	log.Debugf("sending %s request to: %s", method, baseURL)
+
+	req, err := http.NewRequest(method, baseURL, body)
 	if err != nil {
 		log.Errorf("failed to create HTTP request: %v", err)
 		return nil, err
