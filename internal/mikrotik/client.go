@@ -112,7 +112,7 @@ func (c *MikrotikApiClient) GetSystemInfo() (*MikrotikSystemInfo, error) {
 
 // GetDNSRecordsByName fetches DNS records filtered by name and type from the MikroTik API
 func (c *MikrotikApiClient) GetDNSRecords(filter DNSRecordFilter) ([]DNSRecord, error) {
-	log.Debugf("fetching DNS records")
+	log.Debugf("fetching DNS records matching Name='%s' and Type='%s'", filter.Name, filter.Type)
 
 	// Send the request
 	resp, err := c.doRequest(http.MethodGet, "ip/dns/static", filter.toQueryParams(), nil)
