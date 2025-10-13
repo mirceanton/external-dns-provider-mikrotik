@@ -142,53 +142,33 @@ func (c *MikrotikApiClient) DeleteRecordsFromEndpoint(ep *endpoint.Endpoint) err
 		return nil
 	}
 
-	// Find records that match this endpoint using server-side filtering for better performance
-	allRecords, err := c.GetDNSRecords(DNSRecordFilter{
-		Name: ep.DNSName,
-		Type: ep.RecordType,
-	})
+	// Find records that match this endpoint
+	allRecords, err := c.GetDNSRecords(DNSRecordFilter{Name: ep.DNSName, Type: ep.RecordType})
 	if err != nil {
 		return fmt.Errorf("failed to get DNS records for %s::%s: %w", ep.RecordType, ep.DNSName, err)
 	}
 
-	// Find matching records based on targets
-	var recordsToDelete []DNSRecord
+	// Match records to delete based on targets
+	// TODO: maybe we can do this filtering server-side?
 	for _, record := range allRecords {
+		log.Debugf("Checking record: %+v", record)
+
 		recordTarget, err := record.toExternalDNSTarget()
 		if err != nil {
-			log.Warnf("Skipping record with unsupported type '%s': %+v", record.Type, record)
+			log.Errorf("error converting record to external-dns target: %v", err)
 			continue
 		}
-		log.Debugf("Checking record: Name='%s', Type='%s', Target='%s'", record.Name, record.Type, recordTarget)
 
-		// Check if this record's target is in the list of targets to delete
 		if slices.Contains(ep.Targets, recordTarget) {
 			// TODO: Consider also matching by TTL and providerSpecific if provided in the endpoint
-			log.Debugf("Target matches: '%s', adding to delete list", recordTarget)
-			recordsToDelete = append(recordsToDelete, record)
+			err := c.deleteDNSRecord(&record)
+			if err != nil {
+				log.Errorf("error deleting DNS record %s: %v", record.ID, err)
+				return err
+			}
 		}
 	}
 
-	if len(recordsToDelete) == 0 {
-		log.Warnf("No DNS records found to delete for endpoint %s", ep.DNSName)
-		return nil
-	}
-
-	// Delete records directly using their fixed IDs from the initial query
-	for i, record := range recordsToDelete {
-		log.Debugf("deleting DNS record %d/%d: %s (ID: %s)", i+1, len(recordsToDelete), record.Name, record.ID)
-
-		// Perform the actual deletion using the original record ID
-		resp, err := c.doRequest(http.MethodDelete, fmt.Sprintf("ip/dns/static/%s", record.ID), "", nil)
-		if err != nil {
-			log.Errorf("error deleting DNS record %s: %v", record.ID, err)
-			return err
-		}
-		resp.Body.Close()
-		log.Debugf("record deleted successfully: %s", record.ID)
-	}
-
-	log.Infof("successfully deleted %d DNS records", len(recordsToDelete))
 	return nil
 }
 
@@ -250,6 +230,21 @@ func (c *MikrotikApiClient) CreateRecordsFromEndpoint(ep *endpoint.Endpoint) ([]
 
 	log.Infof("successfully created %d DNS records", len(createdRecords))
 	return createdRecords, nil
+}
+
+// deleteDNSRecord deletes a single DNS record
+func (c *MikrotikApiClient) deleteDNSRecord(record *DNSRecord) error {
+	log.Infof("deleting DNS record (ID: %s)", record.ID)
+
+	resp, err := c.doRequest(http.MethodDelete, fmt.Sprintf("ip/dns/static/%s", record.ID), "", nil)
+	if err != nil {
+		log.Errorf("error deleting DNS record %s: %v", record.ID, err)
+		return err
+	}
+	defer resp.Body.Close()
+	log.Debugf("record deleted successfully: %s", record.ID)
+
+	return nil
 }
 
 type DNSRecordFilter struct {
