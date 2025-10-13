@@ -160,10 +160,6 @@ func (c *MikrotikApiClient) DeleteDNSRecords(ep *endpoint.Endpoint) error {
 			log.Warnf("Skipping record with unsupported type '%s': %+v", record.Type, record)
 			continue
 		}
-		if recordTarget == "" {
-			log.Warnf("Skipping record with empty target: %+v", record)
-			continue
-		}
 		log.Debugf("Checking record: Name='%s', Type='%s', Target='%s'", record.Name, record.Type, recordTarget)
 
 		// Check if this record's target is in the list of targets to delete
