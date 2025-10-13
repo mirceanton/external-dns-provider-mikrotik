@@ -12,7 +12,6 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 	"slices"
-	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/publicsuffix"
@@ -234,7 +233,7 @@ func (c *MikrotikApiClient) CreateDNSRecords(ep *endpoint.Endpoint) ([]*DNSRecor
 		// Send the request
 		resp, err := c.doRequest(http.MethodPut, "ip/dns/static", "", bytes.NewReader(jsonBody))
 		if err != nil {
-			//TODO: Do we need to revert the changes if partial failure occurs here?
+			// TODO: Do we need to revert the changes if partial failure occurs here?
 			return nil, fmt.Errorf("error creating DNS record %d: %w", i+1, err)
 		}
 		defer resp.Body.Close()
@@ -259,28 +258,20 @@ type DNSRecordFilter struct {
 }
 
 // toQueryParams converts a DNSRecordFilter to an encoded query string for the RouterOS API.
-// Special handling: type parameter commas are not URL-encoded and spaces are encoded as %20
 func (f DNSRecordFilter) toQueryParams() string {
-	var parts []string
+	params := url.Values{}
 
-	// Add name parameter if specified
 	if f.Name != "" {
-		// For name parameter, replace '+' with '%20' for spaces
-		parts = append(parts, fmt.Sprintf("name=%s", strings.ReplaceAll(url.QueryEscape(f.Name), "+", "%20")))
+		params.Set("name", f.Name)
 	}
 
-	// Add type parameter
-	var recordType string
-	if f.Type != "" {
-		recordType = f.Type
-	} else {
-		// Default to common record types if no type specified
+	recordType := f.Type
+	if recordType == "" {
 		recordType = "A,AAAA,CNAME,TXT,MX,SRV,NS"
 	}
-	// For type parameter, don't encode commas
-	parts = append(parts, fmt.Sprintf("type=%s", recordType))
+	params.Set("type", recordType)
 
-	return strings.Join(parts, "&")
+	return params.Encode()
 }
 
 // doRequest sends an HTTP request to the MikroTik API with credentials
