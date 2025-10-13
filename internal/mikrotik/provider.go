@@ -327,19 +327,19 @@ func (p *MikrotikProvider) aggregateRecordsToEndpoints(records []DNSRecord) ([]*
 		recordGroups[groupKey] = append(recordGroups[groupKey], record)
 		log.Debugf("Added record %s (ID: %s) to group %s", record.Name, record.ID, groupKey)
 	}
+	log.Debugf("Grouped records into %d groups", len(recordGroups))
 
+	// Convert each group to an endpoint
 	var endpoints []*endpoint.Endpoint
 	for groupKey, groupRecords := range recordGroups {
-		if len(groupRecords) == 0 {
-			continue
-		}
+		log.Debugf("Processing group %s with %d records", groupKey, len(groupRecords))
 
 		// Use the first record as the template for the base endpoint
 		template := groupRecords[0]
+
 		ttl, err := MikrotikTTLtoEndpointTTL(template.TTL)
 		if err != nil {
-			log.Warnf("Failed to convert TTL for group %s: %v", groupKey, err)
-			continue
+			return nil, fmt.Errorf("invalid TTL in record group %s: %w", groupKey, err)
 		}
 
 		baseEndpoint := &endpoint.Endpoint{
@@ -385,18 +385,14 @@ func (p *MikrotikProvider) aggregateRecordsToEndpoints(records []DNSRecord) ([]*
 		for _, record := range groupRecords {
 			target, err := record.toExternalDNSTarget()
 			if err != nil {
-				log.Warnf("Failed to convert record %s to target for group %s: %v", record.ID, groupKey, err)
-				continue
+				return nil, fmt.Errorf("failed to convert record %+v to target: %w", record, err)
 			}
 			targets = append(targets, target)
 		}
 
-		if len(targets) == 0 {
-			log.Warnf("No valid targets found for group %s", groupKey)
-			continue
-		}
-
 		baseEndpoint.Targets = targets
+		log.Debugf("Created endpoint for group %s: %+v", groupKey, baseEndpoint)
+
 		endpoints = append(endpoints, baseEndpoint)
 	}
 
