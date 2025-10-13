@@ -204,7 +204,6 @@ func (c *MikrotikApiClient) CreateDNSRecords(ep *endpoint.Endpoint) ([]*DNSRecor
 	}
 
 	var createdRecords []*DNSRecord
-	var lastError error
 
 	for i, record := range records {
 		log.Debugf("creating DNS record %d/%d: %+v", i+1, len(records), record)
@@ -229,28 +228,21 @@ func (c *MikrotikApiClient) CreateDNSRecords(ep *endpoint.Endpoint) ([]*DNSRecor
 		// Serialize the data to JSON to be sent to the API
 		jsonBody, err := json.Marshal(record)
 		if err != nil {
-			log.Errorf("error marshalling DNS record: %v, continuing with next record", err)
-			lastError = err
-			continue
+			return nil, fmt.Errorf("error marshalling DNS record %d: %w", i+1, err)
 		}
 
 		// Send the request
 		resp, err := c.doRequest(http.MethodPut, "ip/dns/static", "", bytes.NewReader(jsonBody))
 		if err != nil {
-			// Keep track of the last error but continue with the next record
-			// This will be handled in the next webhook synchronization
-			log.Errorf("error creating DNS record %d: %v, continuing with next record", i+1, err)
-			lastError = err
-			continue
+			//TODO: Do we need to revert the changes if partial failure occurs here?
+			return nil, fmt.Errorf("error creating DNS record %d: %w", i+1, err)
 		}
 		defer resp.Body.Close()
 
 		// Parse the response
 		var createdRecord DNSRecord
 		if err = json.NewDecoder(resp.Body).Decode(&createdRecord); err != nil {
-			log.Errorf("Error decoding response body: %v, continuing with next record", err)
-			lastError = err
-			continue
+			return nil, fmt.Errorf("error decoding response body for record %d: %w", i+1, err)
 		}
 		log.Debugf("created record: %+v", createdRecord)
 
@@ -258,12 +250,6 @@ func (c *MikrotikApiClient) CreateDNSRecords(ep *endpoint.Endpoint) ([]*DNSRecor
 	}
 
 	log.Infof("successfully created %d DNS records", len(createdRecords))
-
-	// If no records were successfully created and we have errors, return the last error
-	if len(createdRecords) == 0 && lastError != nil {
-		return nil, lastError
-	}
-
 	return createdRecords, nil
 }
 
