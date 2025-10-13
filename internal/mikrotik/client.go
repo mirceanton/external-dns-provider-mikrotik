@@ -182,54 +182,61 @@ func (c *MikrotikApiClient) CreateRecordsFromEndpoint(ep *endpoint.Endpoint) ([]
 		return nil, fmt.Errorf("failed to convert endpoint to DNS records: %w", err)
 	}
 
-	var createdRecords []*DNSRecord
-
-	for i, record := range records {
-		log.Debugf("creating DNS record %d/%d: %+v", i+1, len(records), record)
-
-		// Enforce Default TTL
-		if record.TTL == "0s" && c.DefaultTTL > 0 {
-			log.Debugf("Setting default TTL for created record: %+v", record)
-			record.TTL, _ = EndpointTTLtoMikrotikTTL(endpoint.TTL(c.DefaultTTL))
-		}
-
-		// Enforce Default Comment
-		if c.DefaultComment != "" {
-			log.Debugf("Default comment configured. Checking records comment...")
-			if record.Comment != "" {
-				log.Debugf("Record already has a comment, skipping default comment: %+v", record)
-			} else {
-				log.Debugf("Setting default comment for created record: %+v", record)
-				record.Comment = c.DefaultComment
-			}
-		}
-
-		// Serialize the data to JSON to be sent to the API
-		jsonBody, err := json.Marshal(record)
+	createdRecords := []*DNSRecord{}
+	for _, record := range records {
+		created, err := c.createDNSRecord(record)
 		if err != nil {
-			return nil, fmt.Errorf("error marshalling DNS record %d: %w", i+1, err)
+			return nil, fmt.Errorf("failed to create DNS record: %w", err)
 		}
-
-		// Send the request
-		resp, err := c.doRequest(http.MethodPut, "ip/dns/static", "", bytes.NewReader(jsonBody))
-		if err != nil {
-			// TODO: Do we need to revert the changes if partial failure occurs here?
-			return nil, fmt.Errorf("error creating DNS record %d: %w", i+1, err)
-		}
-		defer resp.Body.Close()
-
-		// Parse the response
-		var createdRecord DNSRecord
-		if err = json.NewDecoder(resp.Body).Decode(&createdRecord); err != nil {
-			return nil, fmt.Errorf("error decoding response body for record %d: %w", i+1, err)
-		}
-		log.Debugf("created record: %+v", createdRecord)
-
-		createdRecords = append(createdRecords, &createdRecord)
+		createdRecords = append(createdRecords, created)
 	}
 
 	log.Infof("successfully created %d DNS records", len(createdRecords))
 	return createdRecords, nil
+}
+
+// createDNSRecord creates a single DNS record
+func (c *MikrotikApiClient) createDNSRecord(record *DNSRecord) (*DNSRecord, error) {
+	log.Infof("creating DNS record: %+v", record)
+
+	// Enforce Default TTL
+	if record.TTL == "0s" && c.DefaultTTL > 0 {
+		log.Debugf("Setting default TTL for created record: %+v", record)
+		record.TTL, _ = EndpointTTLtoMikrotikTTL(endpoint.TTL(c.DefaultTTL))
+	}
+
+	// Enforce Default Comment
+	if c.DefaultComment != "" {
+		log.Debugf("Default comment configured. Checking records comment...")
+		if record.Comment != "" {
+			log.Debugf("Record already has a comment, skipping default comment: %+v", record)
+		} else {
+			log.Debugf("Setting default comment for created record: %+v", record)
+			record.Comment = c.DefaultComment
+		}
+	}
+
+	// Serialize the data to JSON to be sent to the API
+	jsonBody, err := json.Marshal(record)
+	if err != nil {
+		return nil, fmt.Errorf("error marshalling DNS record %w", err)
+	}
+
+	// Send the request
+	resp, err := c.doRequest(http.MethodPut, "ip/dns/static", "", bytes.NewReader(jsonBody))
+	if err != nil {
+		return nil, fmt.Errorf("error creating DNS record %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Parse the response
+	var createdRecord DNSRecord
+	if err = json.NewDecoder(resp.Body).Decode(&createdRecord); err != nil {
+		return nil, fmt.Errorf("error decoding response body for record: %w", err)
+	}
+	log.Debugf("created record: %+v", createdRecord)
+
+	return &createdRecord, nil
 }
 
 // deleteDNSRecord deletes a single DNS record
