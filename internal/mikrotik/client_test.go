@@ -626,7 +626,7 @@ func TestDeleteDNSRecords(t *testing.T) {
 				t.Fatalf("Failed to create client: %v", err)
 			}
 
-			err = client.DeleteDNSRecords(tc.endpoint)
+			err = client.DeleteRecordsFromEndpoint(tc.endpoint)
 
 			if tc.expectError {
 				if err == nil {
