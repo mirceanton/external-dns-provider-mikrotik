@@ -133,8 +133,8 @@ func (c *MikrotikApiClient) GetDNSRecords(filter DNSRecordFilter) ([]DNSRecord, 
 	return records, nil
 }
 
-// DeleteDNSRecords deletes all DNS records associated with an endpoint
-func (c *MikrotikApiClient) DeleteDNSRecords(ep *endpoint.Endpoint) error {
+// DeleteRecordsFromEndpoint deletes all DNS records associated with an endpoint
+func (c *MikrotikApiClient) DeleteRecordsFromEndpoint(ep *endpoint.Endpoint) error {
 	log.Infof("deleting DNS records for endpoint: %+v", ep)
 
 	if len(ep.Targets) == 0 {
