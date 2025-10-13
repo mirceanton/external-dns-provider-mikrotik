@@ -2,7 +2,7 @@
 apiVersion: externaldns.k8s.io/v1alpha1
 kind: DNSEndpoint
 metadata:
-  name: aaaa-record
+  name: aaaa-multi-record
 spec:
   endpoints:
     - dnsName: aaaa.example.com
@@ -10,3 +10,4 @@ spec:
       recordType: AAAA
       targets:
         - 2001:db8::1
+        - 2001:db8::2
