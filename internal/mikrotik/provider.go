@@ -349,21 +349,35 @@ func (p *MikrotikProvider) aggregateRecordsToEndpoints(records []DNSRecord) ([]*
 		}
 
 		// Add provider-specific properties from the template
-		// Do not pass default values to avoid unnecessary updates
-		if template.Comment != "" && template.Comment != p.client.DefaultComment {
-			baseEndpoint.ProviderSpecific = append(baseEndpoint.ProviderSpecific, endpoint.ProviderSpecificProperty{Name: "comment", Value: template.Comment})
+		if template.Comment != "" {
+			baseEndpoint.ProviderSpecific = append(
+				baseEndpoint.ProviderSpecific,
+				endpoint.ProviderSpecificProperty{Name: "comment", Value: template.Comment},
+			)
 		}
-		if template.Disabled != "" && template.Disabled != "false" {
-			baseEndpoint.ProviderSpecific = append(baseEndpoint.ProviderSpecific, endpoint.ProviderSpecificProperty{Name: "disabled", Value: template.Disabled})
+		if template.Disabled != "" {
+			baseEndpoint.ProviderSpecific = append(
+				baseEndpoint.ProviderSpecific,
+				endpoint.ProviderSpecificProperty{Name: "disabled", Value: template.Disabled},
+			)
 		}
 		if template.Regexp != "" {
-			baseEndpoint.ProviderSpecific = append(baseEndpoint.ProviderSpecific, endpoint.ProviderSpecificProperty{Name: "regexp", Value: template.Regexp})
+			baseEndpoint.ProviderSpecific = append(
+				baseEndpoint.ProviderSpecific,
+				endpoint.ProviderSpecificProperty{Name: "regexp", Value: template.Regexp},
+			)
 		}
-		if template.MatchSubdomain != "" && template.MatchSubdomain != "false" {
-			baseEndpoint.ProviderSpecific = append(baseEndpoint.ProviderSpecific, endpoint.ProviderSpecificProperty{Name: "match-subdomain", Value: template.MatchSubdomain})
+		if template.MatchSubdomain != "" {
+			baseEndpoint.ProviderSpecific = append(
+				baseEndpoint.ProviderSpecific,
+				endpoint.ProviderSpecificProperty{Name: "match-subdomain", Value: template.MatchSubdomain},
+			)
 		}
 		if template.AddressList != "" {
-			baseEndpoint.ProviderSpecific = append(baseEndpoint.ProviderSpecific, endpoint.ProviderSpecificProperty{Name: "address-list", Value: template.AddressList})
+			baseEndpoint.ProviderSpecific = append(
+				baseEndpoint.ProviderSpecific,
+				endpoint.ProviderSpecificProperty{Name: "address-list", Value: template.AddressList},
+			)
 		}
 
 		// Aggregate all targets from the records in the group
