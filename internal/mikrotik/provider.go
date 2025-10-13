@@ -70,7 +70,7 @@ func (p *MikrotikProvider) Records(ctx context.Context) ([]*endpoint.Endpoint, e
 func (p *MikrotikProvider) ApplyChanges(ctx context.Context, changes *plan.Changes) error {
 	// Create new endpoints
 	for _, endpoint := range changes.Create {
-		_, err := p.client.CreateDNSRecords(endpoint)
+		_, err := p.client.CreateRecordsFromEndpoint(endpoint)
 		if err != nil {
 			log.Errorf("Failed to create DNS records for endpoint %s: %v", endpoint.DNSName, err)
 			return err
@@ -115,7 +115,7 @@ func (p *MikrotikProvider) ApplyChanges(ctx context.Context, changes *plan.Chang
 					log.Errorf("Failed to delete DNS records for endpoint %s during update: %v", oldEndpoint.DNSName, err)
 					return err
 				}
-				_, err := p.client.CreateDNSRecords(newEndpoint)
+				_, err := p.client.CreateRecordsFromEndpoint(newEndpoint)
 				if err != nil {
 					log.Errorf("Failed to create DNS records for endpoint %s during update: %v", newEndpoint.DNSName, err)
 					return err
@@ -189,7 +189,7 @@ func (p *MikrotikProvider) smartUpdateEndpoint(oldEndpoint, newEndpoint *endpoin
 			ProviderSpecific: newEndpoint.ProviderSpecific,
 		}
 
-		_, err := p.client.CreateDNSRecords(addEndpoint)
+		_, err := p.client.CreateRecordsFromEndpoint(addEndpoint)
 		if err != nil {
 			return fmt.Errorf("failed to create new targets: %w", err)
 		}
