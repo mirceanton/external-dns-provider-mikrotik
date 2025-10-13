@@ -843,12 +843,16 @@ func TestDoRequest(t *testing.T) {
 				// Handle valid requests
 				if r.URL.Path == "/rest/system/resource" {
 					w.Header().Set("Content-Type", "application/json")
-					w.Write([]byte(`{"version":"7.16"}`))
+					if _, err := w.Write([]byte(`{"version":"7.16"}`)); err != nil {
+						t.Errorf("Failed to write response: %v", err)
+					}
 					return
 				}
 				if r.URL.Path == "/rest/ip/dns/static" {
 					w.Header().Set("Content-Type", "application/json")
-					w.Write([]byte(`{"id":"*1","name":"test.com"}`))
+					if _, err := w.Write([]byte(`{"id":"*1","name":"test.com"}`)); err != nil {
+						t.Errorf("Failed to write response: %v", err)
+					}
 					return
 				}
 
