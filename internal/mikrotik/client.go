@@ -192,8 +192,8 @@ func (c *MikrotikApiClient) DeleteRecordsFromEndpoint(ep *endpoint.Endpoint) err
 	return nil
 }
 
-// CreateDNSRecords creates multiple DNS records in batch
-func (c *MikrotikApiClient) CreateDNSRecords(ep *endpoint.Endpoint) ([]*DNSRecord, error) {
+// CreateRecordsFromEndpoint creates multiple DNS records in batch
+func (c *MikrotikApiClient) CreateRecordsFromEndpoint(ep *endpoint.Endpoint) ([]*DNSRecord, error) {
 	log.Infof("creating DNS records for endpoint: %+v", ep)
 
 	// Convert endpoint to multiple DNS records

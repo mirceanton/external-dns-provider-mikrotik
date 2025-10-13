@@ -747,7 +747,7 @@ func TestCreateDNSRecords(t *testing.T) {
 				t.Fatalf("Failed to create client: %v", err)
 			}
 
-			records, err := client.CreateDNSRecords(tc.endpoint)
+			records, err := client.CreateRecordsFromEndpoint(tc.endpoint)
 
 			if tc.expectError {
 				if err == nil {
