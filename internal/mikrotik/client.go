@@ -93,7 +93,7 @@ func (c *MikrotikApiClient) GetSystemInfo() (*MikrotikSystemInfo, error) {
 	log.Debugf("fetching system information.")
 
 	// Send the request
-	resp, err := c.doRequest(http.MethodGet, "system/resource", nil, nil)
+	resp, err := c.doRequest(http.MethodGet, "system/resource", "", nil)
 	if err != nil {
 		log.Errorf("error fetching system info: %v", err)
 		return nil, err
@@ -180,7 +180,7 @@ func (c *MikrotikApiClient) DeleteDNSRecords(ep *endpoint.Endpoint) error {
 		log.Debugf("deleting DNS record %d/%d: %s (ID: %s)", i+1, len(recordsToDelete), record.Name, record.ID)
 
 		// Perform the actual deletion using the original record ID
-		resp, err := c.doRequest(http.MethodDelete, fmt.Sprintf("ip/dns/static/%s", record.ID), nil, nil)
+		resp, err := c.doRequest(http.MethodDelete, fmt.Sprintf("ip/dns/static/%s", record.ID), "", nil)
 		if err != nil {
 			log.Errorf("error deleting DNS record %s: %v", record.ID, err)
 			return err
@@ -235,7 +235,7 @@ func (c *MikrotikApiClient) CreateDNSRecords(ep *endpoint.Endpoint) ([]*DNSRecor
 		}
 
 		// Send the request
-		resp, err := c.doRequest(http.MethodPut, "ip/dns/static", nil, bytes.NewReader(jsonBody))
+		resp, err := c.doRequest(http.MethodPut, "ip/dns/static", "", bytes.NewReader(jsonBody))
 		if err != nil {
 			// Keep track of the last error but continue with the next record
 			// This will be handled in the next webhook synchronization
@@ -272,55 +272,40 @@ type DNSRecordFilter struct {
 	Type string
 }
 
-// Convert a DNSRecordFilter to URL Query Parameters for the RouterOS API
-func (f DNSRecordFilter) toQueryParams() url.Values {
-	queryParams := url.Values{}
+// toQueryParams converts a DNSRecordFilter to an encoded query string for the RouterOS API.
+// Special handling: type parameter commas are not URL-encoded and spaces are encoded as %20
+func (f DNSRecordFilter) toQueryParams() string {
+	var parts []string
 
+	// Add name parameter if specified
 	if f.Name != "" {
-		queryParams.Set("name", f.Name)
+		// For name parameter, replace '+' with '%20' for spaces
+		parts = append(parts, fmt.Sprintf("name=%s", strings.ReplaceAll(url.QueryEscape(f.Name), "+", "%20")))
 	}
 
+	// Add type parameter
+	var recordType string
 	if f.Type != "" {
-		queryParams.Set("type", f.Type)
+		recordType = f.Type
 	} else {
 		// Default to common record types if no type specified
-		queryParams.Set("type", "A,AAAA,CNAME,TXT,MX,SRV,NS")
+		recordType = "A,AAAA,CNAME,TXT,MX,SRV,NS"
 	}
+	// For type parameter, don't encode commas
+	parts = append(parts, fmt.Sprintf("type=%s", recordType))
 
-	return queryParams
-}
-
-// encodeQueryParams custom encodes query parameters for MikroTik API
-// Special handling: type parameter commas should not be URL-encoded and spaces should be %20
-func (c *MikrotikApiClient) encodeQueryParams(params url.Values) string {
-	if len(params) == 0 {
-		return ""
-	}
-
-	var parts []string
-	for key, values := range params {
-		for _, value := range values {
-			if key == "type" {
-				// For type parameter, don't encode commas
-				parts = append(parts, fmt.Sprintf("type=%s", value))
-			} else {
-				// For other parameters, replace '+' with '%20' for spaces
-				parts = append(parts, fmt.Sprintf("%s=%s", url.QueryEscape(key), strings.ReplaceAll(url.QueryEscape(value), "+", "%20")))
-			}
-		}
-	}
 	return strings.Join(parts, "&")
 }
 
 // doRequest sends an HTTP request to the MikroTik API with credentials
-// queryParams will be URL-encoded and appended to the path
-func (c *MikrotikApiClient) doRequest(method, path string, queryParams url.Values, body io.Reader) (*http.Response, error) {
+// queryString will be appended to the path as-is (should already be encoded)
+func (c *MikrotikApiClient) doRequest(method, path string, queryString string, body io.Reader) (*http.Response, error) {
 	// Build URL with query parameters
 	baseURL := fmt.Sprintf("%s/rest/%s", c.BaseUrl, path)
 
 	// Add query parameters if provided
-	if len(queryParams) > 0 {
-		baseURL += "?" + c.encodeQueryParams(queryParams)
+	if queryString != "" {
+		baseURL += "?" + queryString
 	}
 
 	log.Debugf("sending %s request to: %s", method, baseURL)

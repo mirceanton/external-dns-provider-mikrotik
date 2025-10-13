@@ -878,7 +878,7 @@ func TestDoRequest(t *testing.T) {
 				bodyReader = bytes.NewReader([]byte(tc.body))
 			}
 
-			resp, err := client.doRequest(tc.method, tc.path, nil, bodyReader)
+			resp, err := client.doRequest(tc.method, tc.path, "", bodyReader)
 
 			if tc.expectError {
 				if err == nil {
