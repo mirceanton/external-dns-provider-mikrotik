@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"slices"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -137,6 +138,11 @@ func (c *MikrotikApiClient) GetDNSRecords(filter DNSRecordFilter) ([]DNSRecord, 
 func (c *MikrotikApiClient) DeleteDNSRecords(ep *endpoint.Endpoint) error {
 	log.Infof("deleting DNS records for endpoint: %+v", ep)
 
+	if len(ep.Targets) == 0 {
+		log.Warnf("no targets specified for endpoint %s, nothing to delete", ep.DNSName)
+		return nil
+	}
+
 	// Find records that match this endpoint using server-side filtering for better performance
 	allRecords, err := c.GetDNSRecords(DNSRecordFilter{
 		Name: ep.DNSName,
@@ -160,16 +166,11 @@ func (c *MikrotikApiClient) DeleteDNSRecords(ep *endpoint.Endpoint) error {
 		}
 		log.Debugf("Checking record: Name='%s', Type='%s', Target='%s'", record.Name, record.Type, recordTarget)
 
-		// If specific targets are provided, only delete records with matching targets
-		if len(ep.Targets) > 0 {
-			// Check if this record's target is in the list of targets to delete
-			for _, targetToDelete := range ep.Targets {
-				if recordTarget == targetToDelete {
-					// TODO: Consider also matching by TTL and providerSpecific if provided in the endpoint
-					log.Debugf("Target matches: '%s', adding to delete list", recordTarget)
-					recordsToDelete = append(recordsToDelete, record)
-				}
-			}
+		// Check if this record's target is in the list of targets to delete
+		if slices.Contains(ep.Targets, recordTarget) {
+			// TODO: Consider also matching by TTL and providerSpecific if provided in the endpoint
+			log.Debugf("Target matches: '%s', adding to delete list", recordTarget)
+			recordsToDelete = append(recordsToDelete, record)
 		}
 	}
 
