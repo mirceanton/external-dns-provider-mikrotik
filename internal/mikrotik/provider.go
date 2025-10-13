@@ -79,7 +79,7 @@ func (p *MikrotikProvider) ApplyChanges(ctx context.Context, changes *plan.Chang
 
 	// Delete endpoints (Delete only - handle Updates separately)
 	for _, endpoint := range changes.Delete {
-		if err := p.client.DeleteDNSRecords(endpoint); err != nil {
+		if err := p.client.DeleteRecordsFromEndpoint(endpoint); err != nil {
 			log.Errorf("Failed to delete DNS records for endpoint %s: %v", endpoint.DNSName, err)
 			return err
 		}
@@ -111,7 +111,7 @@ func (p *MikrotikProvider) ApplyChanges(ctx context.Context, changes *plan.Chang
 			} else {
 				log.Infof("Performing full replacement update for endpoint %s", newEndpoint.DNSName)
 				// Full replacement: delete old and create new
-				if err := p.client.DeleteDNSRecords(oldEndpoint); err != nil {
+				if err := p.client.DeleteRecordsFromEndpoint(oldEndpoint); err != nil {
 					log.Errorf("Failed to delete DNS records for endpoint %s during update: %v", oldEndpoint.DNSName, err)
 					return err
 				}
@@ -172,7 +172,7 @@ func (p *MikrotikProvider) smartUpdateEndpoint(oldEndpoint, newEndpoint *endpoin
 		}
 
 		log.Debugf("Batch deleting %d obsolete targets for %s", len(toDelete), newEndpoint.DNSName)
-		err := p.client.DeleteDNSRecords(deleteEndpoint)
+		err := p.client.DeleteRecordsFromEndpoint(deleteEndpoint)
 		if err != nil {
 			return fmt.Errorf("failed to batch delete obsolete targets for %s: %w", newEndpoint.DNSName, err)
 		}
