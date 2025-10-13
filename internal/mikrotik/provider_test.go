@@ -367,7 +367,9 @@ func TestNewMikrotikProvider(t *testing.T) {
 				// Return system info for /rest/system/resource
 				if r.URL.Path == "/rest/system/resource" && r.Method == http.MethodGet {
 					w.Header().Set("Content-Type", "application/json")
-					json.NewEncoder(w).Encode(mockServerInfo)
+					if err := json.NewEncoder(w).Encode(mockServerInfo); err != nil {
+						t.Errorf("Failed to encode response: %v", err)
+					}
 					return
 				}
 
@@ -497,7 +499,9 @@ func TestMikrotikProvider_Records(t *testing.T) {
 				// Return DNS records for /rest/ip/dns/static
 				if r.URL.Path == "/rest/ip/dns/static" && r.Method == http.MethodGet {
 					w.Header().Set("Content-Type", "application/json")
-					json.NewEncoder(w).Encode(mockRecords)
+					if err := json.NewEncoder(w).Encode(mockRecords); err != nil {
+						t.Errorf("Failed to encode response: %v", err)
+					}
 					return
 				}
 
@@ -780,7 +784,9 @@ func TestMikrotikProvider_ApplyChanges(t *testing.T) {
 					}
 
 					w.Header().Set("Content-Type", "application/json")
-					json.NewEncoder(w).Encode(mockRecords)
+					if err := json.NewEncoder(w).Encode(mockRecords); err != nil {
+						t.Errorf("Failed to encode response: %v", err)
+					}
 					return
 				}
 
@@ -788,10 +794,14 @@ func TestMikrotikProvider_ApplyChanges(t *testing.T) {
 				if r.Method == http.MethodPut && r.URL.Path == "/rest/ip/dns/static" {
 					putCallCount++
 					var record DNSRecord
-					json.NewDecoder(r.Body).Decode(&record)
+					if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
+						t.Errorf("Failed to decode request: %v", err)
+					}
 					record.ID = "*new"
 					w.Header().Set("Content-Type", "application/json")
-					json.NewEncoder(w).Encode(record)
+					if err := json.NewEncoder(w).Encode(record); err != nil {
+						t.Errorf("Failed to encode response: %v", err)
+					}
 					return
 				}
 
