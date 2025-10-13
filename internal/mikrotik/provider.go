@@ -291,16 +291,22 @@ func (p *MikrotikProvider) compareEndpointsBesidesTargets(a *endpoint.Endpoint, 
 }
 
 // filterManagedRecords filters DNS records based on the provider's domain filter.
-// TODO: filter by other criteria if needed (e.g., comment prefix)
 func (p *MikrotikProvider) filterManagedRecords(records []DNSRecord) []DNSRecord {
+	if p.domainFilter == nil {
+		log.Debug("No domain filter set, returning all records")
+		return records
+	}
+
 	var filtered []DNSRecord
 	for _, record := range records {
-		if p.domainFilter != nil && !p.domainFilter.Match(record.Name) {
+		if !p.domainFilter.Match(record.Name) {
 			log.Debugf("Skipping record %s as it does not match domain filter", record.Name)
 			continue
 		}
 		filtered = append(filtered, record)
 	}
+
+	log.Debugf("Filtered records: %d out of %d match domain filter", len(filtered), len(records))
 	return filtered
 }
 
