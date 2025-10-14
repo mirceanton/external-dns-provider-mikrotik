@@ -3,7 +3,6 @@ package mikrotik
 import (
 	"context"
 	"fmt"
-	"slices"
 
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/external-dns/endpoint"
@@ -67,7 +66,10 @@ func (p *MikrotikProvider) Records(ctx context.Context) ([]*endpoint.Endpoint, e
 
 // ApplyChanges applies a given set of changes in the DNS provider.
 func (p *MikrotikProvider) ApplyChanges(ctx context.Context, changes *plan.Changes) error {
-	changes = p.changes(changes)
+	changes, err := p.filterChanges(changes)
+	if err != nil {
+		return fmt.Errorf("failed to process changes: %w", err)
+	}
 
 	for _, endpoint := range append(changes.UpdateOld, changes.Delete...) {
 		if err := p.client.DeleteRecordsFromEndpoint(endpoint); err != nil {
@@ -114,7 +116,7 @@ func (p *MikrotikProvider) getProviderSpecificOrDefault(ep *endpoint.Endpoint, p
 }
 
 // compareEndpoints compares two endpoints to determine if they are identical, keeping in mind empty/default states.
-func (p *MikrotikProvider) compareEndpointsBesidesTargets(a *endpoint.Endpoint, b *endpoint.Endpoint) bool {
+func (p *MikrotikProvider) compareEndpointsMetadata(a *endpoint.Endpoint, b *endpoint.Endpoint) bool {
 	log.Debugf("Comparing endpoint a: %v", a)
 	log.Debugf("Against endpoint b: %v", b)
 
@@ -125,11 +127,6 @@ func (p *MikrotikProvider) compareEndpointsBesidesTargets(a *endpoint.Endpoint, 
 
 	if a.RecordType != b.RecordType {
 		log.Debugf("RecordType mismatch: %v != %v", a.RecordType, b.RecordType)
-		return false
-	}
-
-	if !slices.Equal(a.Targets, b.Targets) {
-		log.Debugf("Targets mismatch: %v != %v", a.Targets, b.Targets)
 		return false
 	}
 
@@ -291,49 +288,104 @@ func (p *MikrotikProvider) aggregateRecordsToEndpoints(records []DNSRecord) ([]*
 	return endpoints, nil
 }
 
-// changes processes and filters the changes plan for updates.
-// It adjusts TTL for created endpoints and removes duplicate updates from the plan.
-func (p *MikrotikProvider) changes(changes *plan.Changes) *plan.Changes {
-	log.Debug("Starting to process changes plan.")
+// filterChanges processes the given plan.Changes to optimize updates by splitting them into deletes and creates
+func (p *MikrotikProvider) filterChanges(changes *plan.Changes) (*plan.Changes, error) {
+	if len(changes.UpdateOld) == 0 || len(changes.UpdateNew) == 0 {
+		return changes, nil
+	}
 
-	// Initialize new plan
+	if len(changes.UpdateOld) != len(changes.UpdateNew) {
+		return nil, fmt.Errorf("mismatched UpdateOld and UpdateNew lengths: %d vs %d", len(changes.UpdateOld), len(changes.UpdateNew))
+	}
+
 	newChanges := &plan.Changes{
 		Create:    changes.Create,
-		Delete:    changes.Delete,
 		UpdateOld: []*endpoint.Endpoint{},
 		UpdateNew: []*endpoint.Endpoint{},
+		Delete:    changes.Delete,
 	}
 
-	log.Debugf("Initial changes - Create: %d, Delete: %d, UpdateOld: %d, UpdateNew: %d", len(changes.Create), len(changes.Delete), len(changes.UpdateOld), len(changes.UpdateNew))
+	// Process matched pairs (updateOld and updateNew are matched by index)
+	for key, oldEndpoint := range changes.UpdateOld {
+		newEndpoint := changes.UpdateNew[key]
 
-	// Identify duplicates in Update changes
-	duplicates := []*endpoint.Endpoint{}
-	for _, old := range changes.UpdateOld {
-		for _, new := range changes.UpdateNew {
-			if p.compareEndpointsBesidesTargets(old, new) {
-				log.Debugf("Found duplicate update for endpoint: %v", old)
-				duplicates = append(duplicates, old)
+		// sanity check: name and type must match
+		if oldEndpoint.DNSName != newEndpoint.DNSName || oldEndpoint.RecordType != newEndpoint.RecordType {
+			return nil, fmt.Errorf("mismatched UpdateOld and UpdateNew endpoints at index %d: %v vs %v", key, oldEndpoint, newEndpoint)
+		}
+
+		// if metadata matches, do partial update
+		if p.compareEndpointsMetadata(oldEndpoint, newEndpoint) {
+			deleteEndpoint, createEndpoint := p.diffEndpoints(oldEndpoint, newEndpoint)
+			if deleteEndpoint != nil {
+				newChanges.Delete = append(newChanges.Delete, deleteEndpoint)
 			}
+			if createEndpoint != nil {
+				newChanges.Create = append(newChanges.Create, createEndpoint)
+			}
+		} else {
+			newChanges.Delete = append(newChanges.Delete, oldEndpoint)
+			newChanges.Create = append(newChanges.Create, newEndpoint)
 		}
 	}
 
-	// Filter out duplicates from UpdateOld
-	for _, old := range changes.UpdateOld {
-		if !slices.Contains(duplicates, old) {
-			log.Debugf("Adding non-duplicate UpdateOld endpoint: %v", old)
-			newChanges.UpdateOld = append(newChanges.UpdateOld, old)
+	return newChanges, nil
+}
+
+// diffEndpoints computes the difference between two endpoints and returns two new endpoints:
+// one for targets to delete and one for targets to add. If there are no targets to delete or add,
+// the corresponding endpoint will be nil.
+func (p *MikrotikProvider) diffEndpoints(oldEndpoint, newEndpoint *endpoint.Endpoint) (*endpoint.Endpoint, *endpoint.Endpoint) {
+	// Build maps of old and new targets
+	oldTargets := make(map[string]bool) // target -> exists
+	for _, target := range oldEndpoint.Targets {
+		oldTargets[target] = true
+	}
+	log.Debugf("Old targets: %v", oldEndpoint.Targets)
+
+	newTargets := make(map[string]bool) // target -> exists
+	for _, target := range newEndpoint.Targets {
+		newTargets[target] = true
+	}
+	log.Debugf("New targets: %v", newEndpoint.Targets)
+
+	// Find targets to delete (in old but not in new)
+	var toDelete []string
+	for target := range oldTargets {
+		if !newTargets[target] {
+			toDelete = append(toDelete, target)
 		}
 	}
+	log.Debugf("Targets to delete: %v", toDelete)
 
-	// Filter out duplicates from UpdateNew
-	for _, new := range changes.UpdateNew {
-		if !slices.Contains(duplicates, new) {
-			log.Debugf("Adding non-duplicate UpdateNew endpoint: %v", new)
-			newChanges.UpdateNew = append(newChanges.UpdateNew, new)
+	// Find targets to add (in new but not in old)
+	var toAdd []string
+	for target := range newTargets {
+		if !oldTargets[target] {
+			toAdd = append(toAdd, target)
 		}
 	}
+	log.Debugf("Targets to add: %v", toAdd)
 
-	log.Debugf("Processed changes - Create: %d, Delete: %d, UpdateOld: %d, UpdateNew: %d", len(newChanges.Create), len(newChanges.Delete), len(newChanges.UpdateOld), len(newChanges.UpdateNew))
-	log.Debug("Finished processing changes plan.")
-	return newChanges
+	endpointToDelete := &endpoint.Endpoint{
+		DNSName:    oldEndpoint.DNSName,
+		RecordType: oldEndpoint.RecordType,
+		Targets:    toDelete,
+	}
+	if len(toDelete) == 0 {
+		log.Debug("No targets to delete, returning nil for delete endpoint")
+		endpointToDelete = nil
+	}
+
+	endpointToAdd := &endpoint.Endpoint{
+		DNSName:    newEndpoint.DNSName,
+		RecordType: newEndpoint.RecordType,
+		Targets:    toAdd,
+	}
+	if len(toAdd) == 0 {
+		log.Debug("No targets to add, returning nil for add endpoint")
+		endpointToAdd = nil
+	}
+
+	return endpointToDelete, endpointToAdd
 }
