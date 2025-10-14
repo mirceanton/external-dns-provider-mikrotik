@@ -17,27 +17,11 @@ const (
 	defaultPS      = "default"
 )
 
-// Helper function to create endpoints for brevity
-func NewEndpoint(dnsName string, targets []string, ttl int64, providerSpecificProps []map[string]string) *endpoint.Endpoint {
+// Helper function to create endpoints with custom record type
+func NewEndpoint(dnsName string, targets []string, recordType string, ttl int64, providerSpecificProps []map[string]string) *endpoint.Endpoint {
 	e := &endpoint.Endpoint{
 		DNSName:    dnsName,
 		Targets:    endpoint.NewTargets(targets...),
-		RecordType: "A", // Default to A record type
-		RecordTTL:  endpoint.TTL(ttl),
-	}
-	for _, prop := range providerSpecificProps {
-		for key, value := range prop {
-			e.SetProviderSpecificProperty(key, value)
-		}
-	}
-	return e
-}
-
-// Helper function to create endpoints with custom record type
-func NewEndpointWithType(dnsName, target, recordType string, ttl int64, providerSpecificProps []map[string]string) *endpoint.Endpoint {
-	e := &endpoint.Endpoint{
-		DNSName:    dnsName,
-		Targets:    endpoint.NewTargets(target),
 		RecordType: recordType,
 		RecordTTL:  endpoint.TTL(ttl),
 	}
@@ -70,28 +54,28 @@ func TestGetProviderSpecificOrDefault(t *testing.T) {
 		{
 			name:          "Direct property exists",
 			provider:      mikrotikProvider,
-			endpoint:      NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"comment": "direct-comment"}}),
+			endpoint:      NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"comment": "direct-comment"}}),
 			property:      "comment",
 			expectedValue: "direct-comment",
 		},
 		{
 			name:          "Prefixed property exists",
 			provider:      mikrotikProvider,
-			endpoint:      NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"webhook/comment": "prefixed-comment"}}),
+			endpoint:      NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"webhook/comment": "prefixed-comment"}}),
 			property:      "comment",
 			expectedValue: "prefixed-comment",
 		},
 		{
 			name:          "Both properties exist - direct takes precedence",
 			provider:      mikrotikProvider,
-			endpoint:      NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"comment": "direct-comment"}, {"webhook/comment": "prefixed-comment"}}),
+			endpoint:      NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"comment": "direct-comment"}, {"webhook/comment": "prefixed-comment"}}),
 			property:      "comment",
 			expectedValue: "direct-comment",
 		},
 		{
 			name:          "Property does not exist",
 			provider:      mikrotikProvider,
-			endpoint:      NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, nil),
+			endpoint:      NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, nil),
 			property:      "comment",
 			expectedValue: defaultPS,
 		},
@@ -107,7 +91,7 @@ func TestGetProviderSpecificOrDefault(t *testing.T) {
 	}
 }
 
-func TestCompareEndpointsBesidesTargets(t *testing.T) {
+func TestCompareEndpointsMetadata(t *testing.T) {
 	mikrotikProvider := &MikrotikProvider{
 		client: &MikrotikApiClient{
 			MikrotikDefaults: &MikrotikDefaults{
@@ -129,15 +113,15 @@ func TestCompareEndpointsBesidesTargets(t *testing.T) {
 		{
 			name:          "Matching basic properties",
 			provider:      mikrotikProvider,
-			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, nil),
-			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, nil),
+			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, nil),
+			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, nil),
 			expectedMatch: true,
 		},
 		{
 			name:          "Matching provider-specific",
 			provider:      mikrotikProvider,
-			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"comment": "some-comment"}, {"disabled": "true"}}),
-			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"comment": "some-comment"}, {"disabled": "true"}}),
+			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"comment": "some-comment"}, {"disabled": "true"}}),
+			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"comment": "some-comment"}, {"disabled": "true"}}),
 			expectedMatch: true,
 		},
 
@@ -145,50 +129,50 @@ func TestCompareEndpointsBesidesTargets(t *testing.T) {
 		{
 			name:          "Match-Subdomain: 'false' and unspecified should match",
 			provider:      mikrotikProvider,
-			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, nil),
-			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"match-subdomain": "false"}}),
+			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, nil),
+			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"match-subdomain": "false"}}),
 			expectedMatch: true,
 		},
 		{
 			name:          "Match-Subdomain: 'false' and empty should match",
 			provider:      mikrotikProvider,
-			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"match-subdomain": ""}}),
-			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"match-subdomain": "false"}}),
+			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"match-subdomain": ""}}),
+			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"match-subdomain": "false"}}),
 			expectedMatch: true,
 		},
 		{
 			name:          "Disabled: 'false' and unspecified should match",
 			provider:      mikrotikProvider,
-			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, nil),
-			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"disabled": "false"}}),
+			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, nil),
+			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"disabled": "false"}}),
 			expectedMatch: true,
 		},
 		{
 			name:          "Disabled: 'false' and empty should match",
 			provider:      mikrotikProvider,
-			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"disabled": ""}}),
-			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"disabled": "false"}}),
+			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"disabled": ""}}),
+			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"disabled": "false"}}),
 			expectedMatch: true,
 		},
 		{
 			name:          "TTL: Default and zero should match",
 			provider:      mikrotikProvider,
-			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, 0, nil),
-			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, defaultTTL, nil),
+			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 0, nil),
+			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", defaultTTL, nil),
 			expectedMatch: true,
 		},
 		{
 			name:          "Comment: Default and empty should match",
 			provider:      mikrotikProvider,
-			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"comment": ""}}),
-			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"comment": defaultComment}}),
+			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"comment": ""}}),
+			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"comment": defaultComment}}),
 			expectedMatch: true,
 		},
 		{
 			name:          "Comment: Default and unspecified should match",
 			provider:      mikrotikProvider,
-			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, nil),
-			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"comment": defaultComment}}),
+			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, nil),
+			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"comment": defaultComment}}),
 			expectedMatch: true,
 		},
 
@@ -196,127 +180,127 @@ func TestCompareEndpointsBesidesTargets(t *testing.T) {
 		{
 			name:          "Mismatch in DNSName",
 			provider:      mikrotikProvider,
-			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, nil),
-			endpointB:     NewEndpoint("different.org", []string{"192.0.2.1"}, 3600, nil),
+			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, nil),
+			endpointB:     NewEndpoint("different.org", []string{"192.0.2.1"}, "A", 3600, nil),
 			expectedMatch: false,
 		},
 		{
 			name:          "Should ignore mismatch in Target",
 			provider:      mikrotikProvider,
-			endpointA:     NewEndpoint("example.com", []string{"1.2.3.4"}, 3600, nil),
-			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, nil),
+			endpointA:     NewEndpoint("example.com", []string{"1.2.3.4"}, "A", 3600, nil),
+			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, nil),
 			expectedMatch: true,
 		},
 		{
 			name:          "Mismatch in TTL (X != Y)",
 			provider:      mikrotikProvider,
-			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, 5, nil),
-			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, 15, nil),
+			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 5, nil),
+			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 15, nil),
 			expectedMatch: false,
 		},
 		{
 			name:          "Mismatch in TTL (0 != X)",
 			provider:      mikrotikProvider,
-			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, 0, nil),
-			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, 15, nil),
+			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 0, nil),
+			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 15, nil),
 			expectedMatch: false,
 		},
 		{
 			name:          "Mismatch in TTL (Default != X)",
 			provider:      mikrotikProvider,
-			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, defaultTTL, nil),
-			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, 15, nil),
+			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", defaultTTL, nil),
+			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 15, nil),
 			expectedMatch: false,
 		},
 		{
 			name:          "Mismatch in comment (something != empty)",
 			provider:      mikrotikProvider,
-			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"comment": "some-comment"}}),
-			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"comment": ""}}),
+			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"comment": "some-comment"}}),
+			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"comment": ""}}),
 			expectedMatch: false,
 		},
 		{
 			name:          "Mismatch in comment (something != unspecified)",
 			provider:      mikrotikProvider,
-			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"comment": "some-comment"}}),
-			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, nil),
+			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"comment": "some-comment"}}),
+			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, nil),
 			expectedMatch: false,
 		},
 		{
 			name:          "Mismatch in comment (something != default)",
 			provider:      mikrotikProvider,
-			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"comment": "some-comment"}}),
-			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"comment": defaultComment}}),
+			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"comment": "some-comment"}}),
+			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"comment": defaultComment}}),
 			expectedMatch: false,
 		},
 		{
 			name:          "Mismatch in comment (something != something else)",
 			provider:      mikrotikProvider,
-			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"comment": "some-comment"}}),
-			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"comment": "other-comment"}}),
+			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"comment": "some-comment"}}),
+			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"comment": "other-comment"}}),
 			expectedMatch: false,
 		},
 		{
 			name:          "Mismatch in match-subdomain (true != false)",
 			provider:      mikrotikProvider,
-			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"match-subdomain": "true"}}),
-			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"match-subdomain": "false"}}),
+			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"match-subdomain": "true"}}),
+			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"match-subdomain": "false"}}),
 			expectedMatch: false,
 		},
 		{
 			name:          "Mismatch in match-subdomain (true != empty)",
 			provider:      mikrotikProvider,
-			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"match-subdomain": "true"}}),
-			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"match-subdomain": ""}}),
+			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"match-subdomain": "true"}}),
+			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"match-subdomain": ""}}),
 			expectedMatch: false,
 		},
 		{
 			name:          "Mismatch in match-subdomain (true != unspecified)",
 			provider:      mikrotikProvider,
-			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"match-subdomain": "true"}}),
-			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, nil),
+			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"match-subdomain": "true"}}),
+			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, nil),
 			expectedMatch: false,
 		},
 		{
 			name:          "Mismatch in disabled (true != false)",
 			provider:      mikrotikProvider,
-			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"disabled": "true"}}),
-			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"disabled": "false"}}),
+			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"disabled": "true"}}),
+			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"disabled": "false"}}),
 			expectedMatch: false,
 		},
 		{
 			name:          "Mismatch in disabled (true != empty)",
 			provider:      mikrotikProvider,
-			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"disabled": "true"}}),
-			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"disabled": ""}}),
+			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"disabled": "true"}}),
+			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"disabled": ""}}),
 			expectedMatch: false,
 		},
 		{
 			name:          "Mismatch in disabled (true != unspecified)",
 			provider:      mikrotikProvider,
-			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"disabled": "true"}}),
-			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, nil),
+			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"disabled": "true"}}),
+			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, nil),
 			expectedMatch: false,
 		},
 		{
 			name:          "Mismatch in address-list",
 			provider:      mikrotikProvider,
-			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"address-list": "1.2.3.4"}}),
-			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"address-list": "2.3.4.5"}}),
+			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"address-list": "1.2.3.4"}}),
+			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"address-list": "2.3.4.5"}}),
 			expectedMatch: false,
 		},
 		{
 			name:          "Mismatch in regexp",
 			provider:      mikrotikProvider,
-			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"regexp": ".*"}}),
-			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, 3600, []map[string]string{{"regexp": "diff.*"}}),
+			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"regexp": ".*"}}),
+			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"regexp": "diff.*"}}),
 			expectedMatch: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			match := tt.provider.compareEndpointsBesidesTargets(tt.endpointA, tt.endpointB)
+			match := tt.provider.compareEndpointsMetadata(tt.endpointA, tt.endpointB)
 			if match != tt.expectedMatch {
 				t.Errorf("Expected %v, got %v", tt.expectedMatch, match)
 			}
@@ -572,7 +556,7 @@ func TestMikrotikProvider_ApplyChanges(t *testing.T) {
 			name: "Successful create operation",
 			changes: &plan.Changes{
 				Create: []*endpoint.Endpoint{
-					NewEndpoint("new.example.com", []string{"1.1.1.1"}, 3600, nil),
+					NewEndpoint("new.example.com", []string{"1.1.1.1"}, "A", 3600, nil),
 				},
 			},
 			expectError:         false,
@@ -584,7 +568,7 @@ func TestMikrotikProvider_ApplyChanges(t *testing.T) {
 			name: "Successful delete operation",
 			changes: &plan.Changes{
 				Delete: []*endpoint.Endpoint{
-					NewEndpoint("delete.example.com", []string{"1.1.1.1"}, 3600, nil),
+					NewEndpoint("delete.example.com", []string{"1.1.1.1"}, "A", 3600, nil),
 				},
 			},
 			expectError:         false,
@@ -596,10 +580,10 @@ func TestMikrotikProvider_ApplyChanges(t *testing.T) {
 			name: "Successful update operation",
 			changes: &plan.Changes{
 				UpdateOld: []*endpoint.Endpoint{
-					NewEndpoint("update.example.com", []string{"1.1.1.1"}, 3600, nil),
+					NewEndpoint("update.example.com", []string{"1.1.1.1"}, "A", 3600, nil),
 				},
 				UpdateNew: []*endpoint.Endpoint{
-					NewEndpoint("update.example.com", []string{"2.2.2.2"}, 3600, nil),
+					NewEndpoint("update.example.com", []string{"2.2.2.2"}, "A", 3600, nil),
 				},
 			},
 			expectError:         false,
@@ -612,15 +596,15 @@ func TestMikrotikProvider_ApplyChanges(t *testing.T) {
 			changes: &plan.Changes{
 				UpdateOld: []*endpoint.Endpoint{
 					// This record is identical in both old and new - should be skipped
-					NewEndpoint("identical.example.com", []string{"1.1.1.1"}, 3600, []map[string]string{{"comment": "same-comment"}}),
+					NewEndpoint("identical.example.com", []string{"1.1.1.1"}, "A", 3600, []map[string]string{{"comment": "same-comment"}}),
 					// This record actually changes targets - should be processed
-					NewEndpoint("changing.example.com", []string{"1.1.1.1"}, 3600, []map[string]string{{"comment": "old-comment"}}),
+					NewEndpoint("changing.example.com", []string{"1.1.1.1"}, "A", 3600, []map[string]string{{"comment": "old-comment"}}),
 				},
 				UpdateNew: []*endpoint.Endpoint{
 					// This record is identical to the old one - should be skipped
-					NewEndpoint("identical.example.com", []string{"1.1.1.1"}, 3600, []map[string]string{{"comment": "same-comment"}}),
+					NewEndpoint("identical.example.com", []string{"1.1.1.1"}, "A", 3600, []map[string]string{{"comment": "same-comment"}}),
 					// This record has different target - should be processed
-					NewEndpoint("changing.example.com", []string{"2.2.2.2"}, 3600, []map[string]string{{"comment": "new-comment"}}),
+					NewEndpoint("changing.example.com", []string{"2.2.2.2"}, "A", 3600, []map[string]string{{"comment": "new-comment"}}),
 				},
 			},
 			expectError:         false,
@@ -632,14 +616,14 @@ func TestMikrotikProvider_ApplyChanges(t *testing.T) {
 			name: "Update with all identical records - should skip all operations",
 			changes: &plan.Changes{
 				UpdateOld: []*endpoint.Endpoint{
-					NewEndpoint("same1.example.com", []string{"1.1.1.1"}, 3600, []map[string]string{{"comment": "test"}}),
-					NewEndpoint("same2.example.com", []string{"2.2.2.2"}, 1800, []map[string]string{{"disabled": "false"}}),
-					NewEndpoint("multi2.example.com", []string{"1.1.1.1", "2.2.2.2"}, 1800, []map[string]string{{"disabled": "false"}}),
+					NewEndpoint("same1.example.com", []string{"1.1.1.1"}, "A", 3600, []map[string]string{{"comment": "test"}}),
+					NewEndpoint("same2.example.com", []string{"2.2.2.2"}, "A", 1800, []map[string]string{{"disabled": "false"}}),
+					NewEndpoint("multi2.example.com", []string{"1.1.1.1", "2.2.2.2"}, "A", 1800, []map[string]string{{"disabled": "false"}}),
 				},
 				UpdateNew: []*endpoint.Endpoint{
-					NewEndpoint("same1.example.com", []string{"1.1.1.1"}, 3600, []map[string]string{{"comment": "test"}}),
-					NewEndpoint("same2.example.com", []string{"2.2.2.2"}, 1800, []map[string]string{{"disabled": "false"}}),
-					NewEndpoint("multi2.example.com", []string{"1.1.1.1", "2.2.2.2"}, 1800, []map[string]string{{"disabled": "false"}}),
+					NewEndpoint("same1.example.com", []string{"1.1.1.1"}, "A", 3600, []map[string]string{{"comment": "test"}}),
+					NewEndpoint("same2.example.com", []string{"2.2.2.2"}, "A", 1800, []map[string]string{{"disabled": "false"}}),
+					NewEndpoint("multi2.example.com", []string{"1.1.1.1", "2.2.2.2"}, "A", 1800, []map[string]string{{"disabled": "false"}}),
 				},
 			},
 			expectError:         false,
@@ -651,10 +635,10 @@ func TestMikrotikProvider_ApplyChanges(t *testing.T) {
 			name: "Update multiple targets",
 			changes: &plan.Changes{
 				UpdateOld: []*endpoint.Endpoint{
-					NewEndpoint("multi1.example.com", []string{"1.1.1.1", "2.2.2.2"}, 3600, []map[string]string{{"comment": "test"}}),
+					NewEndpoint("multi1.example.com", []string{"1.1.1.1", "2.2.2.2"}, "A", 3600, []map[string]string{{"comment": "test"}}),
 				},
 				UpdateNew: []*endpoint.Endpoint{
-					NewEndpoint("multi1.example.com", []string{"2.2.2.2", "3.3.3.3", "4.4.4.4"}, 3600, []map[string]string{{"comment": "test"}}),
+					NewEndpoint("multi1.example.com", []string{"2.2.2.2", "3.3.3.3", "4.4.4.4"}, "A", 3600, []map[string]string{{"comment": "test"}}),
 				},
 			},
 			expectError:         false,
