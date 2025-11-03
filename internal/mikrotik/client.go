@@ -211,7 +211,6 @@ func (c *MikrotikApiClient) createDNSRecord(record *DNSRecord) (*DNSRecord, erro
 
 	// Enforce Default Comment
 	if c.DefaultComment != "" {
-		log.Debugf("Default comment configured. Checking records comment...")
 		if record.Comment != "" {
 			log.Debugf("Record already has a comment, skipping default comment: %+v", record)
 		} else {
