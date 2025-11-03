@@ -626,7 +626,7 @@ func TestDeleteDNSRecords(t *testing.T) {
 				t.Fatalf("Failed to create client: %v", err)
 			}
 
-			err = client.DeleteDNSRecords(tc.endpoint)
+			err = client.DeleteRecordsFromEndpoint(tc.endpoint)
 
 			if tc.expectError {
 				if err == nil {
@@ -747,7 +747,7 @@ func TestCreateDNSRecords(t *testing.T) {
 				t.Fatalf("Failed to create client: %v", err)
 			}
 
-			records, err := client.CreateDNSRecords(tc.endpoint)
+			records, err := client.CreateRecordsFromEndpoint(tc.endpoint)
 
 			if tc.expectError {
 				if err == nil {
@@ -890,6 +890,7 @@ func TestDoRequest(t *testing.T) {
 				}
 				if resp == nil {
 					t.Fatal("Expected response, got nil")
+					return
 				}
 				defer resp.Body.Close()
 				if resp.StatusCode != tc.expectedStatus {

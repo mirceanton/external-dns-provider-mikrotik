@@ -384,7 +384,7 @@ func validateUnsignedInteger(value string) error {
 	}
 	intVal, err := strconv.Atoi(value)
 	if err != nil {
-		return fmt.Errorf("value cannot be converrted to int: %s", value)
+		return fmt.Errorf("value cannot be converted to int: %s", value)
 	}
 
 	if intVal < 0 || intVal > 65535 {
