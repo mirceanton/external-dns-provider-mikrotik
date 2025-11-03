@@ -378,10 +378,10 @@ func (p *MikrotikProvider) diffEndpoints(oldEndpoint, newEndpoint *endpoint.Endp
 	}
 
 	endpointToAdd := &endpoint.Endpoint{
-		DNSName:    newEndpoint.DNSName,
-		RecordType: newEndpoint.RecordType,
-		Targets:    toAdd,
-		RecordTTL:  newEndpoint.RecordTTL,
+		DNSName:          newEndpoint.DNSName,
+		RecordType:       newEndpoint.RecordType,
+		Targets:          toAdd,
+		RecordTTL:        newEndpoint.RecordTTL,
 		ProviderSpecific: newEndpoint.ProviderSpecific,
 	}
 	if len(toAdd) == 0 {
