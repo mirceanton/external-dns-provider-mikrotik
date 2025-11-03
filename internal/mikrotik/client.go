@@ -218,13 +218,13 @@ func (c *MikrotikApiClient) createDNSRecord(record *DNSRecord) (*DNSRecord, erro
 	// Serialize the data to JSON to be sent to the API
 	jsonBody, err := json.Marshal(record)
 	if err != nil {
-		return nil, fmt.Errorf("error marshalling DNS record %w", err)
+		return nil, fmt.Errorf("error marshalling DNS record: %w", err)
 	}
 
 	// Send the request
 	resp, err := c.doRequest(http.MethodPut, "ip/dns/static", "", bytes.NewReader(jsonBody))
 	if err != nil {
-		return nil, fmt.Errorf("error creating DNS record %w", err)
+		return nil, fmt.Errorf("error creating DNS record: %w", err)
 	}
 	defer resp.Body.Close()
 
