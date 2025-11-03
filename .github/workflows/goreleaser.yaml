@@ -6,14 +6,7 @@ permissions: { contents: read }
 on:  # yamllint disable-line rule:truthy
   release: { types: [published] }
   pull_request: { branches: ["main"] }
-  push:
-    paths:
-      - .github/workflows/goreleaser.yaml
-      - .goreleaser.yaml
-      - ".mise.toml"
-      - "**.go"
-      - "go.mod"
-      - "go.sum"
+  push: { branches: ["main", "renovate/**"] }
   workflow_dispatch:
     inputs:
       dry-run:

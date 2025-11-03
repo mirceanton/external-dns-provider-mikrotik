@@ -5,7 +5,6 @@ permissions: { contents: read }
 
 on:  # yamllint disable-line rule:truthy
   schedule: [{ cron: '0 0 * * *' }]
-  push: {}
   workflow_dispatch:
     inputs:
       dry-run:
@@ -15,7 +14,7 @@ on:  # yamllint disable-line rule:truthy
         type: boolean
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref_name }}
   cancel-in-progress: true
 
 jobs:
@@ -40,8 +39,4 @@ jobs:
         uses: mirceanton/action-semver-release@be5a9413659737e968dffd82b6a0a47805ffd026 # v2.0.0
         with:
           github-token: ${{ steps.app-token.outputs.token }}
-          dry-run: |
-            ${{
-              ( github.event.inputs.dry-run == 'true' && github.event_name == 'workflow_dispatch' ) ||
-              github.event_name == 'push'
-            }}
+          dry-run: ${{ github.event.inputs.dry-run == 'true' && github.event_name == 'workflow_dispatch' }}
