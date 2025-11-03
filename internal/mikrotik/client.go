@@ -282,6 +282,7 @@ func (c *MikrotikApiClient) doRequest(method, path string, queryString string, b
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		respBody, _ := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
 		log.Errorf("request failed with status %s, response: %s", resp.Status, string(respBody))
 		return nil, fmt.Errorf("request failed: %s", resp.Status)
 	}

@@ -890,6 +890,7 @@ func TestDoRequest(t *testing.T) {
 				}
 				if resp == nil {
 					t.Fatal("Expected response, got nil")
+					return
 				}
 				defer resp.Body.Close()
 				if resp.StatusCode != tc.expectedStatus {

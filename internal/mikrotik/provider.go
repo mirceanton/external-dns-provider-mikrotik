@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/external-dns/provider"
 )
 
-// DNS Provider for working with mikrotik
+// MikrotikProvider is a helper class for working with mikrotik
 type MikrotikProvider struct {
 	provider.BaseProvider
 
