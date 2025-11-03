@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/external-dns/provider"
 )
 
-// DNS Provider for working with mikrotik
+// MikrotikProvider is a helper class for working with mikrotik
 type MikrotikProvider struct {
 	provider.BaseProvider
 
@@ -53,7 +53,6 @@ func (p *MikrotikProvider) Records(ctx context.Context) ([]*endpoint.Endpoint, e
 
 	// Filter managed records
 	filteredRecords := p.filterManagedRecords(records)
-	log.Debugf("Filtered down to %d managed DNS records", len(filteredRecords))
 
 	// Aggregate records to endpoints
 	endpoints, err := p.aggregateRecordsToEndpoints(filteredRecords)
@@ -62,136 +61,25 @@ func (p *MikrotikProvider) Records(ctx context.Context) ([]*endpoint.Endpoint, e
 		return nil, err
 	}
 
-	log.Debugf("Returned %d endpoints after domain filtering", len(endpoints))
 	return endpoints, nil
 }
 
 // ApplyChanges applies a given set of changes in the DNS provider.
 func (p *MikrotikProvider) ApplyChanges(ctx context.Context, changes *plan.Changes) error {
-	// Create new endpoints
-	for _, endpoint := range changes.Create {
-		_, err := p.client.CreateDNSRecords(endpoint)
-		if err != nil {
-			log.Errorf("Failed to create DNS records for endpoint %s: %v", endpoint.DNSName, err)
+	changes, err := p.filterChanges(changes)
+	if err != nil {
+		return fmt.Errorf("failed to process changes: %w", err)
+	}
+
+	for _, endpoint := range append(changes.UpdateOld, changes.Delete...) {
+		if err := p.client.DeleteRecordsFromEndpoint(endpoint); err != nil {
 			return err
 		}
 	}
 
-	// Delete endpoints (Delete only - handle Updates separately)
-	for _, endpoint := range changes.Delete {
-		if err := p.client.DeleteDNSRecords(endpoint); err != nil {
-			log.Errorf("Failed to delete DNS records for endpoint %s: %v", endpoint.DNSName, err)
+	for _, endpoint := range append(changes.Create, changes.UpdateNew...) {
+		if _, err := p.client.CreateRecordsFromEndpoint(endpoint); err != nil {
 			return err
-		}
-	}
-
-	// We assume that UpdateOld and UpdateNew are aligned by index.
-	if len(changes.UpdateOld) > 0 || len(changes.UpdateNew) > 0 {
-
-		if len(changes.UpdateOld) != len(changes.UpdateNew) {
-			log.Errorf("Mismatched UpdateOld and UpdateNew lengths: %d vs %d", len(changes.UpdateOld), len(changes.UpdateNew))
-			return fmt.Errorf("mismatched UpdateOld and UpdateNew lengths: %d vs %d", len(changes.UpdateOld), len(changes.UpdateNew))
-		}
-
-		// Process matched pairs with smart updates
-		for key, oldEndpoint := range changes.UpdateOld {
-			newEndpoint := changes.UpdateNew[key]
-			// check name and type for sanity
-			if oldEndpoint.DNSName != newEndpoint.DNSName || oldEndpoint.RecordType != newEndpoint.RecordType {
-				log.Errorf("Mismatched UpdateOld and UpdateNew endpoints at index %d: %v vs %v", key, oldEndpoint, newEndpoint)
-				return fmt.Errorf("mismatched UpdateOld and UpdateNew endpoints at index %d: %v vs %v", key, oldEndpoint, newEndpoint)
-			}
-			// if metadata are same, do smart update
-			if p.compareEndpointsBesidesTargets(oldEndpoint, newEndpoint) {
-				log.Infof("Performing smart update for endpoint %s", newEndpoint.DNSName)
-				if err := p.smartUpdateEndpoint(oldEndpoint, newEndpoint); err != nil {
-					log.Errorf("Failed to update DNS records for endpoint %s: %v", newEndpoint.DNSName, err)
-					return err
-				}
-			} else {
-				log.Infof("Performing full replacement update for endpoint %s", newEndpoint.DNSName)
-				// Full replacement: delete old and create new
-				if err := p.client.DeleteDNSRecords(oldEndpoint); err != nil {
-					log.Errorf("Failed to delete DNS records for endpoint %s during update: %v", oldEndpoint.DNSName, err)
-					return err
-				}
-				_, err := p.client.CreateDNSRecords(newEndpoint)
-				if err != nil {
-					log.Errorf("Failed to create DNS records for endpoint %s during update: %v", newEndpoint.DNSName, err)
-					return err
-				}
-			}
-		}
-	}
-
-	return nil
-}
-
-// smartUpdateEndpoint performs differential updates, only modifying changed targets
-func (p *MikrotikProvider) smartUpdateEndpoint(oldEndpoint, newEndpoint *endpoint.Endpoint) error {
-	log.Debugf("Smart update: comparing old endpoint %s with new endpoint", oldEndpoint.DNSName)
-
-	// Build maps of old and new targets
-	oldTargets := make(map[string]bool) // target -> exists
-	for _, target := range oldEndpoint.Targets {
-		oldTargets[target] = true
-	}
-
-	newTargets := make(map[string]bool) // target -> exists
-	for _, target := range newEndpoint.Targets {
-		newTargets[target] = true
-	}
-
-	log.Debugf("Old targets: %v, New targets: %v", oldEndpoint.Targets, newEndpoint.Targets)
-
-	// Find targets to delete (in old but not in new)
-	var toDelete []string
-	for target := range oldTargets {
-		if !newTargets[target] {
-			toDelete = append(toDelete, target)
-		}
-	}
-
-	// Find targets to add (in new but not in old)
-	var toAdd []string
-	for target := range newTargets {
-		if !oldTargets[target] {
-			toAdd = append(toAdd, target)
-		}
-	}
-
-	log.Infof("Smart update for %s: %d targets to delete, %d targets to add", newEndpoint.DNSName, len(toDelete), len(toAdd))
-
-	// Delete obsolete targets using batch deletion
-	if len(toDelete) > 0 {
-		// Create a temporary endpoint for batch deletion of obsolete targets
-		deleteEndpoint := &endpoint.Endpoint{
-			DNSName:    newEndpoint.DNSName,
-			RecordType: newEndpoint.RecordType,
-			Targets:    toDelete,
-		}
-
-		log.Debugf("Batch deleting %d obsolete targets for %s", len(toDelete), newEndpoint.DNSName)
-		err := p.client.DeleteDNSRecords(deleteEndpoint)
-		if err != nil {
-			return fmt.Errorf("failed to batch delete obsolete targets for %s: %w", newEndpoint.DNSName, err)
-		}
-	}
-
-	// Add new targets
-	if len(toAdd) > 0 {
-		// Create a new endpoint with only the new targets
-		addEndpoint := &endpoint.Endpoint{
-			DNSName:          newEndpoint.DNSName,
-			RecordType:       newEndpoint.RecordType,
-			RecordTTL:        newEndpoint.RecordTTL,
-			Targets:          toAdd,
-			ProviderSpecific: newEndpoint.ProviderSpecific,
-		}
-
-		_, err := p.client.CreateDNSRecords(addEndpoint)
-		if err != nil {
-			return fmt.Errorf("failed to create new targets: %w", err)
 		}
 	}
 
@@ -228,7 +116,7 @@ func (p *MikrotikProvider) getProviderSpecificOrDefault(ep *endpoint.Endpoint, p
 }
 
 // compareEndpoints compares two endpoints to determine if they are identical, keeping in mind empty/default states.
-func (p *MikrotikProvider) compareEndpointsBesidesTargets(a *endpoint.Endpoint, b *endpoint.Endpoint) bool {
+func (p *MikrotikProvider) compareEndpointsMetadata(a *endpoint.Endpoint, b *endpoint.Endpoint) bool {
 	log.Debugf("Comparing endpoint a: %v", a)
 	log.Debugf("Against endpoint b: %v", b)
 
@@ -291,16 +179,22 @@ func (p *MikrotikProvider) compareEndpointsBesidesTargets(a *endpoint.Endpoint, 
 }
 
 // filterManagedRecords filters DNS records based on the provider's domain filter.
-// TODO: filter by other criteria if needed (e.g., comment prefix)
 func (p *MikrotikProvider) filterManagedRecords(records []DNSRecord) []DNSRecord {
+	if p.domainFilter == nil {
+		log.Debug("No domain filter set, returning all records")
+		return records
+	}
+
 	var filtered []DNSRecord
 	for _, record := range records {
-		if p.domainFilter != nil && !p.domainFilter.Match(record.Name) {
+		if !p.domainFilter.Match(record.Name) {
 			log.Debugf("Skipping record %s as it does not match domain filter", record.Name)
 			continue
 		}
 		filtered = append(filtered, record)
 	}
+
+	log.Debugf("Filtered records: %d out of %d match domain filter", len(filtered), len(records))
 	return filtered
 }
 
@@ -321,19 +215,19 @@ func (p *MikrotikProvider) aggregateRecordsToEndpoints(records []DNSRecord) ([]*
 		recordGroups[groupKey] = append(recordGroups[groupKey], record)
 		log.Debugf("Added record %s (ID: %s) to group %s", record.Name, record.ID, groupKey)
 	}
+	log.Debugf("Grouped records into %d groups", len(recordGroups))
 
+	// Convert each group to an endpoint
 	var endpoints []*endpoint.Endpoint
 	for groupKey, groupRecords := range recordGroups {
-		if len(groupRecords) == 0 {
-			continue
-		}
+		log.Debugf("Processing group %s with %d records", groupKey, len(groupRecords))
 
 		// Use the first record as the template for the base endpoint
 		template := groupRecords[0]
+
 		ttl, err := MikrotikTTLtoEndpointTTL(template.TTL)
 		if err != nil {
-			log.Warnf("Failed to convert TTL for group %s: %v", groupKey, err)
-			continue
+			return nil, fmt.Errorf("invalid TTL in record group %s: %w", groupKey, err)
 		}
 
 		baseEndpoint := &endpoint.Endpoint{
@@ -343,21 +237,35 @@ func (p *MikrotikProvider) aggregateRecordsToEndpoints(records []DNSRecord) ([]*
 		}
 
 		// Add provider-specific properties from the template
-		// Do not pass default values to avoid unnecessary updates
-		if template.Comment != "" && template.Comment != p.client.DefaultComment {
-			baseEndpoint.ProviderSpecific = append(baseEndpoint.ProviderSpecific, endpoint.ProviderSpecificProperty{Name: "comment", Value: template.Comment})
+		if template.Comment != "" {
+			baseEndpoint.ProviderSpecific = append(
+				baseEndpoint.ProviderSpecific,
+				endpoint.ProviderSpecificProperty{Name: "comment", Value: template.Comment},
+			)
 		}
-		if template.Disabled != "" && template.Disabled != "false" {
-			baseEndpoint.ProviderSpecific = append(baseEndpoint.ProviderSpecific, endpoint.ProviderSpecificProperty{Name: "disabled", Value: template.Disabled})
+		if template.Disabled != "" {
+			baseEndpoint.ProviderSpecific = append(
+				baseEndpoint.ProviderSpecific,
+				endpoint.ProviderSpecificProperty{Name: "disabled", Value: template.Disabled},
+			)
 		}
 		if template.Regexp != "" {
-			baseEndpoint.ProviderSpecific = append(baseEndpoint.ProviderSpecific, endpoint.ProviderSpecificProperty{Name: "regexp", Value: template.Regexp})
+			baseEndpoint.ProviderSpecific = append(
+				baseEndpoint.ProviderSpecific,
+				endpoint.ProviderSpecificProperty{Name: "regexp", Value: template.Regexp},
+			)
 		}
-		if template.MatchSubdomain != "" && template.MatchSubdomain != "false" {
-			baseEndpoint.ProviderSpecific = append(baseEndpoint.ProviderSpecific, endpoint.ProviderSpecificProperty{Name: "match-subdomain", Value: template.MatchSubdomain})
+		if template.MatchSubdomain != "" {
+			baseEndpoint.ProviderSpecific = append(
+				baseEndpoint.ProviderSpecific,
+				endpoint.ProviderSpecificProperty{Name: "match-subdomain", Value: template.MatchSubdomain},
+			)
 		}
 		if template.AddressList != "" {
-			baseEndpoint.ProviderSpecific = append(baseEndpoint.ProviderSpecific, endpoint.ProviderSpecificProperty{Name: "address-list", Value: template.AddressList})
+			baseEndpoint.ProviderSpecific = append(
+				baseEndpoint.ProviderSpecific,
+				endpoint.ProviderSpecificProperty{Name: "address-list", Value: template.AddressList},
+			)
 		}
 
 		// Aggregate all targets from the records in the group
@@ -365,21 +273,121 @@ func (p *MikrotikProvider) aggregateRecordsToEndpoints(records []DNSRecord) ([]*
 		for _, record := range groupRecords {
 			target, err := record.toExternalDNSTarget()
 			if err != nil {
-				log.Warnf("Failed to convert record %s to target for group %s: %v", record.ID, groupKey, err)
-				continue
+				return nil, fmt.Errorf("failed to convert record %+v to target: %w", record, err)
 			}
 			targets = append(targets, target)
 		}
 
-		if len(targets) == 0 {
-			log.Warnf("No valid targets found for group %s", groupKey)
-			continue
-		}
-
 		baseEndpoint.Targets = targets
+		log.Debugf("Created endpoint for group %s: %+v", groupKey, baseEndpoint)
+
 		endpoints = append(endpoints, baseEndpoint)
 	}
 
 	log.Debugf("Aggregated %d record groups to %d endpoints", len(recordGroups), len(endpoints))
 	return endpoints, nil
+}
+
+// filterChanges processes the given plan.Changes to optimize updates by splitting them into deletes and creates
+func (p *MikrotikProvider) filterChanges(changes *plan.Changes) (*plan.Changes, error) {
+	if len(changes.UpdateOld) == 0 || len(changes.UpdateNew) == 0 {
+		return changes, nil
+	}
+
+	if len(changes.UpdateOld) != len(changes.UpdateNew) {
+		return nil, fmt.Errorf("mismatched UpdateOld and UpdateNew lengths: %d vs %d", len(changes.UpdateOld), len(changes.UpdateNew))
+	}
+
+	newChanges := &plan.Changes{
+		Create:    changes.Create,
+		UpdateOld: []*endpoint.Endpoint{},
+		UpdateNew: []*endpoint.Endpoint{},
+		Delete:    changes.Delete,
+	}
+
+	// Process matched pairs (updateOld and updateNew are matched by index)
+	for key, oldEndpoint := range changes.UpdateOld {
+		newEndpoint := changes.UpdateNew[key]
+
+		// sanity check: name and type must match
+		if oldEndpoint.DNSName != newEndpoint.DNSName || oldEndpoint.RecordType != newEndpoint.RecordType {
+			return nil, fmt.Errorf("mismatched UpdateOld and UpdateNew endpoints at index %d: %v vs %v", key, oldEndpoint, newEndpoint)
+		}
+
+		// if metadata matches, do partial update
+		if p.compareEndpointsMetadata(oldEndpoint, newEndpoint) {
+			deleteEndpoint, createEndpoint := p.diffEndpoints(oldEndpoint, newEndpoint)
+			if deleteEndpoint != nil {
+				newChanges.Delete = append(newChanges.Delete, deleteEndpoint)
+			}
+			if createEndpoint != nil {
+				newChanges.Create = append(newChanges.Create, createEndpoint)
+			}
+		} else {
+			newChanges.Delete = append(newChanges.Delete, oldEndpoint)
+			newChanges.Create = append(newChanges.Create, newEndpoint)
+		}
+	}
+
+	return newChanges, nil
+}
+
+// diffEndpoints computes the difference between two endpoints and returns two new endpoints:
+// one for targets to delete and one for targets to add. If there are no targets to delete or add,
+// the corresponding endpoint will be nil.
+func (p *MikrotikProvider) diffEndpoints(oldEndpoint, newEndpoint *endpoint.Endpoint) (*endpoint.Endpoint, *endpoint.Endpoint) {
+	// Build maps of old and new targets
+	oldTargets := make(map[string]bool) // target -> exists
+	for _, target := range oldEndpoint.Targets {
+		oldTargets[target] = true
+	}
+	log.Debugf("Old targets: %v", oldEndpoint.Targets)
+
+	newTargets := make(map[string]bool) // target -> exists
+	for _, target := range newEndpoint.Targets {
+		newTargets[target] = true
+	}
+	log.Debugf("New targets: %v", newEndpoint.Targets)
+
+	// Find targets to delete (in old but not in new)
+	var toDelete []string
+	for target := range oldTargets {
+		if !newTargets[target] {
+			toDelete = append(toDelete, target)
+		}
+	}
+	log.Debugf("Targets to delete: %v", toDelete)
+
+	// Find targets to add (in new but not in old)
+	var toAdd []string
+	for target := range newTargets {
+		if !oldTargets[target] {
+			toAdd = append(toAdd, target)
+		}
+	}
+	log.Debugf("Targets to add: %v", toAdd)
+
+	endpointToDelete := &endpoint.Endpoint{
+		DNSName:    oldEndpoint.DNSName,
+		RecordType: oldEndpoint.RecordType,
+		Targets:    toDelete,
+	}
+	if len(toDelete) == 0 {
+		log.Debug("No targets to delete, returning nil for delete endpoint")
+		endpointToDelete = nil
+	}
+
+	endpointToAdd := &endpoint.Endpoint{
+		DNSName:          newEndpoint.DNSName,
+		RecordType:       newEndpoint.RecordType,
+		Targets:          toAdd,
+		RecordTTL:        newEndpoint.RecordTTL,
+		ProviderSpecific: newEndpoint.ProviderSpecific,
+	}
+	if len(toAdd) == 0 {
+		log.Debug("No targets to add, returning nil for add endpoint")
+		endpointToAdd = nil
+	}
+
+	return endpointToDelete, endpointToAdd
 }
