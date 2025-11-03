@@ -175,6 +175,11 @@ func (c *MikrotikApiClient) DeleteRecordsFromEndpoint(ep *endpoint.Endpoint) err
 func (c *MikrotikApiClient) CreateRecordsFromEndpoint(ep *endpoint.Endpoint) ([]*DNSRecord, error) {
 	log.Infof("creating DNS records for endpoint: %+v", ep)
 
+	if len(ep.Targets) == 0 {
+		log.Warnf("no targets specified for endpoint %s, nothing to delete", ep.DNSName)
+		return nil, nil
+	}
+
 	// Convert endpoint to multiple DNS records
 	records, err := NewDNSRecords(ep)
 	if err != nil {
