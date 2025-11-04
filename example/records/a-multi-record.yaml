@@ -1,0 +1,14 @@
+---
+apiVersion: externaldns.k8s.io/v1alpha1
+kind: DNSEndpoint
+metadata:
+  name: a-multi-record
+spec:
+  endpoints:
+    - dnsName: a.example.com
+      recordTTL: 3605
+      recordType: A
+      targets:
+        - 10.0.0.1
+        - 10.0.0.2
+        - 10.0.0.3

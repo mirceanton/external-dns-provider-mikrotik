@@ -148,7 +148,7 @@ func TestMikrotikTTLtoEndpointTTL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ttl, err := mikrotikTTLtoEndpointTTL(tt.inputTTL)
+			ttl, err := MikrotikTTLtoEndpointTTL(tt.inputTTL)
 			if tt.expectError {
 				assert.Error(t, err)
 			} else {
@@ -177,7 +177,7 @@ func TestEndpointTTLtoMikrotikTTL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ttlStr, err := endpointTTLtoMikrotikTTL(tt.inputTTL)
+			ttlStr, err := EndpointTTLtoMikrotikTTL(tt.inputTTL)
 			if tt.expectError {
 				assert.Error(t, err)
 				assert.Equal(t, "", ttlStr)
@@ -192,644 +192,131 @@ func TestEndpointTTLtoMikrotikTTL(t *testing.T) {
 // ================================================================================================
 // Test DNS Record Conversion Functions
 // ================================================================================================
-func TestDNSRecordToExternalDNSEndpoint(t *testing.T) {
+func TestDNSRecordToExternalDNSTarget(t *testing.T) {
 	tests := []struct {
-		name        string
-		record      *DNSRecord
-		expected    *endpoint.Endpoint
-		expectError bool
+		name           string
+		record         *DNSRecord
+		expectedTarget string
+		expectError    bool
 	}{
-		// ===============================================================
-		// A RECORD TEST CASES
-		// ===============================================================
+		// A RECORD
 		{
-			name: "Valid A record",
-			record: &DNSRecord{
-				Name:    "example.com",
-				Type:    "A",
-				Address: "192.0.2.1",
-				TTL:     "1h",
-			},
-			expected: &endpoint.Endpoint{
-				DNSName:    "example.com",
-				RecordType: "A",
-				Targets:    endpoint.NewTargets("192.0.2.1"),
-				RecordTTL:  endpoint.TTL(3600),
-			},
-			expectError: false,
+			name:           "Valid A record",
+			record:         &DNSRecord{Type: "A", Address: "192.0.2.1"},
+			expectedTarget: "192.0.2.1",
+			expectError:    false,
 		},
 		{
-			name: "Invalid A record (empty address)",
-			record: &DNSRecord{
-				Name:    "invalid.example.com",
-				Type:    "A",
-				Address: "",
-				TTL:     "1h",
-			},
-			expected:    nil,
-			expectError: true,
-		},
-		{
-			name: "Invalid A record (malformed address)",
-			record: &DNSRecord{
-				Name:    "invalid.example.com",
-				Type:    "A",
-				Address: "999.999.999.999",
-				TTL:     "1h",
-			},
-			expected:    nil,
-			expectError: true,
-		},
-		{
-			name: "Invalid A record (IPv6 address)",
-			record: &DNSRecord{
-				Name:    "invalid.example.com",
-				Type:    "A",
-				Address: "2001:db8::1",
-				TTL:     "1h",
-			},
-			expected:    nil,
+			name:        "Invalid A record (IPv6 address)",
+			record:      &DNSRecord{Type: "A", Address: "2001:db8::1"},
 			expectError: true,
 		},
 
-		// ===============================================================
-		// AAAA RECORD TEST CASES
-		// ===============================================================
+		// AAAA RECORD
 		{
-			name: "Valid AAAA record",
-			record: &DNSRecord{
-				Name:    "ipv6.example.com",
-				Type:    "AAAA",
-				Address: "2001:db8::1",
-				TTL:     "2h",
-			},
-			expected: &endpoint.Endpoint{
-				DNSName:    "ipv6.example.com",
-				RecordType: "AAAA",
-				Targets:    endpoint.NewTargets("2001:db8::1"),
-				RecordTTL:  endpoint.TTL(7200),
-			},
-			expectError: false,
+			name:           "Valid AAAA record",
+			record:         &DNSRecord{Type: "AAAA", Address: "2001:db8::1"},
+			expectedTarget: "2001:db8::1",
+			expectError:    false,
 		},
 		{
-			name: "Invalid AAAA record (empty address)",
-			record: &DNSRecord{
-				Name:    "invalid.example.com",
-				Type:    "AAAA",
-				Address: "",
-				TTL:     "1h",
-			},
-			expected:    nil,
-			expectError: true,
-		},
-		{
-			name: "Invalid AAAA record (IPv4 address)",
-			record: &DNSRecord{
-				Name:    "invalid.example.com",
-				Type:    "AAAA",
-				Address: "1.2.3.4",
-				TTL:     "1h",
-			},
-			expected:    nil,
-			expectError: true,
-		},
-		{
-			name: "Invalid AAAA record (malformed address)",
-			record: &DNSRecord{
-				Name:    "invalid.example.com",
-				Type:    "AAAA",
-				Address: "1200:0000:AB00:1234:0000:2552:7777:1313:3:31",
-				TTL:     "1h",
-			},
-			expected:    nil,
+			name:        "Invalid AAAA record (IPv4 address)",
+			record:      &DNSRecord{Type: "AAAA", Address: "192.0.2.1"},
 			expectError: true,
 		},
 
-		// ===============================================================
-		// CNAME RECORD TEST CASES
-		// ===============================================================
+		// CNAME RECORD
 		{
-			name: "Valid CNAME record",
-			record: &DNSRecord{
-				Name:  "www.example.com",
-				Type:  "CNAME",
-				CName: "example.com",
-				TTL:   "30m",
-			},
-			expected: &endpoint.Endpoint{
-				DNSName:    "www.example.com",
-				RecordType: "CNAME",
-				Targets:    endpoint.NewTargets("example.com"),
-				RecordTTL:  endpoint.TTL(1800),
-			},
-			expectError: false,
+			name:           "Valid CNAME record",
+			record:         &DNSRecord{Type: "CNAME", CName: "example.com"},
+			expectedTarget: "example.com",
+			expectError:    false,
 		},
 		{
-			name: "Invalid CNAME record (empty cname)",
-			record: &DNSRecord{
-				Name:  "invalid.example.com",
-				Type:  "CNAME",
-				CName: "",
-				TTL:   "30m",
-			},
-			expected:    nil,
-			expectError: true,
-		},
-		{
-			name: "Invalid CNAME record (malformed domain)",
-			record: &DNSRecord{
-				Name:  "invalid.example.com",
-				Type:  "CNAME",
-				CName: "sub......domain...here-",
-				TTL:   "30m",
-			},
-			expected:    nil,
+			name:        "Invalid CNAME record (malformed domain)",
+			record:      &DNSRecord{Type: "CNAME", CName: "invalid_domain"},
 			expectError: true,
 		},
 
-		// ===============================================================
-		// TXT RECORD TEST CASES
-		// ===============================================================
+		// TXT RECORD
 		{
-			name: "Valid TXT record",
-			record: &DNSRecord{
-				Name: "example.com",
-				Type: "TXT",
-				Text: "v=spf1 include:example.com ~all",
-				TTL:  "10m",
-			},
-			expected: &endpoint.Endpoint{
-				DNSName:    "example.com",
-				RecordType: "TXT",
-				Targets:    endpoint.NewTargets("v=spf1 include:example.com ~all"),
-				RecordTTL:  endpoint.TTL(600),
-			},
-			expectError: false,
+			name:           "Valid TXT record",
+			record:         &DNSRecord{Type: "TXT", Text: "some text"},
+			expectedTarget: "some text",
+			expectError:    false,
 		},
 		{
-			name: "Invalid TXT record (empty text)",
-			record: &DNSRecord{
-				Name: "invalid.example.com",
-				Type: "TXT",
-				Text: "",
-				TTL:  "10m",
-			},
-			expected:    nil,
+			name:        "Invalid TXT record (empty text)",
+			record:      &DNSRecord{Type: "TXT", Text: ""},
 			expectError: true,
 		},
 
-		// ===============================================================
-		// MX RECORD TEST CASES
-		// ===============================================================
+		// MX RECORD
 		{
-			name: "Valid MX record",
-			record: &DNSRecord{
-				Name:         "mx.example.com",
-				Type:         "MX",
-				MXExchange:   "mailhost1.example.com",
-				MXPreference: "10",
-				TTL:          "10m",
-			},
-			expected: &endpoint.Endpoint{
-				DNSName:    "mx.example.com",
-				RecordType: "MX",
-				Targets:    endpoint.NewTargets("10 mailhost1.example.com"),
-				RecordTTL:  endpoint.TTL(600),
-			},
-			expectError: false,
+			name:           "Valid MX record",
+			record:         &DNSRecord{Type: "MX", MXPreference: "10", MXExchange: "mail.example.com"},
+			expectedTarget: "10 mail.example.com",
+			expectError:    false,
 		},
 		{
-			name: "Invalid MX record (empty preference)",
-			record: &DNSRecord{
-				Name:         "invalid.example.com",
-				Type:         "MX",
-				MXExchange:   "mailhost1.example.com",
-				MXPreference: "",
-				TTL:          "10m",
-			},
-			expected:    nil,
+			name:        "Invalid MX record (bad preference)",
+			record:      &DNSRecord{Type: "MX", MXPreference: "bad", MXExchange: "mail.example.com"},
 			expectError: true,
 		},
 		{
-			name: "Invalid MX record (negative preference)",
-			record: &DNSRecord{
-				Name:         "invalid.example.com",
-				Type:         "MX",
-				MXExchange:   "mailhost1.example.com",
-				MXPreference: "-10",
-				TTL:          "10m",
-			},
-			expected:    nil,
-			expectError: true,
-		},
-		{
-			name: "Invalid MX record (too large preference)",
-			record: &DNSRecord{
-				Name:         "invalid.example.com",
-				Type:         "MX",
-				MXExchange:   "mailhost1.example.com",
-				MXPreference: "70000",
-				TTL:          "10m",
-			},
-			expected:    nil,
-			expectError: true,
-		},
-		{
-			name: "Invalid MX record (non-numeric preference)",
-			record: &DNSRecord{
-				Name:         "invalid.example.com",
-				Type:         "MX",
-				MXExchange:   "mailhost1.example.com",
-				MXPreference: "invalid",
-				TTL:          "10m",
-			},
-			expected:    nil,
-			expectError: true,
-		},
-		{
-			name: "Invalid MX record (empty exchange)",
-			record: &DNSRecord{
-				Name:         "invalid.example.com",
-				Type:         "MX",
-				MXExchange:   "",
-				MXPreference: "1",
-				TTL:          "10m",
-			},
-			expected:    nil,
-			expectError: true,
-		},
-		{
-			name: "Invalid MX record (exchange missing TLD)",
-			record: &DNSRecord{
-				Name:         "invalid.example.com",
-				Type:         "MX",
-				MXExchange:   "invalid_domain",
-				MXPreference: "10",
-				TTL:          "10m",
-			},
-			expected:    nil,
-			expectError: true,
-		},
-		{
-			name: "Invalid MX record (malformed domain)",
-			record: &DNSRecord{
-				Name:         "invalid.example.com",
-				Type:         "MX",
-				MXExchange:   "sub....domain.com",
-				MXPreference: "10",
-				TTL:          "10m",
-			},
-			expected:    nil,
+			name:        "Invalid MX record (bad exchange)",
+			record:      &DNSRecord{Type: "MX", MXPreference: "10", MXExchange: "invalid_mail"},
 			expectError: true,
 		},
 
-		// ===============================================================
-		// SRV RECORD TEST CASES
-		// ===============================================================
+		// SRV RECORD
 		{
-			name: "Valid SRV record",
-			record: &DNSRecord{
-				Name:        "_sip._tcp.example.com",
-				Type:        "SRV",
-				SrvPriority: "10",
-				SrvWeight:   "20",
-				SrvPort:     "5060",
-				SrvTarget:   "sipserver.example.com",
-				TTL:         "1h",
-			},
-			expected: &endpoint.Endpoint{
-				DNSName:    "_sip._tcp.example.com",
-				RecordType: "SRV",
-				Targets:    endpoint.NewTargets("10 20 5060 sipserver.example.com"),
-				RecordTTL:  endpoint.TTL(3600),
-			},
-			expectError: false,
+			name:           "Valid SRV record",
+			record:         &DNSRecord{Type: "SRV", SrvPriority: "10", SrvWeight: "20", SrvPort: "8080", SrvTarget: "server.example.com"},
+			expectedTarget: "10 20 8080 server.example.com",
+			expectError:    false,
 		},
 		{
-			name: "Valid SRV record with minimum priority and weight",
-			record: &DNSRecord{
-				Name:        "_sip._tcp.example.com",
-				Type:        "SRV",
-				SrvPriority: "0",
-				SrvWeight:   "0",
-				SrvPort:     "443",
-				SrvTarget:   "example.com",
-				TTL:         "1h",
-			},
-			expected: &endpoint.Endpoint{
-				DNSName:    "_sip._tcp.example.com",
-				RecordType: "SRV",
-				Targets:    endpoint.NewTargets("0 0 443 example.com"),
-				RecordTTL:  endpoint.TTL(3600),
-			},
-			expectError: false,
-		},
-		{
-			name: "Valid SRV record with maximum priority and weight",
-			record: &DNSRecord{
-				Name:        "_sip._tcp.example.com",
-				Type:        "SRV",
-				SrvPriority: "65535",
-				SrvWeight:   "65535",
-				SrvPort:     "53",
-				SrvTarget:   "domain.com",
-				TTL:         "1h",
-			},
-			expected: &endpoint.Endpoint{
-				DNSName:    "_sip._tcp.example.com",
-				RecordType: "SRV",
-				Targets:    endpoint.NewTargets("65535 65535 53 domain.com"),
-				RecordTTL:  endpoint.TTL(3600),
-			},
-			expectError: false,
-		},
-		{
-			name: "Invalid SRV record (negative priority)",
-			record: &DNSRecord{
-				Name:        "_sip._tcp.example.com",
-				Type:        "SRV",
-				SrvPriority: "-1",
-				SrvWeight:   "20",
-				SrvPort:     "80",
-				SrvTarget:   "sipserver.example.com",
-				TTL:         "1h",
-			},
-			expected:    nil,
+			name:        "Invalid SRV record (bad priority)",
+			record:      &DNSRecord{Type: "SRV", SrvPriority: "-1", SrvWeight: "20", SrvPort: "8080", SrvTarget: "server.example.com"},
 			expectError: true,
 		},
 		{
-			name: "Invalid SRV record (negative weight)",
-			record: &DNSRecord{
-				Name:        "_sip._tcp.example.com",
-				Type:        "SRV",
-				SrvPriority: "10",
-				SrvWeight:   "-5",
-				SrvPort:     "80",
-				SrvTarget:   "sipserver.example.com",
-				TTL:         "1h",
-			},
-			expected:    nil,
-			expectError: true,
-		},
-		{
-			name: "Invalid SRV record (port out of range)",
-			record: &DNSRecord{
-				Name:        "_sip._tcp.example.com",
-				Type:        "SRV",
-				SrvPriority: "10",
-				SrvWeight:   "20",
-				SrvPort:     "70000",
-				SrvTarget:   "sipserver.example.com",
-				TTL:         "1h",
-			},
-			expected:    nil,
-			expectError: true,
-		},
-		{
-			name: "Invalid SRV record (empty target)",
-			record: &DNSRecord{
-				Name:        "_sip._tcp.example.com",
-				Type:        "SRV",
-				SrvPriority: "10",
-				SrvWeight:   "20",
-				SrvPort:     "80",
-				SrvTarget:   "",
-				TTL:         "1h",
-			},
-			expected:    nil,
-			expectError: true,
-		},
-		{
-			name: "Invalid SRV record (malformed target domain)",
-			record: &DNSRecord{
-				Name:        "_sip._tcp.example.com",
-				Type:        "SRV",
-				SrvPriority: "10",
-				SrvWeight:   "20",
-				SrvPort:     "80",
-				SrvTarget:   "invalid_domain..com",
-				TTL:         "1h",
-			},
-			expected:    nil,
+			name:        "Invalid SRV record (bad target)",
+			record:      &DNSRecord{Type: "SRV", SrvPriority: "10", SrvWeight: "20", SrvPort: "8080", SrvTarget: "invalid_server"},
 			expectError: true,
 		},
 
-		// ===============================================================
-		// NS RECORD TEST CASES
-		// ===============================================================
+		// NS RECORD
 		{
-			name: "Valid NS record",
-			record: &DNSRecord{
-				Name: "example.com",
-				Type: "NS",
-				NS:   "ns1.example.net",
-				TTL:  "1h",
-			},
-			expected: &endpoint.Endpoint{
-				DNSName:    "example.com",
-				RecordType: "NS",
-				Targets:    endpoint.NewTargets("ns1.example.net"),
-				RecordTTL:  endpoint.TTL(3600),
-			},
-			expectError: false,
+			name:           "Valid NS record",
+			record:         &DNSRecord{Type: "NS", NS: "ns1.example.com"},
+			expectedTarget: "ns1.example.com",
+			expectError:    false,
 		},
 		{
-			name: "Invalid NS record (empty NS field)",
-			record: &DNSRecord{
-				Name: "example.com",
-				Type: "NS",
-				NS:   "",
-				TTL:  "1h",
-			},
-			expected:    nil,
-			expectError: true,
-		},
-		{
-			name: "Invalid NS record (malformed NS domain)",
-			record: &DNSRecord{
-				Name: "example.com",
-				Type: "NS",
-				NS:   "invalid_domain..com",
-				TTL:  "1h",
-			},
-			expected:    nil,
+			name:        "Invalid NS record (malformed domain)",
+			record:      &DNSRecord{Type: "NS", NS: "invalid_ns"},
 			expectError: true,
 		},
 
-		// ===============================================================
-		// PROVIDER-SPECIFIC DATA TEST CASES
-		// ===============================================================
+		// UNSUPPORTED TYPE
 		{
-			name: "Valid Regexp Record",
-			record: &DNSRecord{
-				Name:    "",
-				Type:    "A",
-				Address: "192.0.2.1",
-				TTL:     "1h",
-				Regexp:  "*.example.com",
-			},
-			expected: &endpoint.Endpoint{
-				DNSName:    "",
-				RecordType: "A",
-				Targets:    endpoint.NewTargets("192.0.2.1"),
-				RecordTTL:  endpoint.TTL(3600),
-				ProviderSpecific: endpoint.ProviderSpecific{
-					{Name: "regexp", Value: "*.example.com"},
-				},
-			},
-			expectError: false,
-		},
-		{
-			name: "Valid Provider-specific properties",
-			record: &DNSRecord{
-				Name:           "example.com",
-				Type:           "TXT",
-				Text:           "some text",
-				TTL:            "10m",
-				Comment:        "Test comment",
-				MatchSubdomain: "yes",
-				AddressList:    "list1",
-				Disabled:       "true",
-			},
-			expected: &endpoint.Endpoint{
-				DNSName:    "example.com",
-				RecordType: "TXT",
-				Targets:    endpoint.NewTargets("some text"),
-				RecordTTL:  endpoint.TTL(600),
-				ProviderSpecific: endpoint.ProviderSpecific{
-					{Name: "comment", Value: "Test comment"},
-					{Name: "match-subdomain", Value: "yes"},
-					{Name: "address-list", Value: "list1"},
-					{Name: "disabled", Value: "true"},
-				},
-			},
-			expectError: false,
-		},
-		{
-			name: "Invalid Provider-Specific (name and regexp are mutually exclusive)",
-			record: &DNSRecord{
-				Name:    "example.com",
-				Type:    "A",
-				Address: "192.0.2.1",
-				TTL:     "1h",
-				Regexp:  "*.example.com",
-			},
-			expected:    nil,
-			expectError: true,
-		},
-		{
-			name: "Invalid Provider-Specific (match-subdomain requires name)",
-			record: &DNSRecord{
-				Name:           "",
-				Type:           "A",
-				Address:        "192.0.2.1",
-				TTL:            "1h",
-				MatchSubdomain: "yes",
-			},
-			expected:    nil,
-			expectError: true,
-		},
-		// TODO: invalid provider specific?
-
-		// ===============================================================
-		// DEFAULT VALUES FOR UNSET FIELDS TEST CASES
-		// ===============================================================
-		{
-			name: "Empty Type (should default to 'A')",
-			record: &DNSRecord{
-				Name: "example.com",
-				//! Type is empty
-				Address: "192.0.2.1",
-				TTL:     "1h",
-			},
-			expected: &endpoint.Endpoint{
-				DNSName:    "example.com",
-				RecordType: "A",
-				Targets:    endpoint.NewTargets("192.0.2.1"),
-				RecordTTL:  endpoint.TTL(3600),
-			},
-			expectError: false,
-		},
-		{
-			name: "Empty TTL (should default to 0)",
-			record: &DNSRecord{
-				Name:    "example.com",
-				Type:    "A",
-				Address: "192.0.2.1",
-				//! TTL is empty
-			},
-			expected: &endpoint.Endpoint{
-				DNSName:    "example.com",
-				RecordType: "A",
-				Targets:    endpoint.NewTargets("192.0.2.1"),
-				RecordTTL:  endpoint.TTL(0),
-			},
-			expectError: false,
-		},
-
-		// ===============================================================
-		// GENERIC ERROR CASES
-		// ===============================================================
-		{
-			name: "Invalid TTL in DNSRecord",
-			record: &DNSRecord{
-				Name:    "example.com",
-				Type:    "A",
-				Address: "192.0.2.1",
-				TTL:     "invalid",
-			},
-			expected:    nil,
-			expectError: true,
-		},
-		{
-			name: "Unsupported record type",
-			record: &DNSRecord{
-				Name: "example.com",
-				Type: "FWD",
-				TTL:  "1h",
-			},
-			expected:    nil,
-			expectError: true,
-		},
-		{
-			name: "Record with empty targets",
-			record: &DNSRecord{
-				Name: "empty.example.com",
-				Type: "A",
-				TTL:  "1h",
-				//! Address is empty
-			},
-			expected:    nil,
+			name:        "Unsupported record type",
+			record:      &DNSRecord{Type: "UNSUPPORTED"},
 			expectError: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			endpoint, err := tt.record.toExternalDNSEndpoint()
+			target, err := tt.record.toExternalDNSTarget()
 			if tt.expectError {
 				assert.Error(t, err)
-				assert.Nil(t, endpoint)
+				assert.Empty(t, target)
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, tt.expected.DNSName, endpoint.DNSName)
-				assert.Equal(t, tt.expected.RecordType, endpoint.RecordType)
-				assert.Equal(t, tt.expected.Targets, endpoint.Targets)
-				assert.Equal(t, tt.expected.RecordTTL, endpoint.RecordTTL)
-
-				// Check provider-specific properties
-				assert.Equal(t, len(tt.expected.ProviderSpecific), len(endpoint.ProviderSpecific))
-				for _, expectedPS := range tt.expected.ProviderSpecific {
-					found := false
-					for _, actualPS := range endpoint.ProviderSpecific {
-						if expectedPS.Name == actualPS.Name {
-							assert.Equal(t, expectedPS.Value, actualPS.Value)
-							found = true
-							break
-						}
-					}
-					assert.True(t, found, "ProviderSpecific property '%s' not found", expectedPS.Name)
-				}
+				assert.Equal(t, tt.expectedTarget, target)
 			}
 		})
 	}
@@ -837,10 +324,11 @@ func TestDNSRecordToExternalDNSEndpoint(t *testing.T) {
 
 func TestExternalDNSEndpointToDNSRecord(t *testing.T) {
 	tests := []struct {
-		name        string
-		endpoint    *endpoint.Endpoint
-		expected    *DNSRecord
-		expectError bool
+		name            string
+		endpoint        *endpoint.Endpoint
+		expected        *DNSRecord
+		expectedRecords []*DNSRecord
+		expectError     bool
 	}{
 		// ===============================================================
 		// A RECORD TEST CASES
@@ -869,11 +357,19 @@ func TestExternalDNSEndpointToDNSRecord(t *testing.T) {
 				Targets:    endpoint.NewTargets("192.0.2.1", "192.0.2.2"),
 				RecordTTL:  endpoint.TTL(3600),
 			},
-			expected: &DNSRecord{
-				Name:    "multi.example.com",
-				Type:    "A",
-				Address: "192.0.2.1", // Should use the first target
-				TTL:     "1h",
+			expectedRecords: []*DNSRecord{
+				{
+					Name:    "multi.example.com",
+					Type:    "A",
+					Address: "192.0.2.1",
+					TTL:     "1h",
+				},
+				{
+					Name:    "multi.example.com",
+					Type:    "A",
+					Address: "192.0.2.2",
+					TTL:     "1h",
+				},
 			},
 			expectError: false,
 		},
@@ -938,11 +434,19 @@ func TestExternalDNSEndpointToDNSRecord(t *testing.T) {
 				Targets:    endpoint.NewTargets("2001:db8::1", "2001:db8::2"),
 				RecordTTL:  endpoint.TTL(3600),
 			},
-			expected: &DNSRecord{
-				Name:    "multi.example.com",
-				Type:    "AAAA",
-				Address: "2001:db8::1", // Should use the first target
-				TTL:     "1h",
+			expectedRecords: []*DNSRecord{
+				{
+					Name:    "multi.example.com",
+					Type:    "AAAA",
+					Address: "2001:db8::1",
+					TTL:     "1h",
+				},
+				{
+					Name:    "multi.example.com",
+					Type:    "AAAA",
+					Address: "2001:db8::2",
+					TTL:     "1h",
+				},
 			},
 			expectError: false,
 		},
@@ -1184,7 +688,7 @@ func TestExternalDNSEndpointToDNSRecord(t *testing.T) {
 				SrvPriority: "65535",
 				SrvWeight:   "65535",
 				SrvPort:     "65535",
-				SrvTarget:   ".",
+				SrvTarget:   "domain.com",
 				TTL:         "1h",
 			},
 			expectError: false,
@@ -1500,32 +1004,56 @@ func TestExternalDNSEndpointToDNSRecord(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			record, err := NewDNSRecord(tt.endpoint)
+			records, recordsErr := NewDNSRecords(tt.endpoint)
+
 			if tt.expectError {
-				assert.Error(t, err)
-				assert.Nil(t, record)
-			} else {
-				assert.NoError(t, err)
-				assert.NotNil(t, record)
-				assert.Equal(t, tt.expected.Name, record.Name)
-				assert.Equal(t, tt.expected.Type, record.Type)
-				assert.Equal(t, tt.expected.TTL, record.TTL)
+				assert.Error(t, recordsErr)
+				assert.Nil(t, records)
+				return
+			}
 
-				// Verify the record content based on type
-				switch record.Type {
-				case "A", "AAAA":
-					assert.Equal(t, tt.expected.Address, record.Address)
-				case "CNAME":
-					assert.Equal(t, tt.expected.CName, record.CName)
-				case "TXT":
-					assert.Equal(t, tt.expected.Text, record.Text)
+			assert.NoError(t, recordsErr)
+			assert.NotNil(t, records)
+
+			expectedRecords := tt.expectedRecords
+			if expectedRecords == nil && tt.expected != nil {
+				expectedRecords = []*DNSRecord{tt.expected}
+			}
+
+			if assert.NotNil(t, expectedRecords, "expected records must be provided for successful cases") {
+				assert.Equal(t, len(expectedRecords), len(records))
+
+				for idx, expectedRecord := range expectedRecords {
+					actualRecord := records[idx]
+
+					assert.Equal(t, expectedRecord.Name, actualRecord.Name)
+					assert.Equal(t, expectedRecord.Type, actualRecord.Type)
+					assert.Equal(t, expectedRecord.TTL, actualRecord.TTL)
+					assert.Equal(t, expectedRecord.Comment, actualRecord.Comment)
+					assert.Equal(t, expectedRecord.Regexp, actualRecord.Regexp)
+					assert.Equal(t, expectedRecord.MatchSubdomain, actualRecord.MatchSubdomain)
+					assert.Equal(t, expectedRecord.AddressList, actualRecord.AddressList)
+					assert.Equal(t, expectedRecord.Disabled, actualRecord.Disabled)
+
+					switch actualRecord.Type {
+					case "A", "AAAA":
+						assert.Equal(t, expectedRecord.Address, actualRecord.Address)
+					case "CNAME":
+						assert.Equal(t, expectedRecord.CName, actualRecord.CName)
+					case "TXT":
+						assert.Equal(t, expectedRecord.Text, actualRecord.Text)
+					case "MX":
+						assert.Equal(t, expectedRecord.MXPreference, actualRecord.MXPreference)
+						assert.Equal(t, expectedRecord.MXExchange, actualRecord.MXExchange)
+					case "SRV":
+						assert.Equal(t, expectedRecord.SrvPriority, actualRecord.SrvPriority)
+						assert.Equal(t, expectedRecord.SrvWeight, actualRecord.SrvWeight)
+						assert.Equal(t, expectedRecord.SrvPort, actualRecord.SrvPort)
+						assert.Equal(t, expectedRecord.SrvTarget, actualRecord.SrvTarget)
+					case "NS":
+						assert.Equal(t, expectedRecord.NS, actualRecord.NS)
+					}
 				}
-
-				// Check provider-specific properties
-				assert.Equal(t, tt.expected.Comment, record.Comment)
-				assert.Equal(t, tt.expected.Regexp, record.Regexp)
-				assert.Equal(t, tt.expected.MatchSubdomain, record.MatchSubdomain)
-				assert.Equal(t, tt.expected.AddressList, record.AddressList)
 			}
 		})
 	}
