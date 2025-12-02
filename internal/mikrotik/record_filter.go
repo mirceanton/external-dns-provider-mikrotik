@@ -8,19 +8,17 @@ type DNSRecordFilter struct {
 	Type string
 }
 
-// toQueryParams converts a DNSRecordFilter to an encoded query string for the RouterOS API.
+// toQueryParams converts a DNSRecordFilter to a query string for the RouterOS API.
 func (f DNSRecordFilter) toQueryParams() string {
-	params := url.Values{}
-
-	if f.Name != "" {
-		params.Set("name", f.Name)
-	}
-
 	recordType := f.Type
 	if recordType == "" {
 		recordType = "A,AAAA,CNAME,TXT,MX,SRV,NS"
 	}
-	params.Set("type", recordType)
+	query := "type=" + recordType
 
-	return params.Encode()
+	if f.Name != "" {
+		query += "&name=" + url.QueryEscape(f.Name)
+	}
+
+	return query
 }
