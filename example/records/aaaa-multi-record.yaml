@@ -5,7 +5,7 @@ metadata:
   name: aaaa-multi-record
 spec:
   endpoints:
-    - dnsName: aaaa.example.com
+    - dnsName: aaaa-multi.example.com
       recordTTL: 180
       recordType: AAAA
       targets:
