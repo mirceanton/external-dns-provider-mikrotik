@@ -2,10 +2,11 @@
 package mikrotik
 
 import (
+	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"sigs.k8s.io/external-dns/endpoint"
@@ -26,7 +27,7 @@ func TestNewMikrotikClient(t *testing.T) {
 
 	defaults := &MikrotikDefaults{
 		DefaultTTL:     1900,
-		DefaultComment: "test",
+		DefaultComment: "",
 	}
 
 	client, err := NewMikrotikClient(config, defaults)
@@ -207,505 +208,65 @@ func TestGetSystemInfo(t *testing.T) {
 	}
 }
 
-func TestCreateDNSRecord(t *testing.T) {
+func TestGetDNSRecordsByName(t *testing.T) {
 	testCases := []struct {
-		name           string
-		initialRecords map[string]DNSRecord
-		endpoint       *endpoint.Endpoint
-		expectedError  bool
+		name          string
+		targetName    string
+		records       []DNSRecord
+		expectedCount int
+		expectError   bool
+		expectedQuery string
 	}{
 		{
-			name:           "Valid A record creation",
-			initialRecords: map[string]DNSRecord{},
-			endpoint: &endpoint.Endpoint{
-				DNSName:    "test-a.example.com",
-				RecordType: "A",
-				Targets:    endpoint.Targets{"192.0.2.1"},
-			},
-			expectedError: false,
-		},
-		{
-			name:           "Valid AAAA record creation",
-			initialRecords: map[string]DNSRecord{},
-			endpoint: &endpoint.Endpoint{
-				DNSName:    "test-aaaa.example.com",
-				RecordType: "AAAA",
-				Targets:    endpoint.Targets{"2001:db8::1"},
-			},
-			expectedError: false,
-		},
-		{
-			name:           "Valid CNAME record creation",
-			initialRecords: map[string]DNSRecord{},
-			endpoint: &endpoint.Endpoint{
-				DNSName:    "test-cname.example.com",
-				RecordType: "CNAME",
-				Targets:    endpoint.Targets{"example.com"},
-			},
-			expectedError: false,
-		},
-		{
-			name:           "Valid TXT record creation",
-			initialRecords: map[string]DNSRecord{},
-			endpoint: &endpoint.Endpoint{
-				DNSName:    "test-txt.example.com",
-				RecordType: "TXT",
-				Targets:    endpoint.Targets{"\"some text record value\""},
-			},
-			expectedError: false,
-		},
-		{
-			name: "Record already exists",
-			initialRecords: map[string]DNSRecord{
-				"exists.example.com|A": {
-					ID:      "*EXISTING",
-					Name:    "exists.example.com",
-					Type:    "A",
-					Address: "192.0.2.1",
-				},
-			},
-			endpoint: &endpoint.Endpoint{
-				DNSName:    "exists.example.com",
-				RecordType: "A",
-				Targets:    endpoint.Targets{"192.0.2.1"},
-			},
-			expectedError: true,
-		},
-		{
-			name:           "Invalid record (missing DNSName)",
-			initialRecords: map[string]DNSRecord{},
-			endpoint: &endpoint.Endpoint{
-				DNSName:    "",
-				RecordType: "A",
-				Targets:    endpoint.Targets{"192.0.2.1"},
-			},
-			expectedError: true,
-		},
-		{
-			name:           "Empty target for A record",
-			initialRecords: map[string]DNSRecord{},
-			endpoint: &endpoint.Endpoint{
-				DNSName:    "empty-target.example.com",
-				RecordType: "A",
-				Targets:    endpoint.Targets{""},
-			},
-			expectedError: true,
-		},
-		{
-			name:           "Malformed IP address for A record",
-			initialRecords: map[string]DNSRecord{},
-			endpoint: &endpoint.Endpoint{
-				DNSName:    "malformed-ip.example.com",
-				RecordType: "A",
-				Targets:    endpoint.Targets{"999.999.999.999"},
-			},
-			expectedError: true,
-		},
-		{
-			name:           "Malformed IP address for AAAA record",
-			initialRecords: map[string]DNSRecord{},
-			endpoint: &endpoint.Endpoint{
-				DNSName:    "malformed-ipv6.example.com",
-				RecordType: "AAAA",
-				Targets:    endpoint.Targets{"gggg::1"},
-			},
-			expectedError: true,
-		},
-		{
-			name:           "Empty target for CNAME record",
-			initialRecords: map[string]DNSRecord{},
-			endpoint: &endpoint.Endpoint{
-				DNSName:    "empty-cname.example.com",
-				RecordType: "CNAME",
-				Targets:    endpoint.Targets{""},
-			},
-			expectedError: true,
-		},
-		// { //! we dont have any kind of cname validation so this will always pass
-		// 	name:           "Malformed domain name for CNAME record",
-		// 	initialRecords: map[string]DNSRecord{},
-		// 	endpoint: &endpoint.Endpoint{
-		// 		DNSName:    "bad-cname.example.com",
-		// 		RecordType: "CNAME",
-		// 		Targets:    endpoint.Targets{"1234!"},
-		// 	},
-		// 	expectedError: true,
-		// },
-		{
-			name:           "Empty text for TXT record",
-			initialRecords: map[string]DNSRecord{},
-			endpoint: &endpoint.Endpoint{
-				DNSName:    "empty-txt.example.com",
-				RecordType: "TXT",
-				Targets:    endpoint.Targets{""},
-			},
-			expectedError: true,
-		},
-		{
-			name:           "Invalid record type",
-			initialRecords: map[string]DNSRecord{},
-			endpoint: &endpoint.Endpoint{
-				DNSName:    "invalid-type.example.com",
-				RecordType: "INVALID",
-				Targets:    endpoint.Targets{"some target"},
-			},
-			expectedError: true,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			// Initialize an in-memory store for DNS records for this test case
-			recordStore := make(map[string]DNSRecord)
-
-			// Pre-populate recordStore with initialRecords
-			for k, v := range tc.initialRecords {
-				recordStore[k] = v
-			}
-
-			// Set up mock server
-			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				// Validate the Basic Auth header
-				username, password, ok := r.BasicAuth()
-				if !ok || username != mockUsername || password != mockPassword {
-					http.Error(w, "Unauthorized", http.StatusUnauthorized)
-					return
-				}
-
-				// Handle DNS record creation
-				if r.URL.Path == "/rest/ip/dns/static" && r.Method == http.MethodPut {
-					var record DNSRecord
-					if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
-						http.Error(w, "Bad Request", http.StatusBadRequest)
-						return
-					}
-
-					// Check if record already exists
-					key := record.Name + "|" + record.Type
-					if _, exists := recordStore[key]; exists {
-						http.Error(w, "Conflict: Record already exists", http.StatusConflict)
-						return
-					}
-
-					// Simulate assigning an ID and storing the record
-					record.ID = "*NEW"
-					recordStore[key] = record
-
-					// Return the created record
-					w.Header().Set("Content-Type", "application/json")
-					if err := json.NewEncoder(w).Encode(record); err != nil {
-						http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-						return
-					}
-					return
-				}
-
-				// Return 404 for any other path
-				http.NotFound(w, r)
-			}))
-			defer server.Close()
-
-			// Set up the client with correct credentials
-			config := &MikrotikConnectionConfig{
-				BaseUrl:       server.URL,
-				Username:      mockUsername,
-				Password:      mockPassword,
-				SkipTLSVerify: true,
-			}
-			defaults := &MikrotikDefaults{}
-			client, err := NewMikrotikClient(config, defaults)
-			if err != nil {
-				t.Fatalf("Failed to create client: %v", err)
-			}
-			record, err := client.CreateDNSRecord(tc.endpoint)
-
-			if tc.expectedError {
-				if err == nil {
-					t.Fatalf("Expected error, got none")
-				}
-				return
-			}
-
-			if err != nil {
-				t.Fatalf("Expected no error, got %v", err)
-			}
-
-			// Verify that the record was stored in the mock server
-			key := tc.endpoint.DNSName + "|" + tc.endpoint.RecordType
-			storedRecord, exists := recordStore[key]
-			if !exists {
-				t.Fatalf("Expected record to be stored, but it was not found")
-			}
-
-			// Verify that the client received the correct record
-			if record.ID != storedRecord.ID {
-				t.Errorf("Expected ID '%s', got '%s'", storedRecord.ID, record.ID)
-			}
-
-			// Additional checks specific to record type
-			switch tc.endpoint.RecordType {
-			case "A", "AAAA":
-				if storedRecord.Address != tc.endpoint.Targets[0] {
-					t.Errorf("Expected Address '%s', got '%s'", tc.endpoint.Targets[0], storedRecord.Address)
-				}
-			case "CNAME":
-				if storedRecord.CName != tc.endpoint.Targets[0] {
-					t.Errorf("Expected CName '%s', got '%s'", tc.endpoint.Targets[0], storedRecord.CName)
-				}
-			case "TXT":
-				if storedRecord.Text != tc.endpoint.Targets[0] {
-					t.Errorf("Expected Text '%s', got '%s'", tc.endpoint.Targets[0], storedRecord.Text)
-				}
-			default:
-				t.Errorf("Unsupported RecordType '%s' in test case", tc.endpoint.RecordType)
-			}
-		})
-	}
-}
-
-func TestDeleteDNSRecord(t *testing.T) {
-	testCases := []struct {
-		name           string
-		initialRecords map[string]DNSRecord
-		endpoint       *endpoint.Endpoint
-		expectedError  bool
-	}{
-		{
-			name: "Delete existing A record",
-			initialRecords: map[string]DNSRecord{
-				"test.example.com|A": {
-					ID:      "*1",
-					Name:    "test.example.com",
-					Type:    "A",
-					Address: "192.0.2.1",
-				},
-			},
-			endpoint: &endpoint.Endpoint{
-				DNSName:    "test.example.com",
-				RecordType: "A",
-			},
-			expectedError: false,
-		},
-		{
-			name: "Delete existing AAAA record",
-			initialRecords: map[string]DNSRecord{
-				"ipv6.example.com|AAAA": {
-					ID:      "*2",
-					Name:    "ipv6.example.com",
-					Type:    "AAAA",
-					Address: "2001:db8::1",
-				},
-			},
-			endpoint: &endpoint.Endpoint{
-				DNSName:    "ipv6.example.com",
-				RecordType: "AAAA",
-			},
-			expectedError: false,
-		},
-		{
-			name: "Delete existing CNAME record",
-			initialRecords: map[string]DNSRecord{
-				"alias.example.com|CNAME": {
-					ID:    "*3",
-					Name:  "alias.example.com",
-					Type:  "CNAME",
-					CName: "example.com",
-				},
-			},
-			endpoint: &endpoint.Endpoint{
-				DNSName:    "alias.example.com",
-				RecordType: "CNAME",
-			},
-			expectedError: false,
-		},
-		{
-			name: "Delete existing TXT record",
-			initialRecords: map[string]DNSRecord{
-				"text.example.com|TXT": {
-					ID:   "*4",
-					Name: "text.example.com",
-					Type: "TXT",
-					Text: "some text",
-				},
-			},
-			endpoint: &endpoint.Endpoint{
-				DNSName:    "text.example.com",
-				RecordType: "TXT",
-			},
-			expectedError: false,
-		},
-		{
-			name:           "Delete non-existent record",
-			initialRecords: map[string]DNSRecord{},
-			endpoint: &endpoint.Endpoint{
-				DNSName:    "nonexistent.example.com",
-				RecordType: "A",
-			},
-			expectedError: true,
-		},
-		{
-			name: "Delete record with missing DNSName",
-			initialRecords: map[string]DNSRecord{
-				"missingname.example.com|A": {
-					ID:      "*5",
-					Name:    "missingname.example.com",
-					Type:    "A",
-					Address: "192.0.2.2",
-				},
-			},
-			endpoint: &endpoint.Endpoint{
-				DNSName:    "",
-				RecordType: "A",
-			},
-			expectedError: true,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			// Initialize an in-memory store for DNS records for this test case
-			recordStore := make(map[string]DNSRecord)
-
-			// Pre-populate recordStore with initialRecords
-			for k, v := range tc.initialRecords {
-				recordStore[k] = v
-			}
-
-			// Set up mock server
-			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				username, password, ok := r.BasicAuth()
-				if !ok || username != mockUsername || password != mockPassword {
-					http.Error(w, "Unauthorized", http.StatusUnauthorized)
-					return
-				}
-
-				// Handle DNS record fetching (for the lookup method)
-				if r.Method == http.MethodGet && r.URL.Path == "/rest/ip/dns/static" {
-					query := r.URL.Query()
-					name := query.Get("name")
-					recordType := query.Get("type")
-					if recordType == "" {
-						recordType = "A"
-					}
-					key := name + "|" + recordType
-					record := recordStore[key]
-					w.Header().Set("Content-Type", "application/json")
-					err := json.NewEncoder(w).Encode([]DNSRecord{record})
-					if err != nil {
-						t.Errorf("error json encoding dns record")
-					}
-					return
-				}
-
-				// Handle DNS record deletion
-				if r.Method == http.MethodDelete && strings.HasPrefix(r.URL.Path, "/rest/ip/dns/static/") {
-					id := strings.TrimPrefix(r.URL.Path, "/rest/ip/dns/static/")
-					var foundKey string
-					for key, record := range recordStore {
-						if record.ID == id {
-							foundKey = key
-							break
-						}
-					}
-					if foundKey != "" {
-						delete(recordStore, foundKey)
-						w.WriteHeader(http.StatusOK)
-					} else {
-						http.Error(w, "Not Found", http.StatusNotFound)
-					}
-					return
-				}
-
-				http.NotFound(w, r)
-			}))
-			defer server.Close()
-
-			config := &MikrotikConnectionConfig{
-				BaseUrl:       server.URL,
-				Username:      mockUsername,
-				Password:      mockPassword,
-				SkipTLSVerify: true,
-			}
-			defaults := &MikrotikDefaults{}
-			client, err := NewMikrotikClient(config, defaults)
-			if err != nil {
-				t.Fatalf("Failed to create client: %v", err)
-			}
-
-			err = client.DeleteDNSRecord(tc.endpoint)
-
-			if tc.expectedError {
-				if err == nil {
-					t.Fatalf("Expected error, got none")
-				}
-			} else {
-				if err != nil {
-					t.Fatalf("Expected no error, got %v", err)
-				}
-				key := tc.endpoint.DNSName + "|" + tc.endpoint.RecordType
-				if _, exists := recordStore[key]; exists {
-					t.Fatalf("Expected record to be deleted, but it still exists")
-				}
-			}
-		})
-	}
-}
-
-func TestGetAllDNSRecords(t *testing.T) {
-	testCases := []struct {
-		name         string
-		records      []DNSRecord
-		expectError  bool
-		unauthorized bool
-	}{
-		{
-			name: "Multiple DNS records",
+			name:       "Filter by specific name",
+			targetName: "example.com",
 			records: []DNSRecord{
 				{
 					ID:      "*1",
-					Address: "192.168.88.1",
-					Comment: "defconf",
-					Name:    "router.lan",
-					TTL:     "1d",
-					Type:    "A",
-				},
-				{
-					ID:      "*3",
 					Address: "1.2.3.4",
-					Comment: "test A-Record",
 					Name:    "example.com",
-					TTL:     "1d",
+					TTL:     "1h",
 					Type:    "A",
 				},
 				{
-					ID:      "*4",
-					CName:   "example.com",
-					Comment: "test CNAME",
-					Name:    "subdomain.example.com",
-					TTL:     "1d",
-					Type:    "CNAME",
-				},
-				{
-					ID:      "*5",
-					Address: "::1",
-					Comment: "test AAAA",
-					Name:    "test quad-A",
-					TTL:     "1d",
-					Type:    "AAAA",
-				},
-				{
-					ID:      "*6",
-					Comment: "test TXT",
-					Name:    "example.com",
-					Text:    "lorem ipsum",
-					TTL:     "1d",
-					Type:    "TXT",
+					ID:    "*2",
+					CName: "example.com",
+					Name:  "www.example.com",
+					TTL:   "1h",
+					Type:  "CNAME",
 				},
 			},
+			expectedCount: 1, // Only records with exact name match
+			expectedQuery: "ip/dns/static?type=A,AAAA,CNAME,TXT,MX,SRV,NS&name=example.com",
 		},
 		{
-			name:    "No DNS records",
-			records: []DNSRecord{},
+			name:       "Get all managed records (empty name)",
+			targetName: "",
+			records: []DNSRecord{
+				{
+					ID:      "*1",
+					Address: "1.2.3.4",
+					Name:    "example.com",
+					TTL:     "1h",
+					Type:    "A",
+				},
+				{
+					ID:      "*2",
+					Address: "5.6.7.8",
+					Name:    "test.com",
+					TTL:     "1h",
+					Type:    "A",
+				},
+			},
+			expectedCount: 2, // All managed records
+			expectedQuery: "ip/dns/static?type=A,AAAA,CNAME,TXT,MX,SRV,NS",
+		},
+		{
+			name:          "No matching records",
+			targetName:    "nonexistent.com",
+			records:       []DNSRecord{},
+			expectedCount: 0,
+			expectedQuery: "ip/dns/static?type=A,AAAA,CNAME,TXT,MX,SRV,NS&name=nonexistent.com",
 		},
 	}
 
@@ -714,15 +275,451 @@ func TestGetAllDNSRecords(t *testing.T) {
 			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				// Basic Auth validation
 				username, password, ok := r.BasicAuth()
-				if !ok || username != mockUsername || password != mockPassword || tc.unauthorized {
+				if !ok || username != mockUsername || password != mockPassword {
 					http.Error(w, "Unauthorized", http.StatusUnauthorized)
 					return
 				}
 
-				// Handle GET requests to /rest/ip/dns/static
+				// Verify the query path matches expected
+				if r.URL.Path != "/rest/ip/dns/static" {
+					t.Errorf("Expected path '/rest/ip/dns/static', got '%s'", r.URL.Path)
+				}
+
+				// Check query parameters
+				if tc.targetName != "" {
+					nameParam := r.URL.Query().Get("name")
+					if nameParam != tc.targetName {
+						t.Errorf("Expected name parameter '%s', got '%s'", tc.targetName, nameParam)
+					}
+				}
+
+				// Return filtered records based on query
+				var filteredRecords []DNSRecord
+				for _, record := range tc.records {
+					if tc.targetName == "" || record.Name == tc.targetName {
+						filteredRecords = append(filteredRecords, record)
+					}
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				if err := json.NewEncoder(w).Encode(filteredRecords); err != nil {
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					return
+				}
+			}))
+			defer server.Close()
+
+			config := &MikrotikConnectionConfig{
+				BaseUrl:       server.URL,
+				Username:      mockUsername,
+				Password:      mockPassword,
+				SkipTLSVerify: true,
+			}
+			defaults := &MikrotikDefaults{
+				DefaultComment: "external-dns",
+			}
+			client, err := NewMikrotikClient(config, defaults)
+			if err != nil {
+				t.Fatalf("Failed to create client: %v", err)
+			}
+
+			records, err := client.GetDNSRecords(DNSRecordFilter{
+				Name: tc.targetName,
+			})
+
+			if tc.expectError {
+				if err == nil {
+					t.Fatalf("Expected error, got none")
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("Expected no error, got %v", err)
+				}
+
+				if len(records) != tc.expectedCount {
+					t.Errorf("Expected %d records, got %d", tc.expectedCount, len(records))
+				}
+			}
+		})
+	}
+}
+
+func TestDeleteDNSRecords(t *testing.T) {
+	testCases := []struct {
+		name              string
+		endpoint          *endpoint.Endpoint
+		existingRecords   []DNSRecord
+		defaultComment    string
+		expectError       bool
+		expectedDeletions int
+	}{
+		{
+			name: "Successful deletion of single record",
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "example.com",
+				RecordType: "A",
+				Targets:    []string{"1.2.3.4"},
+			},
+			existingRecords: []DNSRecord{
+				{
+					ID:      "*1",
+					Name:    "example.com",
+					Type:    "A",
+					Address: "1.2.3.4",
+					Comment: "external-dns",
+				},
+			},
+			defaultComment:    "external-dns",
+			expectError:       false,
+			expectedDeletions: 1,
+		},
+		{
+			name: "Successful deletion of multiple records",
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "multi.example.com",
+				RecordType: "A",
+				Targets:    []string{"1.2.3.4", "5.6.7.8"},
+			},
+			existingRecords: []DNSRecord{
+				{
+					ID:      "*1",
+					Name:    "multi.example.com",
+					Type:    "A",
+					Address: "1.2.3.4",
+					Comment: "external-dns",
+				},
+				{
+					ID:      "*2",
+					Name:    "multi.example.com",
+					Type:    "A",
+					Address: "5.6.7.8",
+					Comment: "external-dns",
+				},
+			},
+			defaultComment:    "external-dns",
+			expectError:       false,
+			expectedDeletions: 2,
+		},
+		{
+			name: "No records found to delete",
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "nonexistent.com",
+				RecordType: "A",
+				Targets:    []string{"1.2.3.4"},
+			},
+			existingRecords:   []DNSRecord{},
+			defaultComment:    "external-dns",
+			expectError:       false,
+			expectedDeletions: 0,
+		},
+		{
+			name: "Partial deletion - delete only specific targets",
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "partial.example.com",
+				RecordType: "A",
+				Targets:    []string{"1.2.3.4"}, // Only delete this specific target
+			},
+			existingRecords: []DNSRecord{
+				{
+					ID:      "*1",
+					Name:    "partial.example.com",
+					Type:    "A",
+					Address: "1.2.3.4", // This should be deleted
+					Comment: "external-dns",
+				},
+				{
+					ID:      "*2",
+					Name:    "partial.example.com",
+					Type:    "A",
+					Address: "5.6.7.8", // This should NOT be deleted (different target)
+					Comment: "external-dns",
+				},
+			},
+			defaultComment:    "external-dns",
+			expectError:       false,
+			expectedDeletions: 1, // Only one record should be deleted
+		},
+		{
+			name: "Partial deletion - delete multiple specific targets",
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "multi-partial.example.com",
+				RecordType: "A",
+				Targets:    []string{"1.2.3.4", "5.6.7.8"}, // Delete these two targets
+			},
+			existingRecords: []DNSRecord{
+				{
+					ID:      "*1",
+					Name:    "multi-partial.example.com",
+					Type:    "A",
+					Address: "1.2.3.4", // Should be deleted
+					Comment: "external-dns",
+				},
+				{
+					ID:      "*2",
+					Name:    "multi-partial.example.com",
+					Type:    "A",
+					Address: "5.6.7.8", // Should be deleted
+					Comment: "external-dns",
+				},
+				{
+					ID:      "*3",
+					Name:    "multi-partial.example.com",
+					Type:    "A",
+					Address: "9.10.11.12", // Should NOT be deleted (not in targets)
+					Comment: "external-dns",
+				},
+			},
+			defaultComment:    "external-dns",
+			expectError:       false,
+			expectedDeletions: 2, // Only two records should be deleted
+		},
+		{
+			name: "Partial deletion - target not found",
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "notfound.example.com",
+				RecordType: "A",
+				Targets:    []string{"1.2.3.4"}, // This target doesn't exist
+			},
+			existingRecords: []DNSRecord{
+				{
+					ID:      "*1",
+					Name:    "notfound.example.com",
+					Type:    "A",
+					Address: "5.6.7.8", // Different target exists
+					Comment: "external-dns",
+				},
+			},
+			defaultComment:    "external-dns",
+			expectError:       false,
+			expectedDeletions: 0, // No records should be deleted
+		},
+		{
+			name: "Partial deletion - mixed CNAME targets",
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "cname-partial.example.com",
+				RecordType: "CNAME",
+				Targets:    []string{"target1.example.com"}, // Only delete this CNAME target
+			},
+			existingRecords: []DNSRecord{
+				{
+					ID:      "*1",
+					Name:    "cname-partial.example.com",
+					Type:    "CNAME",
+					CName:   "target1.example.com", // Should be deleted
+					Comment: "external-dns",
+				},
+				{
+					ID:      "*2",
+					Name:    "cname-partial.example.com",
+					Type:    "CNAME",
+					CName:   "target2.example.com", // Should NOT be deleted
+					Comment: "external-dns",
+				},
+			},
+			defaultComment:    "external-dns",
+			expectError:       false,
+			expectedDeletions: 1,
+		},
+		{
+			name: "Partial deletion - some targets exist, some don't",
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "mixed-exist.example.com",
+				RecordType: "A",
+				Targets:    []string{"1.2.3.4", "5.6.7.8", "9.10.11.12"}, // Mix of existing and non-existing
+			},
+			existingRecords: []DNSRecord{
+				{
+					ID:      "*1",
+					Name:    "mixed-exist.example.com",
+					Type:    "A",
+					Address: "1.2.3.4", // Exists, should be deleted
+					Comment: "external-dns",
+				},
+				{
+					ID:      "*2",
+					Name:    "mixed-exist.example.com",
+					Type:    "A",
+					Address: "9.10.11.12", // Exists, should be deleted
+					Comment: "external-dns",
+				},
+				// Note: 5.6.7.8 doesn't exist in records
+			},
+			defaultComment:    "external-dns",
+			expectError:       false,
+			expectedDeletions: 2, // Only the two existing records should be deleted
+		},
+		{
+			name: "Partial deletion - different record types with same name",
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "mixed-types.example.com",
+				RecordType: "A", // Only targeting A records
+				Targets:    []string{"1.2.3.4"},
+			},
+			existingRecords: []DNSRecord{
+				{
+					ID:      "*1",
+					Name:    "mixed-types.example.com",
+					Type:    "A",
+					Address: "1.2.3.4", // Should be deleted
+					Comment: "external-dns",
+				},
+				{
+					ID:      "*2",
+					Name:    "mixed-types.example.com",
+					Type:    "CNAME",
+					CName:   "target.example.com", // Should NOT be deleted (different type)
+					Comment: "external-dns",
+				},
+			},
+			defaultComment:    "external-dns",
+			expectError:       false,
+			expectedDeletions: 1,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			deletedCount := 0
+			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// Basic Auth validation
+				username, password, ok := r.BasicAuth()
+				if !ok || username != mockUsername || password != mockPassword {
+					http.Error(w, "Unauthorized", http.StatusUnauthorized)
+					return
+				}
+
+				// Handle GET requests to /rest/ip/dns/static (for GetDNSRecordsByName)
 				if r.Method == http.MethodGet && r.URL.Path == "/rest/ip/dns/static" {
 					w.Header().Set("Content-Type", "application/json")
-					if err := json.NewEncoder(w).Encode(tc.records); err != nil {
+					if err := json.NewEncoder(w).Encode(tc.existingRecords); err != nil {
+						http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+						return
+					}
+					return
+				}
+
+				// Handle DELETE requests to /rest/ip/dns/static/*
+				if r.Method == http.MethodDelete && len(r.URL.Path) > len("/rest/ip/dns/static/") &&
+					r.URL.Path[:len("/rest/ip/dns/static/")] == "/rest/ip/dns/static/" {
+					deletedCount++
+					w.WriteHeader(http.StatusOK)
+					return
+				}
+
+				// Return 404 for any other path
+				http.NotFound(w, r)
+			}))
+			defer server.Close()
+
+			// Set up the client
+			config := &MikrotikConnectionConfig{
+				BaseUrl:       server.URL,
+				Username:      mockUsername,
+				Password:      mockPassword,
+				SkipTLSVerify: true,
+			}
+			defaults := &MikrotikDefaults{
+				DefaultComment: tc.defaultComment,
+			}
+			client, err := NewMikrotikClient(config, defaults)
+			if err != nil {
+				t.Fatalf("Failed to create client: %v", err)
+			}
+
+			err = client.DeleteRecordsFromEndpoint(tc.endpoint)
+
+			if tc.expectError {
+				if err == nil {
+					t.Fatalf("Expected error, got none")
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("Expected no error, got %v", err)
+				}
+				if deletedCount != tc.expectedDeletions {
+					t.Errorf("Expected %d deletions, got %d", tc.expectedDeletions, deletedCount)
+				}
+			}
+		})
+	}
+}
+
+func TestCreateDNSRecords(t *testing.T) {
+	testCases := []struct {
+		name            string
+		endpoint        *endpoint.Endpoint
+		expectError     bool
+		expectedRecords int
+		statusCode      int
+	}{
+		{
+			name: "Successful creation of single A record",
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "example.com",
+				RecordType: "A",
+				Targets:    []string{"1.2.3.4"},
+				RecordTTL:  endpoint.TTL(3600),
+			},
+			expectError:     false,
+			expectedRecords: 1,
+			statusCode:      http.StatusOK,
+		},
+		{
+			name: "Successful creation of multiple A records",
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "multi.example.com",
+				RecordType: "A",
+				Targets:    []string{"1.2.3.4", "5.6.7.8"},
+				RecordTTL:  endpoint.TTL(3600),
+			},
+			expectError:     false,
+			expectedRecords: 2,
+			statusCode:      http.StatusOK,
+		},
+		{
+			name: "API error during creation",
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "error.example.com",
+				RecordType: "A",
+				Targets:    []string{"1.2.3.4"},
+				RecordTTL:  endpoint.TTL(3600),
+			},
+			expectError:     true,
+			expectedRecords: 0,
+			statusCode:      http.StatusInternalServerError,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			createdCount := 0
+			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// Basic Auth validation
+				username, password, ok := r.BasicAuth()
+				if !ok || username != mockUsername || password != mockPassword {
+					http.Error(w, "Unauthorized", http.StatusUnauthorized)
+					return
+				}
+
+				// Handle PUT requests to /rest/ip/dns/static
+				if r.Method == http.MethodPut && r.URL.Path == "/rest/ip/dns/static" {
+					if tc.statusCode == http.StatusInternalServerError {
+						http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+						return
+					}
+
+					// Parse request body to get record data
+					var record DNSRecord
+					if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
+						http.Error(w, "Bad Request", http.StatusBadRequest)
+						return
+					}
+
+					createdCount++
+					record.ID = "*1"
+
+					w.Header().Set("Content-Type", "application/json")
+					if err := json.NewEncoder(w).Encode(record); err != nil {
 						http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 						return
 					}
@@ -741,12 +738,16 @@ func TestGetAllDNSRecords(t *testing.T) {
 				Password:      mockPassword,
 				SkipTLSVerify: true,
 			}
-			defaults := &MikrotikDefaults{}
+			defaults := &MikrotikDefaults{
+				DefaultTTL:     3600,
+				DefaultComment: "external-dns",
+			}
 			client, err := NewMikrotikClient(config, defaults)
 			if err != nil {
 				t.Fatalf("Failed to create client: %v", err)
 			}
-			records, err := client.GetAllDNSRecords()
+
+			records, err := client.CreateRecordsFromEndpoint(tc.endpoint)
 
 			if tc.expectError {
 				if err == nil {
@@ -756,48 +757,144 @@ func TestGetAllDNSRecords(t *testing.T) {
 				if err != nil {
 					t.Fatalf("Expected no error, got %v", err)
 				}
+				if len(records) != tc.expectedRecords {
+					t.Errorf("Expected %d records created, got %d", tc.expectedRecords, len(records))
+				}
+			}
+		})
+	}
+}
 
-				// Verify the number of records
-				if len(records) != len(tc.records) {
-					t.Fatalf("Expected %d records, got %d", len(tc.records), len(records))
+func TestDoRequest(t *testing.T) {
+	testCases := []struct {
+		name           string
+		method         string
+		path           string
+		body           string
+		expectedStatus int
+		expectError    bool
+	}{
+		{
+			name:           "Successful GET request",
+			method:         "GET",
+			path:           "system/resource",
+			body:           "",
+			expectedStatus: http.StatusOK,
+			expectError:    false,
+		},
+		{
+			name:           "Successful POST request with body",
+			method:         "POST",
+			path:           "ip/dns/static",
+			body:           `{"name":"test.com","type":"A","address":"1.2.3.4"}`,
+			expectedStatus: http.StatusOK,
+			expectError:    false,
+		},
+		{
+			name:           "404 Not Found",
+			method:         "GET",
+			path:           "nonexistent/path",
+			body:           "",
+			expectedStatus: http.StatusNotFound,
+			expectError:    true,
+		},
+		{
+			name:           "401 Unauthorized",
+			method:         "GET",
+			path:           "unauthorized",
+			body:           "",
+			expectedStatus: http.StatusUnauthorized,
+			expectError:    true,
+		},
+		{
+			name:           "500 Internal Server Error",
+			method:         "GET",
+			path:           "error",
+			body:           "",
+			expectedStatus: http.StatusInternalServerError,
+			expectError:    true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// Handle special paths that simulate different status codes
+				if r.URL.Path == "/rest/unauthorized" {
+					http.Error(w, "Unauthorized", http.StatusUnauthorized)
+					return
+				}
+				if r.URL.Path == "/rest/error" {
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					return
+				}
+				if r.URL.Path == "/rest/nonexistent/path" {
+					http.NotFound(w, r)
+					return
 				}
 
-				// Compare records if there are any
-				if len(tc.records) > 0 {
-					expectedRecordsMap := make(map[string]DNSRecord)
-					for _, rec := range tc.records {
-						key := rec.Name + "|" + rec.Type
-						expectedRecordsMap[key] = rec
-					}
+				// Basic Auth validation for normal requests
+				username, password, ok := r.BasicAuth()
+				if !ok || username != mockUsername || password != mockPassword {
+					http.Error(w, "Unauthorized", http.StatusUnauthorized)
+					return
+				}
 
-					for _, record := range records {
-						key := record.Name + "|" + record.Type
-						expectedRecord, exists := expectedRecordsMap[key]
-						if !exists {
-							t.Errorf("Unexpected record found: %v", record)
-							continue
-						}
-						// Compare fields
-						if record.ID != expectedRecord.ID {
-							t.Errorf("Expected ID '%s', got '%s' for record %s", expectedRecord.ID, record.ID, key)
-						}
-						switch record.Type {
-						case "A", "AAAA":
-							if record.Address != expectedRecord.Address {
-								t.Errorf("Expected Address '%s', got '%s' for record %s", expectedRecord.Address, record.Address, key)
-							}
-						case "CNAME":
-							if record.CName != expectedRecord.CName {
-								t.Errorf("Expected CName '%s', got '%s' for record %s", expectedRecord.CName, record.CName, key)
-							}
-						case "TXT":
-							if record.Text != expectedRecord.Text {
-								t.Errorf("Expected Text '%s', got '%s' for record %s", expectedRecord.Text, record.Text, key)
-							}
-						default:
-							t.Errorf("Unsupported RecordType '%s' for record %s", record.Type, key)
-						}
+				// Handle valid requests
+				if r.URL.Path == "/rest/system/resource" {
+					w.Header().Set("Content-Type", "application/json")
+					if _, err := w.Write([]byte(`{"version":"7.16"}`)); err != nil {
+						t.Errorf("Failed to write response: %v", err)
 					}
+					return
+				}
+				if r.URL.Path == "/rest/ip/dns/static" {
+					w.Header().Set("Content-Type", "application/json")
+					if _, err := w.Write([]byte(`{"id":"*1","name":"test.com"}`)); err != nil {
+						t.Errorf("Failed to write response: %v", err)
+					}
+					return
+				}
+
+				http.NotFound(w, r)
+			}))
+			defer server.Close()
+
+			// Set up the client
+			config := &MikrotikConnectionConfig{
+				BaseUrl:       server.URL,
+				Username:      mockUsername,
+				Password:      mockPassword,
+				SkipTLSVerify: true,
+			}
+			defaults := &MikrotikDefaults{}
+			client, err := NewMikrotikClient(config, defaults)
+			if err != nil {
+				t.Fatalf("Failed to create client: %v", err)
+			}
+
+			var bodyReader io.Reader
+			if tc.body != "" {
+				bodyReader = bytes.NewReader([]byte(tc.body))
+			}
+
+			resp, err := client.doRequest(tc.method, tc.path, "", bodyReader)
+
+			if tc.expectError {
+				if err == nil {
+					t.Fatalf("Expected error, got none")
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("Expected no error, got %v", err)
+				}
+				if resp == nil {
+					t.Fatal("Expected response, got nil")
+					return
+				}
+				defer resp.Body.Close()
+				if resp.StatusCode != tc.expectedStatus {
+					t.Errorf("Expected status %d, got %d", tc.expectedStatus, resp.StatusCode)
 				}
 			}
 		})
