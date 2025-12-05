@@ -2,7 +2,7 @@ module github.com/mirceanton/external-dns-provider-mikrotik
 
 go 1.25
 
-toolchain go1.25.4
+toolchain go1.25.5
 
 require (
 	github.com/caarlos0/env/v11 v11.3.1
