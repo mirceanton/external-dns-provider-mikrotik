@@ -79,7 +79,7 @@ See mirceanton/external-dns-provider-mikrotik#166
 
 ## 🚀 Deployment
 
-1. Create a service account in RouterOS. This local user needs read and write access to manage static DNS.
+1. Create a service account in RouterOS. This local user needs `api` and `rest-api` policies to authenticate and use the RouterOS HTTP APIs. Additionally, this local user needs `read` and `write` policies to manage static DNS.
 2. Create a Kubernetes namespace for your External DNS deployment
 
     ```yaml
