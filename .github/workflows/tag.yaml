@@ -1,0 +1,57 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Tag
+permissions: { contents: read }
+
+on:
+  schedule: [{ cron: '0 0 * * *' }]
+  push: { branches: ["main"] }
+  workflow_dispatch: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tag:
+    if: github.repository_owner == 'mirceanton' # ? don't run on forks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Generate Token
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+        id: app-token
+        with:
+          app-id: '${{ secrets.BOT_APP_ID }}'
+          private-key: '${{ secrets.BOT_APP_PRIVATE_KEY }}'
+
+      - name: Checkout code
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          fetch-depth: 0
+          token: '${{ steps.app-token.outputs.token }}'
+
+      - name: Setup mise
+        uses: jdx/mise-action@146a28175021df8ca24f8ee1828cc2a60f980bd5 # v3.5.1
+
+      - name: Determine tags
+        id: tags
+        run: |
+          CURRENT=$(mise exec -- svu current)
+          NEXT=$(mise exec -- svu next)
+          echo "current=$CURRENT" | tee -a "$GITHUB_OUTPUT"
+          echo "next=$NEXT" | tee -a "$GITHUB_OUTPUT"
+          if [ "$CURRENT" != "$NEXT" ]; then
+            echo "should_tag=true" | tee -a "$GITHUB_OUTPUT"
+          else
+            echo "should_tag=false" | tee -a "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create and push tag
+        if: steps.tags.outputs.should_tag == 'true'
+        run: |
+          git config user.name "${{ steps.app-token.outputs.app-slug }}[bot]"
+          git config user.email "${{ steps.app-token.outputs.installation-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.tags.outputs.next }}" -m "Release ${{ steps.tags.outputs.next }}"
+          git push origin "${{ steps.tags.outputs.next }}"
