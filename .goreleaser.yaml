@@ -37,40 +37,40 @@ changelog:
   use: github
   sort: asc
   groups:
-    - title: "## 💥 Breaking Changes"
+    - title: "💥 Breaking Changes"
       regexp: '^.*?(feat|fix|patch)(\(.+\))?!:.+$'
       order: 0
-    - title: "## ✨ New Features"
+    - title: "✨ New Features"
       regexp: '^.*?feat(\(.+\))?:.+$'
       order: 1
-    - title: "## 🐛 Bug Fixes"
+    - title: "🐛 Bug Fixes"
       regexp: '^.*?(fix|patch)(\(.+\))?:.+$'
       order: 2
-    - title: "## ⚡ Performance Improvements"
+    - title: "⚡ Performance Improvements"
       regexp: '^.*?perf(\(.+\))?:.+$'
       order: 3
-    - title: "## 📚 Documentation"
+    - title: "📚 Documentation"
       regexp: '^.*?docs(\(.+\))?:.+$'
       order: 4
-    - title: "## 📦 Build System"
+    - title: "📦 Build System"
       regexp: '^.*?build(\(.+\))?:.+$'
       order: 5
-    - title: "## 👷 CI/CD"
+    - title: "👷 CI/CD"
       regexp: '^.*?ci(\(.+\))?:.+$'
       order: 6
-    - title: "## 🧪 Tests"
+    - title: "🧪 Tests"
       regexp: '^.*?test(\(.+\))?:.+$'
       order: 7
-    - title: "## ♻️ Code Refactoring"
+    - title: "♻️ Code Refactoring"
       regexp: '^.*?refactor(\(.+\))?:.+$'
       order: 8
-    - title: "## 💄 Code Style"
+    - title: "💄 Code Style"
       regexp: '^.*?style(\(.+\))?:.+$'
       order: 9
-    - title: "## 🧹 Chores"
+    - title: "🧹 Chores"
       regexp: '^.*?chore(\(.+\))?:.+$'
       order: 10
-    - title: "## 🔧 Other Changes"
+    - title: "🔧 Other Changes"
       order: 999
 
 dockers:
