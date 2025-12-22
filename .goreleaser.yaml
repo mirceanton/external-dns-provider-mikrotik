@@ -25,6 +25,9 @@ checksum:
   disable: false
   name_template: "checksums.txt"
 
+release:
+  use_existing_draft: true
+
 changelog:
   disable: false
   use: github

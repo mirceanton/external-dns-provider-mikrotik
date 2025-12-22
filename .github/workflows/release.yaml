@@ -40,3 +40,4 @@ jobs:
         with:
           github-token: ${{ steps.app-token.outputs.token }}
           dry-run: ${{ github.event.inputs.dry-run == 'true' && github.event_name == 'workflow_dispatch' }}
+          draft: true #? releases created as draft for goreleaser to use

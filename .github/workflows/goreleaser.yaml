@@ -4,7 +4,7 @@ name: Goreleaser
 permissions: { contents: read }
 
 on:  # yamllint disable-line rule:truthy
-  release: { types: [published] }
+  release: { types: [created] }  # Trigger on created (draft) releases, not published
   pull_request: { branches: ["main"] }
   push: { branches: ["main", "renovate/**"] }
   workflow_dispatch:
