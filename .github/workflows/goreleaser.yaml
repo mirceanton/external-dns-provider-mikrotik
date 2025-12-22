@@ -3,17 +3,9 @@
 name: Goreleaser
 permissions: { contents: read }
 
-on:  # yamllint disable-line rule:truthy
-  release: { types: [created] }  # Trigger on created (draft) releases, not published
-  pull_request: { branches: ["main"] }
-  push: { branches: ["main", "renovate/**"] }
-  workflow_dispatch:
-    inputs:
-      dry-run:
-        description: Dry Run
-        required: false
-        default: false
-        type: boolean
+on:
+  push:
+    tags: ["v*"]
 
 jobs:
   goreleaser:
@@ -27,17 +19,7 @@ jobs:
       - name: Setup mise
         uses: jdx/mise-action@146a28175021df8ca24f8ee1828cc2a60f980bd5 # v3.5.1
 
-      - name: Run goreleaser (dry-run)
-        if: |
-          (github.event_name == 'push') ||
-          (github.event_name == 'workflow_dispatch' && inputs.dry-run == true)
-        run: goreleaser --snapshot
-        env: { TAP_GITHUB_TOKEN: "${{ secrets.GHCR_RW_TOKEN }}" }
-
       - name: Generate Token
-        if: |
-          (github.event_name == 'release') ||
-          (github.event_name == 'workflow_dispatch' && inputs.dry-run == false)
         uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
         id: app-token
         with:
@@ -45,9 +27,6 @@ jobs:
           private-key: "${{ secrets.BOT_APP_PRIVATE_KEY }}"
 
       - name: Login to Container Registry
-        if: |
-          (github.event_name == 'release') ||
-          (github.event_name == 'workflow_dispatch' && inputs.dry-run == false)
         uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
         with:
           registry: "ghcr.io"
@@ -55,9 +34,6 @@ jobs:
           password: "${{ secrets.GHCR_RW_TOKEN }}"
 
       - name: Run goreleaser
-        if: |
-          (github.event_name == 'release') ||
-          (github.event_name == 'workflow_dispatch' && inputs.dry-run == false)
         run: mise exec -- goreleaser --clean
         env:
           GITHUB_TOKEN: "${{ steps.app-token.outputs.token }}"

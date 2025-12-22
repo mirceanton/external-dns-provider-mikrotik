@@ -7,6 +7,7 @@ before:
   hooks:
     - go mod tidy
     - go mod download
+
 builds:
   - env:
       - CGO_ENABLED=0
@@ -26,23 +27,50 @@ checksum:
   name_template: "checksums.txt"
 
 release:
-  use_existing_draft: true
+  draft: false #? do we want to leave the release as draft?
+  prerelease: auto #? auto-detect pre-releases from git tags
+  make_latest: true
+  mode: replace #? replace existing release notes if present
 
 changelog:
   disable: false
   use: github
   sort: asc
   groups:
-    - title: Features
-      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+    - title: "## 💥 Breaking Changes"
+      regexp: '^.*?(feat|fix|patch)(\(.+\))?!:.+$'
       order: 0
-    - title: "Patches"
-      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+    - title: "## ✨ New Features"
+      regexp: '^.*?feat(\(.+\))?:.+$'
       order: 1
-    - title: "CI"
-      regexp: ".*ci.*"
-      order: 998
-    - title: Others
+    - title: "## 🐛 Bug Fixes"
+      regexp: '^.*?(fix|patch)(\(.+\))?:.+$'
+      order: 2
+    - title: "## ⚡ Performance Improvements"
+      regexp: '^.*?perf(\(.+\))?:.+$'
+      order: 3
+    - title: "## 📚 Documentation"
+      regexp: '^.*?docs(\(.+\))?:.+$'
+      order: 4
+    - title: "## 📦 Build System"
+      regexp: '^.*?build(\(.+\))?:.+$'
+      order: 5
+    - title: "## 👷 CI/CD"
+      regexp: '^.*?ci(\(.+\))?:.+$'
+      order: 6
+    - title: "## 🧪 Tests"
+      regexp: '^.*?test(\(.+\))?:.+$'
+      order: 7
+    - title: "## ♻️ Code Refactoring"
+      regexp: '^.*?refactor(\(.+\))?:.+$'
+      order: 8
+    - title: "## 💄 Code Style"
+      regexp: '^.*?style(\(.+\))?:.+$'
+      order: 9
+    - title: "## 🧹 Chores"
+      regexp: '^.*?chore(\(.+\))?:.+$'
+      order: 10
+    - title: "## 🔧 Other Changes"
       order: 999
 
 dockers:
