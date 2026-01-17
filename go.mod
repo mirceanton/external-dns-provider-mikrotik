@@ -6,7 +6,7 @@ toolchain go1.25.5
 
 require (
 	github.com/caarlos0/env/v11 v11.3.1
-	github.com/go-chi/chi/v5 v5.2.3
+	github.com/go-chi/chi/v5 v5.2.4
 	github.com/prometheus/client_golang v1.23.2
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
