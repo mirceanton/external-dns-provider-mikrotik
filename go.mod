@@ -1,6 +1,6 @@
 module github.com/mirceanton/external-dns-provider-mikrotik
 
-go 1.25
+go 1.25.0
 
 toolchain go1.26.0
 
@@ -10,7 +10,7 @@ require (
 	github.com/prometheus/client_golang v1.23.2
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
-	golang.org/x/net v0.50.0
+	golang.org/x/net v0.51.0
 	sigs.k8s.io/external-dns v0.20.0
 )
 
