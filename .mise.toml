@@ -3,7 +3,7 @@
 # Project Tools
 # =================================================================================================
 go = "1.26.1"
-"aqua:golangci/golangci-lint" = "2.11.2"
+"aqua:golangci/golangci-lint" = "2.11.3"
 "aqua:goreleaser/goreleaser" = "2.14.1"
 "aqua:kubernetes/kubectl" = "1.33.1"
 
