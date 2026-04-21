@@ -4,7 +4,7 @@
 # =================================================================================================
 go = "1.26.2"
 "aqua:golangci/golangci-lint" = "2.11.4"
-"aqua:goreleaser/goreleaser" = "2.15.3"
+"aqua:goreleaser/goreleaser" = "2.15.4"
 "aqua:kubernetes/kubectl" = "1.33.1"
 
 
