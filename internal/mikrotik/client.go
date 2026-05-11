@@ -5,11 +5,13 @@ package mikrotik
 import (
 	"bytes"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
+	"os"
 	"slices"
 
 	log "github.com/sirupsen/logrus"
@@ -28,6 +30,7 @@ type MikrotikConnectionConfig struct {
 	Username      string `env:"MIKROTIK_USERNAME,notEmpty"`
 	Password      string `env:"MIKROTIK_PASSWORD,notEmpty"`
 	SkipTLSVerify bool   `env:"MIKROTIK_SKIP_TLS_VERIFY" envDefault:"false"`
+	CACert        string `env:"MIKROTIK_CA_CERT"`
 }
 
 // MikrotikApiClient encapsulates the client configuration and HTTP client
@@ -70,14 +73,32 @@ func NewMikrotikClient(config *MikrotikConnectionConfig, defaults *MikrotikDefau
 		return nil, err
 	}
 
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: config.SkipTLSVerify,
+	}
+
+	if config.CACert != "" {
+		caCert, err := os.ReadFile(config.CACert)
+		if err != nil {
+			log.Errorf("failed to read CA cert: %v", err)
+			return nil, err
+		}
+		pool, err := x509.SystemCertPool()
+		if err != nil {
+			pool = x509.NewCertPool()
+		}
+		if !pool.AppendCertsFromPEM(caCert) {
+			return nil, fmt.Errorf("failed to append CA cert")
+		}
+		tlsConfig.RootCAs = pool
+	}
+
 	client := &MikrotikApiClient{
 		MikrotikDefaults:         defaults,
 		MikrotikConnectionConfig: config,
 		Client: &http.Client{
 			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: config.SkipTLSVerify,
-				},
+				TLSClientConfig: tlsConfig,
 			},
 			Jar: jar,
 		},

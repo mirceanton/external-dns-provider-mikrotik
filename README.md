@@ -49,6 +49,7 @@ See mirceanton/external-dns-provider-mikrotik#166
 | `MIKROTIK_USERNAME`         | Username for the RouterOS API authentication.                                      | N/A           |
 | `MIKROTIK_PASSWORD`         | Password for the RouterOS API authentication.                                      | N/A           |
 | `MIKROTIK_SKIP_TLS_VERIFY`  | Whether to skip TLS verification (`true` or `false`).                              | `false`       |
+| `MIKROTIK_CA_CERT`          | Path to a custom CA certificate file for TLS verification.                         | N/A           |
 
 ### Logging Configuration
 
