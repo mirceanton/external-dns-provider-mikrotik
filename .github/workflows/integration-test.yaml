@@ -100,7 +100,7 @@ jobs:
           CONNECTED=false
           for i in $(seq 1 120); do
             STATUS=$(curl -s -u admin: http://127.0.0.1:4480/rest/system/resource \
-                     --max-time 3 -o /dev/null -w "%{http_code}")
+                     --max-time 3 -o /dev/null -w "%{http_code}" || echo "000")
             if [ "$STATUS" = "200" ]; then
               echo "RouterOS API ready after $i attempts"
               CONNECTED=true
