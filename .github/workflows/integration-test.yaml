@@ -28,7 +28,7 @@ on:
 
 jobs:
   generate-matrix:
-    runs-on: infra-runners
+    runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.fetch.outputs.matrix }}
     steps:
@@ -46,7 +46,7 @@ jobs:
 
   integration-test:
     needs: generate-matrix
-    runs-on: infra-runners
+    runs-on: ubuntu-latest
     continue-on-error: ${{ matrix.allow_failure }}
     strategy:
       fail-fast: false
