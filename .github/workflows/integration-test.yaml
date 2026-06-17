@@ -45,7 +45,7 @@ jobs:
         id: fetch
         env:
           INCLUDE_UNSTABLE: ${{ inputs.include_unstable || 'false' }}
-        run: echo "matrix=$(go run ./tools/fetch-chr-versions/)" >> "$GITHUB_OUTPUT"
+        run: echo "matrix=$(go run ./tools/fetch-chr-versions/)" | tee "$GITHUB_OUTPUT"
 
   integration-test:
     needs: generate-matrix
