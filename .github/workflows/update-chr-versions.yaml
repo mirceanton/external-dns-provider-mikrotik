@@ -29,7 +29,7 @@ concurrency:
 jobs:
   update:
     if: github.repository_owner == 'mirceanton' # ? don't run on forks
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     permissions:
       contents: write
       pull-requests: write
