@@ -3,8 +3,8 @@
 name: Update CHR Versions
 permissions: { contents: read }
 
-on:
-  schedule: [{ cron: "0 4 * * 1" }] # Weekly Monday 04:00 UTC
+on:  # yamllint disable-line rule:truthy
+  schedule: [{cron: '0 4 * * *'}]  # Daily 04:00 UTC
   workflow_dispatch:
     inputs:
       include_unstable:
@@ -33,6 +33,8 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+    outputs:
+      matrix: ${{ steps.fetch.outputs.matrix }}
     steps:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -42,9 +44,16 @@ jobs:
         with: { go-version-file: go.mod }
 
       - name: Fetch CHR versions
-        run: go run ./tools/fetch-chr-versions/ | tee .github/chr-versions.json
+        id: fetch
         env:
           INCLUDE_UNSTABLE: ${{ inputs.include_unstable || 'false' }}
+        run: |
+          go run ./tools/fetch-chr-versions/ > .github/chr-versions.json
+          {
+            echo "matrix<<EOF"
+            cat .github/chr-versions.json
+            echo "EOF"
+          } | tee "$GITHUB_OUTPUT"
 
       - name: Generate Token
         if: github.event_name != 'pull_request'
@@ -52,18 +61,40 @@ jobs:
         id: app-token
         with:
           client-id: ${{ secrets.BOT_APP_CLIENT_ID }}
-          private-key: "${{ secrets.BOT_APP_PRIVATE_KEY }}"
+          private-key: '${{ secrets.BOT_APP_PRIVATE_KEY }}'
 
       - name: Create pull request
         if: github.event_name != 'pull_request'
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
-          token: "${{ steps.app-token.outputs.token }}"
+          token: '${{ steps.app-token.outputs.token }}'
           add-paths: .github/chr-versions.json
           branch: chore/update-chr-versions
           base: main
-          commit-message: "chore(integration): update CHR test versions"
-          title: "chore(integration): update CHR test versions"
+          commit-message: 'chore(integration): update CHR test versions'
+          title: 'chore(integration): update CHR test versions'
           body: Automated update of `.github/chr-versions.json` from the MikroTik release feeds.
-          author: "${{ steps.app-token.outputs.app-slug }}[bot] <${{ steps.app-token.outputs.installation-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com>"
-          committer: "${{ steps.app-token.outputs.app-slug }}[bot] <${{ steps.app-token.outputs.installation-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com>"
+          author: '${{ steps.app-token.outputs.app-slug }}[bot] <${{ steps.app-token.outputs.installation-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com>'
+          committer: '${{ steps.app-token.outputs.app-slug }}[bot] <${{ steps.app-token.outputs.installation-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com>'
+
+  warm-cache:
+    needs: update
+    runs-on: infra-runners
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.update.outputs.matrix) }}
+    steps:
+      - name: Restore CHR image cache
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        id: chr-cache
+        with:
+          path: chr.img
+          key: chr-image-${{ matrix.version }}
+
+      - name: Download and extract CHR image
+        if: steps.chr-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -fL "${{ matrix.download_url }}" -o chr.img.zip
+          unzip chr.img.zip
+          mv chr-*.img chr.img
