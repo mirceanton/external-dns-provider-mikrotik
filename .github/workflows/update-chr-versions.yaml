@@ -42,7 +42,9 @@ jobs:
         with: { go-version-file: go.mod }
 
       - name: Fetch CHR versions
-        run: go run ./tools/fetch-chr-versions/ | tee .github/chr-versions.json
+        run: |
+          echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
+          go run ./tools/fetch-chr-versions/ | tee .github/chr-versions.json
         env:
           INCLUDE_UNSTABLE: ${{ inputs.include_unstable || 'false' }}
 

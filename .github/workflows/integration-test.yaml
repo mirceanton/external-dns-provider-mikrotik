@@ -80,6 +80,7 @@ jobs:
       - name: Download and extract CHR image
         if: steps.chr-cache.outputs.cache-hit != 'true'
         run: |
+          echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
           curl -fL "${{ matrix.download_url }}" -o chr.img.zip
           unzip chr.img.zip
           mv chr-*.img chr.img
