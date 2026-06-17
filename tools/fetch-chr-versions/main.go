@@ -115,7 +115,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	out, err := json.Marshal(entries)
+	out, err := json.MarshalIndent(entries, "", "  ")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: failed to marshal output: %v\n", err)
 		os.Exit(1)
