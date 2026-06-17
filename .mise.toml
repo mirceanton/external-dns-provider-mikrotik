@@ -20,8 +20,8 @@ golangci-lint = "2.12.2"
 # CI Tools -> major versions
 # =================================================================================================
 "aqua:rhysd/actionlint" = "1"
-"pipx:yamllint" = "v1.38.0"
 "ubi:caarlos0/svu" = "latest"
+"npm:prettier" = "latest"
 
 # =================================================================================================
 # TASKS -> Kube Cluster
