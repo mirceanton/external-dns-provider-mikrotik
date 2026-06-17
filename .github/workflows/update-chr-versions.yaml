@@ -65,5 +65,5 @@ jobs:
           commit-message: 'chore(integration): update CHR test versions'
           title: 'chore(integration): update CHR test versions'
           body: Automated update of `.github/chr-versions.json` from the MikroTik release feeds.
-          author: '${{ steps.app-token.outputs.app-slug }}[bot]'
-          committer: '${{ steps.app-token.outputs.app-slug }}[bot]'
+          author: "${{ steps.app-token.outputs.app-slug }}[bot] <${{ steps.app-token.outputs.installation-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com>"
+          committer: "${{ steps.app-token.outputs.app-slug }}[bot] <${{ steps.app-token.outputs.installation-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com>"
