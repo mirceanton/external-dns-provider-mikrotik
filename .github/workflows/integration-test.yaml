@@ -3,6 +3,10 @@
 name: Integration Test
 permissions: { contents: read }
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:  # yamllint disable-line rule:truthy
   schedule: [{cron: '0 4 * * 1'}]  # Weekly Monday 04:00 UTC
   workflow_dispatch:
