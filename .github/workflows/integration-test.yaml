@@ -4,15 +4,21 @@ name: Integration Test
 permissions: { contents: read }
 
 on:  # yamllint disable-line rule:truthy
+  schedule: [{cron: '0 4 * * 1'}]  # Weekly Monday 04:00 UTC
   workflow_dispatch:
     inputs:
       include_unstable:
         description: Include testing/development RouterOS channels (allowed to fail)
         type: boolean
         default: false
-  schedule:
-    - cron: '0 4 * * 1'  # Weekly Monday 04:00 UTC
-  pull_request: { branches: ["main"] }
+  pull_request:
+    branches: ["main"]
+    paths:
+      - .github/workflows/integration-test.yaml
+      - tools/fetch-chr-versions/**.go
+      - internal/mikrotik/**.go
+      - go.mod
+      - go.sum
   push:
     branches: ["main"]
     paths:
