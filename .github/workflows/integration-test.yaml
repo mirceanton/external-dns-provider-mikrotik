@@ -1,0 +1,139 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Integration Test
+permissions: { contents: read }
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:  # yamllint disable-line rule:truthy
+  workflow_dispatch: {}
+  pull_request:
+    branches: ["main"]
+    paths:
+      - .github/workflows/integration-test.yaml
+      - .github/chr-versions.json
+      - internal/mikrotik/**.go
+      - go.mod
+      - go.sum
+  push:
+    branches: ["main"]
+    paths:
+      - .github/workflows/integration-test.yaml
+      - .github/chr-versions.json
+      - internal/mikrotik/**.go
+      - go.mod
+      - go.sum
+
+jobs:
+  generate-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.fetch.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Read CHR versions
+        id: fetch
+        run: |
+          {
+            echo "matrix<<EOF"
+            cat .github/chr-versions.json
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+  integration-test:
+    needs: generate-matrix
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.allow_failure }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Setup Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with: { go-version-file: go.mod }
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Install QEMU
+        run: sudo apt-get install -y qemu-system-x86
+
+      - name: Restore CHR image cache
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        id: chr-cache
+        with:
+          path: chr.img
+          key: chr-image-${{ matrix.version }}
+
+      - name: Download and extract CHR image
+        if: steps.chr-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -fL "${{ matrix.download_url }}" -o chr.img.zip
+          unzip chr.img.zip
+          mv chr-*.img chr.img
+
+      - name: Boot CHR VM
+        run: |
+          qemu-system-x86_64 \
+            -enable-kvm \
+            -m 256 \
+            -hda chr.img \
+            -snapshot \
+            -net nic \
+            -net user,hostfwd=tcp::4480-:80 \
+            -display none \
+            -daemonize \
+            -pidfile qemu.pid
+
+      - name: Wait for RouterOS API
+        run: |
+          echo "Waiting for RouterOS REST API to become ready..."
+          CONNECTED=false
+          for i in $(seq 1 120); do
+            STATUS=$(curl -s -u admin: http://127.0.0.1:4480/rest/system/resource \
+                     --max-time 3 -o /dev/null -w "%{http_code}" || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "RouterOS API ready after $i attempts"
+              CONNECTED=true
+              break
+            fi
+            echo "Attempt $i/120: HTTP $STATUS, retrying in 5s..."
+            sleep 5
+          done
+          if [ "$CONNECTED" != "true" ]; then
+            echo "RouterOS API did not become ready within timeout"
+            exit 1
+          fi
+
+      - name: Set RouterOS admin password
+        run: |
+          curl -fs -u admin: \
+            -X POST http://127.0.0.1:4480/rest/password \
+            -H 'Content-Type: application/json' \
+            -d '{"old-password":"","new-password":"RouterTest1!","confirm-new-password":"RouterTest1!"}'
+
+      - name: Run integration tests
+        env:
+          MIKROTIK_BASEURL: http://127.0.0.1:4480
+          MIKROTIK_USERNAME: admin
+          MIKROTIK_PASSWORD: "RouterTest1!"
+        run: go test -v -tags integration -race ./internal/mikrotik/ -timeout 300s
+
+      - name: Stop QEMU
+        if: always()
+        run: |
+          if [ -f qemu.pid ]; then
+            kill "$(cat qemu.pid)" || true
+          fi

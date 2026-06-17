@@ -1,0 +1,69 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Update CHR Versions
+permissions: { contents: read }
+
+on:  # yamllint disable-line rule:truthy
+  schedule: [{cron: '0 4 * * 1'}]  # Weekly Monday 04:00 UTC
+  workflow_dispatch:
+    inputs:
+      include_unstable:
+        description: Include testing/development RouterOS channels (allowed to fail)
+        type: boolean
+        default: false
+  pull_request:
+    branches: ["main"]
+    paths:
+      - .github/workflows/update-chr-versions.yaml
+      - tools/fetch-chr-versions/**
+  push:
+    branches: ["main"]
+    paths:
+      - .github/workflows/update-chr-versions.yaml
+      - tools/fetch-chr-versions/**
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  update:
+    if: github.repository_owner == 'mirceanton' # ? don't run on forks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Setup Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with: { go-version-file: go.mod }
+
+      - name: Fetch CHR versions
+        run: go run ./tools/fetch-chr-versions/ | tee .github/chr-versions.json
+        env:
+          INCLUDE_UNSTABLE: ${{ inputs.include_unstable || 'false' }}
+
+      - name: Generate Token
+        if: github.event_name != 'pull_request'
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          app-id: '${{ secrets.BOT_APP_ID }}'
+          private-key: '${{ secrets.BOT_APP_PRIVATE_KEY }}'
+
+      - name: Create pull request
+        if: github.event_name != 'pull_request'
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          token: '${{ steps.app-token.outputs.token }}'
+          add-paths: .github/chr-versions.json
+          branch: chore/update-chr-versions
+          base: main
+          commit-message: 'chore(integration): update CHR test versions'
+          title: 'chore(integration): update CHR test versions'
+          body: Automated update of `.github/chr-versions.json` from the MikroTik release feeds.
+          author: '${{ steps.app-token.outputs.app-slug }}[bot]'
+          committer: '${{ steps.app-token.outputs.app-slug }}[bot]'
