@@ -43,32 +43,32 @@ See mirceanton/external-dns-provider-mikrotik#166
 
 ### MikroTik Connection Configuration
 
-| Environment Variable        | Description                                                                        | Default Value |
-|-----------------------------|------------------------------------------------------------------------------------|---------------|
-| `MIKROTIK_BASEURL`          | URL at which the RouterOS API is available. (ex. `https://192.168.88.1:443`)       | N/A           |
-| `MIKROTIK_USERNAME`         | Username for the RouterOS API authentication.                                      | N/A           |
-| `MIKROTIK_PASSWORD`         | Password for the RouterOS API authentication.                                      | N/A           |
-| `MIKROTIK_SKIP_TLS_VERIFY`  | Whether to skip TLS verification (`true` or `false`).                              | `false`       |
-| `MIKROTIK_CA_CERT`          | Path to a custom CA certificate file for TLS verification.                         | N/A           |
+| Environment Variable       | Description                                                                  | Default Value |
+| -------------------------- | ---------------------------------------------------------------------------- | ------------- |
+| `MIKROTIK_BASEURL`         | URL at which the RouterOS API is available. (ex. `https://192.168.88.1:443`) | N/A           |
+| `MIKROTIK_USERNAME`        | Username for the RouterOS API authentication.                                | N/A           |
+| `MIKROTIK_PASSWORD`        | Password for the RouterOS API authentication.                                | N/A           |
+| `MIKROTIK_SKIP_TLS_VERIFY` | Whether to skip TLS verification (`true` or `false`).                        | `false`       |
+| `MIKROTIK_CA_CERT`         | Path to a custom CA certificate file for TLS verification.                   | N/A           |
 
 ### Logging Configuration
 
-| Environment Variable  | Description                                                                        | Default Value |
-|-----------------------|------------------------------------------------------------------------------------|---------------|
-| `LOG_FORMAT`          | The format in which logs will be printed. (`text` or `json`)                       | `text`        |
-| `LOG_LEVEL`           | The verbosity at which logs are printed logs. (`debug`, `info`, `warn` or `error`) | `info`        |
+| Environment Variable | Description                                                                        | Default Value |
+| -------------------- | ---------------------------------------------------------------------------------- | ------------- |
+| `LOG_FORMAT`         | The format in which logs will be printed. (`text` or `json`)                       | `text`        |
+| `LOG_LEVEL`          | The verbosity at which logs are printed logs. (`debug`, `info`, `warn` or `error`) | `info`        |
 
 ### Default Values Configuration
 
-| Environment Variable        | Description                                                                        | Default Value |
-|-----------------------------|------------------------------------------------------------------------------------|---------------|
-| `MIKROTIK_DEFAULT_TTL`      | Default TTL value to be set for DNS records with no specified TTL.                 | `3600`        |
-| `MIKROTIK_DEFAULT_Comment`  | Default Comment value to be set for DNS records with no specified Comment.         | N/A           |
+| Environment Variable       | Description                                                                | Default Value |
+| -------------------------- | -------------------------------------------------------------------------- | ------------- |
+| `MIKROTIK_DEFAULT_TTL`     | Default TTL value to be set for DNS records with no specified TTL.         | `3600`        |
+| `MIKROTIK_DEFAULT_Comment` | Default Comment value to be set for DNS records with no specified Comment. | N/A           |
 
 ### Webhook Server Configuration
 
 | Environment Variable             | Description                                                      | Default Value |
-|----------------------------------|------------------------------------------------------------------|---------------|
+| -------------------------------- | ---------------------------------------------------------------- | ------------- |
 | `SERVER_HOST`                    | The host address where the server listens.                       | `localhost`   |
 | `SERVER_PORT`                    | The port where the server listens.                               | `8888`        |
 | `SERVER_READ_TIMEOUT`            | Duration the server waits before timing out on read operations.  | N/A           |
@@ -83,43 +83,43 @@ See mirceanton/external-dns-provider-mikrotik#166
 1. Create a service account in RouterOS. This local user needs `api` and `rest-api` policies to authenticate and use the RouterOS HTTP APIs. Additionally, this local user needs `read` and `write` policies to manage static DNS.
 2. Create a Kubernetes namespace for your External DNS deployment
 
-    ```yaml
-    ---
-    apiVersion: v1
-    kind: Namespace
-    metadata:
-      name: external-dns
-    ```
+   ```yaml
+   ---
+   apiVersion: v1
+   kind: Namespace
+   metadata:
+     name: external-dns
+   ```
 
 3. Create a Kubernetes secret with the connection details for your RouterOS instance:
 
-    ```yaml
-    ---
-    apiVersion: v1
-    kind: Secret
-    metadata:
-      name: mikrotik-credentials
-      namespace: external-dns
-    stringData:
-      MIKROTIK_BASEURL: "https://192.168.88.1:443"
-      MIKROTIK_USERNAME: "external-dns"
-      MIKROTIK_PASSWORD: "external-dns"
-      MIKROTIK_SKIP_TLS_VERIFY: "true"
-    ```
+   ```yaml
+   ---
+   apiVersion: v1
+   kind: Secret
+   metadata:
+     name: mikrotik-credentials
+     namespace: external-dns
+   stringData:
+     MIKROTIK_BASEURL: "https://192.168.88.1:443"
+     MIKROTIK_USERNAME: "external-dns"
+     MIKROTIK_PASSWORD: "external-dns"
+     MIKROTIK_SKIP_TLS_VERIFY: "true"
+   ```
 
 4. Add the External DNS helm repository and update your local cache
 
-    ```bash
-    helm repo add external-dns https://kubernetes-sigs.github.io/external-dns/
-    helm repo update
-    ```
+   ```bash
+   helm repo add external-dns https://kubernetes-sigs.github.io/external-dns/
+   helm repo update
+   ```
 
 5. Configure your helm values. Take a look at the [example values.yaml](./example/values.yaml)
 6. Install the External DNS helm chart
 
-    ```bash
-    helm upgrade --install --namespace external-dns external-dns external-dns/external-dns -f values.yaml
-    ```
+   ```bash
+   helm upgrade --install --namespace external-dns external-dns external-dns/external-dns -f values.yaml
+   ```
 
 > [!TIP]
 > By default, support for MX, NS and SRV records is disabled and needs to be enabled via the `--managed-record-types` argument.
