@@ -134,4 +134,6 @@ jobs:
       - name: Stop QEMU
         if: always()
         run: |
-          [ -f qemu.pid ] && kill "$(cat qemu.pid)" || true
+          if [ -f qemu.pid ]; then
+            kill "$(cat qemu.pid)" || true
+          fi
