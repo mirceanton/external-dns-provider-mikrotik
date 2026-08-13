@@ -67,8 +67,10 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - name: Install QEMU
-        run: sudo apt-get install -y qemu-system-x86
+      - name: Set up QEMU
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-system-x86
 
       - name: Restore CHR image cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -81,7 +83,7 @@ jobs:
         if: steps.chr-cache.outputs.cache-hit != 'true'
         run: |
           echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
-          curl -fL "${{ matrix.download_url }}" -o chr.img.zip
+          curl -fL --retry 5 --retry-all-errors --retry-delay 5 "${{ matrix.download_url }}" -o chr.img.zip
           unzip chr.img.zip
           mv chr-*.img chr.img
 
