@@ -67,8 +67,8 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - name: Install QEMU
-        run: sudo apt-get install -y qemu-system-x86
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4.2.0
 
       - name: Restore CHR image cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
