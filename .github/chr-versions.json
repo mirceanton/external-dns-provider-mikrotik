@@ -1,14 +1,14 @@
 [
   {
-    "version": "7.24.1",
+    "version": "7.24.2",
     "channel": "stable",
-    "download_url": "https://download.mikrotik.com/routeros/7.24.1/chr-7.24.1.img.zip",
+    "download_url": "https://download.mikrotik.com/routeros/7.24.2/chr-7.24.2.img.zip",
     "allow_failure": false
   },
   {
-    "version": "7.21.5",
+    "version": "7.23.5",
     "channel": "long-term",
-    "download_url": "https://download.mikrotik.com/routeros/7.21.5/chr-7.21.5.img.zip",
+    "download_url": "https://download.mikrotik.com/routeros/7.23.5/chr-7.23.5.img.zip",
     "allow_failure": false
   }
 ]
