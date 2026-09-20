@@ -104,43 +104,43 @@ checksum = "sha256:815c3c39984d1f7347486ad58b8e33e61ee87bc8ad79e0dbc9793e2220061
 url = "https://dl.k8s.io/v1.33.1/bin/windows/amd64/kubectl.exe"
 
 [[tools."aqua:kubernetes/minikube"]]
-version = "1.38.1"
+version = "1.39.0"
 backend = "aqua:kubernetes/minikube"
 
 [tools."aqua:kubernetes/minikube"."platforms.linux-arm64"]
-checksum = "sha256:a0b8a1ebfc8c07a247271d8df98ac0ddd7c8c855b601d402463e2e50c08c6bab"
-url = "https://github.com/kubernetes/minikube/releases/download/v1.38.1/minikube-linux-arm64"
-url_api = "https://api.github.com/repos/kubernetes/minikube/releases/assets/358742599"
+checksum = "sha256:202f331cb677761c5aec81c58472d16d65707358b9f66226210be3fe3275b1c3"
+url = "https://github.com/kubernetes/minikube/releases/download/v1.39.0/minikube-linux-arm64"
+url_api = "https://api.github.com/repos/kubernetes/minikube/releases/assets/541765415"
 
 [tools."aqua:kubernetes/minikube"."platforms.linux-arm64-musl"]
-checksum = "sha256:a0b8a1ebfc8c07a247271d8df98ac0ddd7c8c855b601d402463e2e50c08c6bab"
-url = "https://github.com/kubernetes/minikube/releases/download/v1.38.1/minikube-linux-arm64"
-url_api = "https://api.github.com/repos/kubernetes/minikube/releases/assets/358742599"
+checksum = "sha256:202f331cb677761c5aec81c58472d16d65707358b9f66226210be3fe3275b1c3"
+url = "https://github.com/kubernetes/minikube/releases/download/v1.39.0/minikube-linux-arm64"
+url_api = "https://api.github.com/repos/kubernetes/minikube/releases/assets/541765415"
 
 [tools."aqua:kubernetes/minikube"."platforms.linux-x64"]
-checksum = "sha256:099477eaf248bcb5bcea8ce78a2898e93ac01461c35189da1848c3de82ecd22e"
-url = "https://github.com/kubernetes/minikube/releases/download/v1.38.1/minikube-linux-amd64"
-url_api = "https://api.github.com/repos/kubernetes/minikube/releases/assets/358743871"
+checksum = "sha256:b738496da01be06bbaf80c688f57ce25acd3849fbb518155f3a88e03ef555aa4"
+url = "https://github.com/kubernetes/minikube/releases/download/v1.39.0/minikube-linux-amd64"
+url_api = "https://api.github.com/repos/kubernetes/minikube/releases/assets/541767984"
 
 [tools."aqua:kubernetes/minikube"."platforms.linux-x64-musl"]
-checksum = "sha256:099477eaf248bcb5bcea8ce78a2898e93ac01461c35189da1848c3de82ecd22e"
-url = "https://github.com/kubernetes/minikube/releases/download/v1.38.1/minikube-linux-amd64"
-url_api = "https://api.github.com/repos/kubernetes/minikube/releases/assets/358743871"
+checksum = "sha256:b738496da01be06bbaf80c688f57ce25acd3849fbb518155f3a88e03ef555aa4"
+url = "https://github.com/kubernetes/minikube/releases/download/v1.39.0/minikube-linux-amd64"
+url_api = "https://api.github.com/repos/kubernetes/minikube/releases/assets/541767984"
 
 [tools."aqua:kubernetes/minikube"."platforms.macos-arm64"]
-checksum = "sha256:f9b0c70bb7daf38c683c0b6e46dc1b612600247ae826bf74576807746a919ee8"
-url = "https://github.com/kubernetes/minikube/releases/download/v1.38.1/minikube-darwin-arm64"
-url_api = "https://api.github.com/repos/kubernetes/minikube/releases/assets/358743776"
+checksum = "sha256:78ad8f2f3b35a81e9c2501b1a65961c1521aa4c76fbbe1b5409053db49e29bcd"
+url = "https://github.com/kubernetes/minikube/releases/download/v1.39.0/minikube-darwin-arm64"
+url_api = "https://api.github.com/repos/kubernetes/minikube/releases/assets/541767687"
 
 [tools."aqua:kubernetes/minikube"."platforms.macos-x64"]
-checksum = "sha256:db11dffba835609988e4e98c3a91a38653ce66ddfa8ea3aaea92d87c54a0a348"
-url = "https://github.com/kubernetes/minikube/releases/download/v1.38.1/minikube-darwin-amd64"
-url_api = "https://api.github.com/repos/kubernetes/minikube/releases/assets/358741589"
+checksum = "sha256:12247c653b6f1b58ac7bb634f6d1e31a1d33f7c63a6f99cbdaef160de15d2175"
+url = "https://github.com/kubernetes/minikube/releases/download/v1.39.0/minikube-darwin-amd64"
+url_api = "https://api.github.com/repos/kubernetes/minikube/releases/assets/541762487"
 
 [tools."aqua:kubernetes/minikube"."platforms.windows-x64"]
-checksum = "sha256:04215bec5632a976b48eb632856b50f1eaaa183b9c2a5904e11d1bacc4961ff7"
-url = "https://github.com/kubernetes/minikube/releases/download/v1.38.1/minikube-windows-amd64.exe"
-url_api = "https://api.github.com/repos/kubernetes/minikube/releases/assets/358741430"
+checksum = "sha256:776386465ded2cf610ae397fe302de32c44d12134b5ce7ce98ab05bd7713b360"
+url = "https://github.com/kubernetes/minikube/releases/download/v1.39.0/minikube-windows-amd64.exe"
+url_api = "https://api.github.com/repos/kubernetes/minikube/releases/assets/541762112"
 
 [[tools."aqua:rhysd/actionlint"]]
 version = "1.7.12"
