@@ -362,5 +362,5 @@ url_api = "https://api.github.com/repos/golangci/golangci-lint/releases/assets/5
 provenance = "github-attestations"
 
 [[tools."npm:prettier"]]
-version = "3.9.8"
+version = "3.9.9"
 backend = "npm:prettier"
