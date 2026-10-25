@@ -237,50 +237,49 @@ url_api = "https://api.github.com/repos/caarlos0/svu/releases/assets/410001860"
 provenance = "github-attestations"
 
 [[tools."github:goreleaser/goreleaser"]]
-version = "2.18.3"
+version = "2.19.0"
 backend = "github:goreleaser/goreleaser"
 
 [tools."github:goreleaser/goreleaser"."platforms.linux-arm64"]
-checksum = "sha256:fa7011a7f8de3b504326b8552cf21c708ed3089519b01d372da32ef4e8d298d7"
-url = "https://github.com/goreleaser/goreleaser/releases/download/v2.18.3/goreleaser_Linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/goreleaser/goreleaser/releases/assets/623773317"
+checksum = "sha256:ef33741b684c9f62d6a21e7a3c8b051f139ea7b1d301693b67cc819c46226d53"
+url = "https://github.com/goreleaser/goreleaser/releases/download/v2.19.0/goreleaser_Linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/goreleaser/goreleaser/releases/assets/667102792"
 provenance = "github-attestations"
 
 [tools."github:goreleaser/goreleaser"."platforms.linux-arm64-musl"]
-checksum = "sha256:fa7011a7f8de3b504326b8552cf21c708ed3089519b01d372da32ef4e8d298d7"
-url = "https://github.com/goreleaser/goreleaser/releases/download/v2.18.3/goreleaser_Linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/goreleaser/goreleaser/releases/assets/623773317"
+checksum = "sha256:ef33741b684c9f62d6a21e7a3c8b051f139ea7b1d301693b67cc819c46226d53"
+url = "https://github.com/goreleaser/goreleaser/releases/download/v2.19.0/goreleaser_Linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/goreleaser/goreleaser/releases/assets/667102792"
 provenance = "github-attestations"
 
 [tools."github:goreleaser/goreleaser"."platforms.linux-x64"]
-checksum = "sha256:b8dee4728bca1aba0d71a832a17cd0a3799f75372878e7ffa36aef2343bce0bc"
-url = "https://github.com/goreleaser/goreleaser/releases/download/v2.18.3/goreleaser_Linux_x86_64.tar.gz"
-url_api = "https://api.github.com/repos/goreleaser/goreleaser/releases/assets/623773318"
+checksum = "sha256:ebc3194ad1d1b1787614405285a0039665cd4c5bd3305215a1b201600f90630b"
+url = "https://github.com/goreleaser/goreleaser/releases/download/v2.19.0/goreleaser_Linux_x86_64.tar.gz"
+url_api = "https://api.github.com/repos/goreleaser/goreleaser/releases/assets/667102791"
 provenance = "github-attestations"
-provenance_verified = true
 
 [tools."github:goreleaser/goreleaser"."platforms.linux-x64-musl"]
-checksum = "sha256:b8dee4728bca1aba0d71a832a17cd0a3799f75372878e7ffa36aef2343bce0bc"
-url = "https://github.com/goreleaser/goreleaser/releases/download/v2.18.3/goreleaser_Linux_x86_64.tar.gz"
-url_api = "https://api.github.com/repos/goreleaser/goreleaser/releases/assets/623773318"
+checksum = "sha256:ebc3194ad1d1b1787614405285a0039665cd4c5bd3305215a1b201600f90630b"
+url = "https://github.com/goreleaser/goreleaser/releases/download/v2.19.0/goreleaser_Linux_x86_64.tar.gz"
+url_api = "https://api.github.com/repos/goreleaser/goreleaser/releases/assets/667102791"
 provenance = "github-attestations"
 
 [tools."github:goreleaser/goreleaser"."platforms.macos-arm64"]
-checksum = "sha256:821c58ab8c31d57bb331cab9f1a703eb3673bff4fce0db9cc3c4a038af14f76f"
-url = "https://github.com/goreleaser/goreleaser/releases/download/v2.18.3/goreleaser_Darwin_arm64.tar.gz"
-url_api = "https://api.github.com/repos/goreleaser/goreleaser/releases/assets/623773406"
+checksum = "sha256:713192b46698ac10ed9275abf25c922a152ab8280c71ae58dc0ff46a33f60004"
+url = "https://github.com/goreleaser/goreleaser/releases/download/v2.19.0/goreleaser_Darwin_arm64.tar.gz"
+url_api = "https://api.github.com/repos/goreleaser/goreleaser/releases/assets/667102793"
 provenance = "github-attestations"
 
 [tools."github:goreleaser/goreleaser"."platforms.macos-x64"]
-checksum = "sha256:dbc39347d9ca25a2da9bcc03633f39130bb3a67c9f2a0da86ba15b8b00bf86ce"
-url = "https://github.com/goreleaser/goreleaser/releases/download/v2.18.3/goreleaser_Darwin_x86_64.tar.gz"
-url_api = "https://api.github.com/repos/goreleaser/goreleaser/releases/assets/623773404"
+checksum = "sha256:164fce297e601ec00009e40d26858789b637335b5564bff2c99027b10d28bafe"
+url = "https://github.com/goreleaser/goreleaser/releases/download/v2.19.0/goreleaser_Darwin_x86_64.tar.gz"
+url_api = "https://api.github.com/repos/goreleaser/goreleaser/releases/assets/667102881"
 provenance = "github-attestations"
 
 [tools."github:goreleaser/goreleaser"."platforms.windows-x64"]
-checksum = "sha256:5e7455df2accbfe69416cf9ccbc6aefe9abd2543525d5d6da24426d827aa8171"
-url = "https://github.com/goreleaser/goreleaser/releases/download/v2.18.3/goreleaser_Windows_x86_64.zip"
-url_api = "https://api.github.com/repos/goreleaser/goreleaser/releases/assets/623773506"
+checksum = "sha256:67807490e909a37f58ef40b67601896d8d4da2411c9839221dae55732c243fe9"
+url = "https://github.com/goreleaser/goreleaser/releases/download/v2.19.0/goreleaser_Windows_x86_64.zip"
+url_api = "https://api.github.com/repos/goreleaser/goreleaser/releases/assets/667103008"
 provenance = "github-attestations"
 
 [[tools.go]]
