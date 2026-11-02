@@ -6,9 +6,9 @@
     "allow_failure": false
   },
   {
-    "version": "7.23.8",
+    "version": "7.24.6",
     "channel": "long-term",
-    "download_url": "https://download.mikrotik.com/routeros/7.23.8/chr-7.23.8.img.zip",
+    "download_url": "https://download.mikrotik.com/routeros/7.24.6/chr-7.24.6.img.zip",
     "allow_failure": false
   }
 ]
