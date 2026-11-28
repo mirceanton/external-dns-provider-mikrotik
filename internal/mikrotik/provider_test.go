@@ -285,9 +285,23 @@ func TestCompareEndpointsMetadata(t *testing.T) {
 		{
 			name:          "Mismatch in address-list",
 			provider:      mikrotikProvider,
-			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"address-list": "1.2.3.4"}}),
-			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"address-list": "2.3.4.5"}}),
+			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"address-list": "list-a"}}),
+			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"address-list": "list-b"}}),
 			expectedMatch: false,
+		},
+		{
+			name:          "Mismatch in address-list (set != unspecified)",
+			provider:      mikrotikProvider,
+			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"address-list": "list-a"}}),
+			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, nil),
+			expectedMatch: false,
+		},
+		{
+			name:          "Match in address-list (annotation prefix vs plain)",
+			provider:      mikrotikProvider,
+			endpointA:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"address-list": "list-a"}}),
+			endpointB:     NewEndpoint("example.com", []string{"192.0.2.1"}, "A", 3600, []map[string]string{{"webhook/address-list": "list-a"}}),
+			expectedMatch: true,
 		},
 		{
 			name:          "Mismatch in regexp",

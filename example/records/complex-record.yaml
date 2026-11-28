@@ -14,7 +14,7 @@ spec:
         - name: comment
           value: "This is a comment"
         - name: address-list
-          value: "1.2.3.1"
+          value: "complex-clients"
         - name: match-subdomain
           value: "true"
         - name: disabled

@@ -63,7 +63,7 @@ See mirceanton/external-dns-provider-mikrotik#166
 | Environment Variable       | Description                                                                | Default Value |
 | -------------------------- | -------------------------------------------------------------------------- | ------------- |
 | `MIKROTIK_DEFAULT_TTL`     | Default TTL value to be set for DNS records with no specified TTL.         | `3600`        |
-| `MIKROTIK_DEFAULT_Comment` | Default Comment value to be set for DNS records with no specified Comment. | N/A           |
+| `MIKROTIK_DEFAULT_COMMENT` | Default Comment value to be set for DNS records with no specified Comment. | N/A           |
 
 ### Webhook Server Configuration
 
@@ -77,6 +77,45 @@ See mirceanton/external-dns-provider-mikrotik#166
 | `EXCLUDE_DOMAIN_FILTER`          | List of domains to exclude from filtering.                       | Empty         |
 | `REGEXP_DOMAIN_FILTER`           | Regular expression for filtering domains.                        | Empty         |
 | `REGEXP_DOMAIN_FILTER_EXCLUSION` | Regular expression for excluding domains from the filter.        | Empty         |
+
+## 🏷️ Provider-Specific Configuration
+
+Besides the name, type, targets and TTL, MikroTik static DNS entries have a few extra properties. You can set them per record with `providerSpecific` entries on a `DNSEndpoint`, or with `external-dns.alpha.kubernetes.io/webhook-<property>` annotations on Ingress/Service objects.
+
+| Property          | Annotation                                                 | Description                                                                                                                           |
+| ----------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `comment`         | `external-dns.alpha.kubernetes.io/webhook-comment`         | Comment attached to the DNS entry. Falls back to `MIKROTIK_DEFAULT_COMMENT` when not set.                                             |
+| `address-list`    | `external-dns.alpha.kubernetes.io/webhook-address-list`    | Name of the firewall address list that RouterOS adds the resolved addresses to when a client queries this entry. See the notes below. |
+| `match-subdomain` | `external-dns.alpha.kubernetes.io/webhook-match-subdomain` | Whether the entry also answers for subdomains of its name (`true`/`false`).                                                           |
+| `disabled`        | `external-dns.alpha.kubernetes.io/webhook-disabled`        | Whether the entry is created as disabled (`true`/`false`).                                                                            |
+
+Using annotations:
+
+```yaml
+metadata:
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: app.example.com
+    external-dns.alpha.kubernetes.io/webhook-address-list: "traefik"
+```
+
+Using a `DNSEndpoint`:
+
+```yaml
+spec:
+  endpoints:
+    - dnsName: app.example.com
+      recordType: A
+      targets: ["192.168.1.10"]
+      providerSpecific:
+        - name: address-list
+          value: "traefik"
+```
+
+### Notes on `address-list`
+
+- RouterOS supports **one** address list per static DNS entry, so the value is a single list name. A comma-separated value such as `"traefik,local-services"` is passed to RouterOS as-is. It is not split into several lists, and the webhook logs a warning. To match several groups in your firewall, use one list and reference it from each rule.
+- RouterOS fills the address list **dynamically**. An address is added only when a client queries the entry through the router (the router's own lookups don't count). It is removed once the answer's TTL plus `address-list-extra-time` (set in `/ip dns`) has passed. The list stays empty until something resolves the name.
+- Records managed by external-dns are fully owned by it. If you edit a managed entry on the router by hand (for example, to add an `address-list`), external-dns sees that it no longer matches the desired state and recreates it. Set the property via the annotation or `providerSpecific` instead.
 
 ## 🚀 Deployment
 

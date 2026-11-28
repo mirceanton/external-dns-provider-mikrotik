@@ -854,6 +854,23 @@ func TestExternalDNSEndpointToDNSRecord(t *testing.T) {
 			expectError: false,
 		},
 		{
+			name: "Setting address-list via annotation (webhook/ prefix)",
+			endpoint: &endpoint.Endpoint{
+				DNSName:    "traefik.example.com",
+				RecordType: "A",
+				Targets:    endpoint.NewTargets("192.0.2.124", "192.0.2.125"),
+				RecordTTL:  endpoint.TTL(3600),
+				ProviderSpecific: endpoint.ProviderSpecific{
+					{Name: "webhook/address-list", Value: "traefik"},
+				},
+			},
+			expectedRecords: []*DNSRecord{
+				{Name: "traefik.example.com", Type: "A", Address: "192.0.2.124", TTL: "1h", AddressList: "traefik"},
+				{Name: "traefik.example.com", Type: "A", Address: "192.0.2.125", TTL: "1h", AddressList: "traefik"},
+			},
+			expectError: false,
+		},
+		{
 			name: "Setting regexp via provider-specific",
 			endpoint: &endpoint.Endpoint{
 				DNSName:    "regexp.example.com",

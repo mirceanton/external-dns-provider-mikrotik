@@ -82,6 +82,10 @@ func NewDNSRecords(ep *endpoint.Endpoint) ([]*DNSRecord, error) {
 		case "match-subdomain", "webhook/match-subdomain":
 			baseRecord.MatchSubdomain = providerSpecific.Value
 		case "address-list", "webhook/address-list":
+			// RouterOS only supports a single firewall address list per static DNS entry.
+			if strings.Contains(providerSpecific.Value, ",") {
+				log.Warnf("address-list '%s' for %s contains a comma, but RouterOS only supports a single address list per static DNS entry; the value will be passed to RouterOS as-is", providerSpecific.Value, ep.DNSName)
+			}
 			baseRecord.AddressList = providerSpecific.Value
 		default:
 			log.Debugf("Encountered unknown provider-specific configuration '%s: %s' for DNS Record of type %s", providerSpecific.Name, providerSpecific.Value, baseRecord.Type)
